@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net6.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <RootNamespace>Blitz3DDecomp</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="AsmResolver" Version="5.3.0" />
+    <PackageReference Include="AsmResolver.PE" Version="5.3.0" />
+    <PackageReference Include="SharpDisasm" Version="1.1.11" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\B3DDecompUtils\B3DDecompUtils.csproj" />
+  </ItemGroup>
+
+</Project>

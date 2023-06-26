@@ -1,0 +1,44 @@
+# Build results
+[Dd]ebug/
+[Dd]ebugPublic/
+[Rr]elease/
+[Rr]eleases/
+x64/
+x86/
+build/
+bld/
+[Bb]in/
+[Oo]bj/
+[Dd]ebugWindows/
+[Rr]eleaseWindows/
+[Dd]ebugMac/
+[Rr]eleaseMac/
+[Dd]ebuLinux/
+[Rr]eleaseLinux/
+*.o
+
+# Misc vs crap 
+*.v12.suo
+*.suo
+*.csproj.user
+*.shproj.user
+*.vcxproj.user
+
+# Rider
+.idea/
+*.DotSettings.user
+
+#performance reports & sessions
+*.vsp
+*.psess
+.vs/
+*.diagsession
+
+# Mac
+*.DS_Store
+
+# Win
+desktop.ini
+
+#Rider
+*.DotSettings.user

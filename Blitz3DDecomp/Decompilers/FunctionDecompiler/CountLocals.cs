@@ -33,14 +33,8 @@ static partial class FunctionDecompiler
                 if (instruction.RightArg.ContainsRegister() && instruction.RightArg.Contains("ebp")) { break; }
                 if (instruction.LeftArg.Contains("@_v") || instruction.RightArg.Contains("@_v")) { break; }
                 if (instruction.LeftArg.Contains("@_f") || instruction.RightArg.Contains("@_f")) { break; }
-
-                if (instruction.RightArg.Contains("@Vector"))
-                {
-                    Console.WriteLine($"yeah!!! {function.Name} {instruction.RightArg}");
-                }
             }
 
-            if (ebpOffsets.Count == 0) { Debugger.Break(); }
             for (int i = 4; i <= ebpOffsets.Count * 4; i += 4)
             {
                 if (!ebpOffsets.Contains(i))

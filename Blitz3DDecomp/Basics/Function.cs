@@ -587,6 +587,9 @@ sealed class Function
         new Function("_builtIn__bbStrStore", 2),
         new Function("_builtIn__bbStrConcat", 2),
         new Function("_builtIn__bbStrCompare", 2),
+        
+        new Function("_builtIn__bbReadStr", 0),
+        new Function("_builtIn_ferrorlog", 0),
 
         new Function("_builtIn__bbObjEachFirst", 2),
         new Function("_builtIn__bbObjEachNext", 1),
@@ -624,6 +627,8 @@ sealed class Function
         public string Name;
         public string LeftArg;
         public string RightArg;
+
+        public int[] CallParameterAssignmentIndices;
 
         public override string ToString()
             => string.IsNullOrWhiteSpace(LeftArg)

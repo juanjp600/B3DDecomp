@@ -80,6 +80,7 @@ static partial class FunctionDecompiler
 
             if (function != null)
             {
+                if (foundArgs.Count != function.Arguments.Count) { Debugger.Break(); }
                 espDiff += function.Arguments.Count * 4;
             }
             else
@@ -105,7 +106,6 @@ static partial class FunctionDecompiler
                     Debugger.Break();
                 }
                 guesses.TryAdd(functionName, foundArgCount);
-                //Console.WriteLine($"{depSpacer}{functionName}@{startIndex} (guessed {foundArgCount} args; {string.Join(foundArgs.Select(kvp => $"{kvp.Key:X2}@{kvp.Value}")))})");
                 if (foundArgCount == 0)
                 {
                     finalI = startIndex;
@@ -115,8 +115,8 @@ static partial class FunctionDecompiler
                 Function.AllFunctions.Add(new Function(functionName, foundArgCount));
             }
 
-            startInstruction.RightArg =
-                $"sources: {string.Join(" ", foundArgs.OrderBy(kvp => kvp.Key).Select(kvp => $"{kvp.Key:X2}@{kvp.Value}"))}";
+            startInstruction.CallParameterAssignmentIndices =
+                foundArgs.OrderBy(kvp => kvp.Key).Select(kvp => kvp.Value).ToArray();
             instructions[startIndex] = startInstruction;
         }
 

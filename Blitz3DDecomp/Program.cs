@@ -15,6 +15,13 @@ internal static class Program
         FunctionDecompiler.IngestFiles.FromDir(disasmPath);
         foreach (var function in Function.AllFunctions)
         {
+            FunctionDecompiler.MarkAsFloat.Process(function);
+        }
+        var usedInstructions = Function.AllFunctions.SelectMany(f => f.AssemblySections.Values)
+            .SelectMany(instrs => instrs).Select(instr => instr.Name).ToHashSet();
+        
+        foreach (var function in Function.AllFunctions)
+        {
             FunctionDecompiler.CountArguments.Process(function);
         }
 
@@ -39,6 +46,11 @@ internal static class Program
         foreach (var function in Function.AllFunctions)
         {
             FunctionDecompiler.CountLocals.Process(function);
+        }
+        
+        foreach (var function in Function.AllFunctions)
+        {
+            FunctionDecompiler.RefineSignature.Process(function);
         }
 
         Debugger.Break();

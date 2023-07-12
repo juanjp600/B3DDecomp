@@ -19,9 +19,10 @@ static partial class FunctionDecompiler
                     if (instruction.Name == "push" && instructionAfterNext.Name == "pop"
                         && instruction.LeftArg == instructionAfterNext.LeftArg)
                     {
-                        if (nextInstruction.Name is not ("fistp" or "fld" or "fild" or "fstp")) { Debugger.Break(); }
+                        if (nextInstruction.Name is not ("fistp" or "fild" or "fstp" or "fld")) { Debugger.Break(); }
 
                         instruction.Name = nextInstruction.Name + "_markAsFloat";
+
                         section = section[..(i + 1)].Concat(section[(i + 3)..]).ToArray();
                         section[i] = instruction;
                         function.AssemblySections[kvp.Key] = section;

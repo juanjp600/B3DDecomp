@@ -50,8 +50,17 @@ internal static class Program
         
         foreach (var function in Function.AllFunctions)
         {
-            FunctionDecompiler.RefineSignature.Process(function);
+            FunctionDecompiler.BbObjTypeInference.Process(function);
         }
+        
+        foreach (var function in Function.AllFunctions)
+        {
+            FunctionDecompiler.PropagateFloat.Process(function);
+        }
+
+        var dingus = Function.AllFunctions.Where(f =>
+            f.ReturnType != DeclType.Unknown || f.Arguments.Any(a => a.DeclType != DeclType.Unknown))
+            .ToArray();
 
         Debugger.Break();
     }

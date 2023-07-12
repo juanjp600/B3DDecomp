@@ -622,13 +622,14 @@ sealed class Function
     public readonly List<BasicDeclaration> Arguments = new List<BasicDeclaration>();
     public readonly List<BasicDeclaration> LocalVariables = new List<BasicDeclaration>();
 
-    public struct Instruction
+    public sealed class Instruction
     {
         public string Name;
         public string LeftArg;
         public string RightArg;
 
-        public int[] CallParameterAssignmentIndices;
+        public int[]? CallParameterAssignmentIndices;
+        public string? BbObjType;
 
         public override string ToString()
             => string.IsNullOrWhiteSpace(LeftArg)

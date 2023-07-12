@@ -12,6 +12,9 @@ static class Registers
 
     public static bool ContainsRegister(this string s)
         => Names.Any(n => s.StartsWith(n) || s.StartsWith($"[{n}"));
+    
+    public static bool ContainsRegister(this string s, string register)
+        => s.ContainsRegister() && Names.Contains(register) && s.Contains(register);
 
     public static string StripDeref(this string s)
         => s.Replace("[", "").Replace("]", "");

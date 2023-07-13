@@ -9,6 +9,7 @@ static partial class FunctionDecompiler
         private static void InferTypesForCall(Function function, Function.Instruction[] instructions, int callLocation)
         {
             var callInstruction = instructions[callLocation];
+            if (!string.IsNullOrEmpty(callInstruction.BbObjType)) { return; }
             if (callInstruction.CallParameterAssignmentIndices is not { Length: >0 } callParameterAssignmentIndices) { return; }
             var calleeName = callInstruction.LeftArg[1..];
             var callee = Function.AllFunctions.FirstOrDefault(f => f.Name == calleeName || f.Name == calleeName[2..]);
@@ -25,7 +26,7 @@ static partial class FunctionDecompiler
                 for (int j = assignmentLocation - 1; j >= 0; j--)
                 {
                     var instruction = instructions[j];
-                    if (instruction.Name is "mov" or "xchg" && instruction.LeftArg.StripDeref() == trackedLocation)
+                    if (instruction.Name is "mov" or "lea" or "xchg" && instruction.LeftArg.StripDeref() == trackedLocation)
                     {
                         trackedLocation = instruction.RightArg.StripDeref();
                         if (instruction.RightArg.StartsWith("@_t"))
@@ -59,9 +60,132 @@ static partial class FunctionDecompiler
                 Console.WriteLine($"{function.Name}: {calleeName} -> {callInstruction.BbObjType}");
             }
         }
-        
-        public static void Process(Function function)
+
+        private static bool InferTypesForLocals(Function function, Function.Instruction[] instructions)
         {
+            bool changedSomething = false;
+            for (int i = 0; i < function.LocalVariables.Count; i++)
+            {
+                if (function.LocalVariables[i].DeclType != DeclType.Unknown) { continue; }
+
+                DeclType? typeAtTop = null;
+                var trackedLocation = $"ebp-0x{((i + 1) * 4):x1}";
+                for (int j = instructions.Length - 1; j >= 0; j--)
+                {
+                    var instruction = instructions[j];
+                    if (instruction.Name is "mov" or "lea" or "xchg" && instruction.LeftArg.StripDeref() == trackedLocation)
+                    {
+                        trackedLocation = instruction.RightArg.StripDeref();
+                    }
+
+                    if (changedSomething) { break; }
+
+                    if (instruction.Name is "call")
+                    {
+                        bool instrIsConstructor = false;
+                        string? bbObjType = instruction.BbObjType;
+
+                        if (trackedLocation == "eax"
+                            && (instruction.LeftArg.Contains("bbObjNew") || instruction.LeftArg.Contains("bbObjFirst") || instruction.LeftArg.Contains("bbObjLast")))
+                        {
+                            instrIsConstructor = true;
+                        }
+                        else if (instruction.LeftArg.Contains("bbObjEachFirst") || instruction.LeftArg.Contains("bbObjStore"))
+                        {
+                            if (string.IsNullOrEmpty(bbObjType))
+                            {
+                                var secondParamAssignmentLocation = instruction.CallParameterAssignmentIndices[1];
+                                var tl3 = instructions[secondParamAssignmentLocation].LeftArg.StripDeref();
+                                for (int k = secondParamAssignmentLocation; k >= 0; k--)
+                                {
+                                    var instruction2 = instructions[k];
+
+                                    if (instruction2.Name is
+                                        "call" or "jmp" or "je" or "jz"
+                                        or "jne" or "jnz" or "jg"
+                                        or "jge" or "jl" or "jle")
+                                    {
+                                        if (!string.IsNullOrEmpty(instruction2.BbObjType))
+                                        {
+                                            if (tl3 == "eax")
+                                            {
+                                                bbObjType = instruction2.BbObjType;
+                                                break;
+                                            }
+                                        }
+                                        else
+                                        {
+                                            break;
+                                        }
+                                    }
+
+                                    if (instruction2.Name is "mov" or "lea" or "xchg" &&
+                                        instruction2.LeftArg.StripDeref() == tl3)
+                                    {
+                                        tl3 = instruction2.RightArg.StripDeref();
+                                    }
+                                }
+                            }
+
+                            if (!string.IsNullOrEmpty(bbObjType))
+                            {
+                                var firstParamAssignmentLocation = instruction.CallParameterAssignmentIndices[0];
+                                var tl2 = instructions[firstParamAssignmentLocation].LeftArg.StripDeref();
+                                for (int k = firstParamAssignmentLocation; k >= 0; k--)
+                                {
+                                    var instruction2 = instructions[k];
+
+                                    if (instruction2.Name is
+                                        "call" or "jmp" or "je" or "jz"
+                                        or "jne" or "jnz" or "jg"
+                                        or "jge" or "jl" or "jle")
+                                    {
+                                        break;
+                                    }
+
+                                    if (instruction2.Name is "mov" or "lea" or "xchg" &&
+                                        instruction2.LeftArg.StripDeref() == tl2)
+                                    {
+                                        tl2 = instruction2.RightArg.StripDeref();
+                                    }
+
+                                    if (tl2.Contains("ebp-"))
+                                    {
+                                        if (tl2 == trackedLocation)
+                                        {
+                                            instrIsConstructor = true;
+                                        }
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+
+                        if (!string.IsNullOrEmpty(bbObjType) && instrIsConstructor)
+                        {
+                            function.LocalVariables[i] = function.LocalVariables[i] with { DeclType = new DeclType("."+bbObjType[2..]) };
+                            Console.WriteLine($"{function.Name}: local {i} is {function.LocalVariables[i].DeclType} because {instruction.LeftArg}");
+                            changedSomething = true;
+                            break;
+                        }
+                    }
+
+                    if (instruction.Name is
+                        "call" or "jmp" or "je" or "jz"
+                        or "jne" or "jnz" or "jg"
+                        or "jge" or "jl" or "jle")
+                    {
+                        trackedLocation = $"ebp-0x{((i + 1) * 4):x1}";
+                    }
+                }
+            }
+
+            return changedSomething;
+        }
+
+        public static bool Process(Function function)
+        {
+            bool changedSomething = false;
             foreach (var section in function.AssemblySections.Values)
             {
                 for (int i=0;i<section.Length;i++)
@@ -69,7 +193,9 @@ static partial class FunctionDecompiler
                     if (section[i].Name != "call") { continue; }
                     InferTypesForCall(function, section, i);
                 }
+                changedSomething |= InferTypesForLocals(function, section);
             }
+            return changedSomething;
         }
     }
 }

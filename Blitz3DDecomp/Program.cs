@@ -47,19 +47,24 @@ internal static class Program
         {
             FunctionDecompiler.CountLocals.Process(function);
         }
-        
-        foreach (var function in Function.AllFunctions)
+
+        bool shouldLoop = true;
+        while (shouldLoop)
         {
-            FunctionDecompiler.BbObjTypeInference.Process(function);
-        }
-        
-        foreach (var function in Function.AllFunctions)
-        {
-            FunctionDecompiler.PropagateFloat.Process(function);
+            shouldLoop = false;
+            foreach (var function in Function.AllFunctions)
+            {
+                shouldLoop |= FunctionDecompiler.BbObjTypeInference.Process(function);
+                shouldLoop |= FunctionDecompiler.BasicFloatPropagation.Process(function);
+            }
         }
 
-        var dingus = Function.AllFunctions.Where(f =>
-            f.ReturnType != DeclType.Unknown || f.Arguments.Any(a => a.DeclType != DeclType.Unknown))
+        var dingus = Function.AllFunctions
+            .Where(f => f.AssemblySections.Any())
+            .Where(f =>
+                f.ReturnType != DeclType.Unknown
+                || f.Arguments.Any(a => a.DeclType != DeclType.Unknown)
+                || f.LocalVariables.Any(v => v.DeclType != DeclType.Unknown))
             .ToArray();
 
         Debugger.Break();

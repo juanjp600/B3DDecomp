@@ -186,14 +186,22 @@ static partial class FunctionDecompiler
         public static bool Process(Function function)
         {
             bool changedSomething = false;
-            foreach (var section in function.AssemblySections.Values)
+
+            while (true)
             {
-                for (int i=0;i<section.Length;i++)
+                bool changedSomethingNow = false;
+                foreach (var section in function.AssemblySections.Values)
                 {
-                    if (section[i].Name != "call") { continue; }
-                    InferTypesForCall(function, section, i);
+                    for (int i=0;i<section.Length;i++)
+                    {
+                        if (section[i].Name != "call") { continue; }
+                        InferTypesForCall(function, section, i);
+                    }
+                    changedSomethingNow |= InferTypesForLocals(function, section);
                 }
-                changedSomething |= InferTypesForLocals(function, section);
+                if (!changedSomethingNow) { break; }
+
+                changedSomething = true;
             }
             return changedSomething;
         }

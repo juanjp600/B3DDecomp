@@ -6,6 +6,7 @@ internal static class Program
     public static void Main(string[] args)
     {
         string disasmPath = "C:/Users/juanj/Desktop/Blitz3D/ReverseEng/game_disasm/";
+        disasmPath = "/Users/juanjp/Desktop/Repos/BlitzBasicGames/game_disasm/";
         string decompPath = disasmPath.Replace("_disasm", "_decomp");
         if (Directory.Exists(decompPath)) { Directory.Delete(decompPath, true); }
         Directory.CreateDirectory(decompPath);
@@ -56,11 +57,14 @@ internal static class Program
             {
                 shouldLoop |= FunctionDecompiler.BbObjTypeInference.Process(function);
                 shouldLoop |= FunctionDecompiler.BasicFloatPropagation.Process(function);
+                shouldLoop |= ReturnTypeInference.Process(function);
             }
         }
 
-        var dingus = Function.AllFunctions
+        var sjdfsd = Function.AllFunctions
             .Where(f => f.AssemblySections.Any())
+            .ToArray();
+        var dingus = sjdfsd
             .Where(f =>
                 f.ReturnType != DeclType.Unknown
                 || f.Arguments.Any(a => a.DeclType != DeclType.Unknown)

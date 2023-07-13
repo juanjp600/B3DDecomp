@@ -131,10 +131,12 @@ internal static class Program
     private static void Main(string[] args)
     {
         var exePath = "C:/Program Files (x86)/Steam/steamapps/common/SCP Containment Breach Multiplayer/game.exe";
+        exePath = "/Users/juanjp/Desktop/Repos/BlitzBasicGames/game.exe";
         //exePath = "C:/Program Files (x86)/Steam/steamapps/common/SCP Nine-Tailed Fox/SCP Nine-Tailed Fox.exe";
         //exePath = "C:/Users/juanj/Desktop/Blitz3D/ReverseEng/StackAllocTest6.exe";
         //exePath = "C:/Users/juanj/Downloads/SCP - Containment Breach v0.2/SCP - Containment Breach v0.2.exe";
         var outputPath = "C:/Users/juanj/Desktop/Blitz3D/ReverseEng/";
+        outputPath = "/Users/juanjp/Desktop/Repos/BlitzBasicGames/";
         var exeName = Path.GetFileName(exePath);
         var fileToInspect = PEImage.FromFile(exePath);
         var resources = fileToInspect.Resources;

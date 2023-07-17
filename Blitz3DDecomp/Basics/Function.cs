@@ -577,11 +577,11 @@ sealed class Function
         new Function("_builtIn__bbMod", 2),
         new Function("_builtIn__bbFMod", 2),
         
-        new Function("_builtIn__bbStrConst", 1),
-        new Function("_builtIn__bbStrFromInt", 1),
-        new Function("_builtIn__bbStrFromFloat", 1),
-        new Function("_builtIn__bbStrToInt", 1),
-        new Function("_builtIn__bbStrToFloat", 1),
+        new Function("_builtIn__bbStrConst", 1) { ReturnType = DeclType.String },
+        new Function("_builtIn__bbStrFromInt", 1) { ReturnType = DeclType.String },
+        new Function("_builtIn__bbStrFromFloat", 1) { ReturnType = DeclType.String },
+        new Function("_builtIn__bbStrToInt", 1) { ReturnType = DeclType.Int },
+        new Function("_builtIn__bbStrToFloat", 1) { ReturnType = DeclType.Float },
         new Function("_builtIn__bbStrLoad", 1),
         new Function("_builtIn__bbStrRelease", 1),
         new Function("_builtIn__bbStrStore", 2),
@@ -606,9 +606,6 @@ sealed class Function
         new Function("_builtIn__bbObjLoad", 1),
         new Function("_builtIn__bbFieldPtrAdd", 2),
         new Function("_builtIn__bbObjDelete", 1),
-        new Function("_builtIn_ffreeimage", 1),
-        new Function("_builtIn_ffreetexture", 1),
-        new Function("_builtIn_ffreefont", 1)
     }.ToList();
 
     public string CoreSymbolName

@@ -57,7 +57,7 @@ internal static class Program
             {
                 shouldLoop |= FunctionDecompiler.BbObjTypeInference.Process(function);
                 shouldLoop |= FunctionDecompiler.BasicFloatPropagation.Process(function);
-                shouldLoop |= ReturnTypeInference.Process(function);
+                shouldLoop |= InferredTypePropagation.Process(function);
             }
         }
 
@@ -69,6 +69,19 @@ internal static class Program
                 f.ReturnType != DeclType.Unknown
                 || f.Arguments.Any(a => a.DeclType != DeclType.Unknown)
                 || f.LocalVariables.Any(v => v.DeclType != DeclType.Unknown))
+            .ToArray();
+        var dingus2 = dingus
+            .Where(f =>
+                f.ReturnType == DeclType.String
+                || f.Arguments.Any(a => a.DeclType == DeclType.String)
+                || f.LocalVariables.Any(v => v.DeclType == DeclType.String))
+            .ToArray();
+
+        var djdjdjd = Function.AllFunctions
+            .Where(f => f.CoreSymbolName.Contains("_builtIn"))
+            .Where(f => f.ReturnType == DeclType.Unknown)
+            .Where(f => f.Arguments.All(a => a.DeclType == DeclType.Unknown))
+            .Where(f => f.LocalVariables.All(v => v.DeclType == DeclType.Unknown))
             .ToArray();
 
         Debugger.Break();

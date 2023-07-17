@@ -152,15 +152,18 @@ static partial class FunctionDecompiler
                     {
                         if (trackedLocation == "eax")
                         {
+                            if (function.LocalVariables[i].DeclType != DeclType.Unknown)
+                            {
+                                Debugger.Break();
+                            }
                             var variable = function.LocalVariables[i];
                             changedSomething |= HandlePropagationForReturnType(function, ref variable, $"local {i}", instruction, typeAtTop);
                             function.LocalVariables[i] = variable;
                         }
-                        break;
                     }
 
                     if (instruction.Name is
-                        "jmp" or "je" or "jz"
+                        "call" or "jmp" or "je" or "jz"
                         or "jne" or "jnz" or "jg"
                         or "jge" or "jl" or "jle")
                     {
@@ -183,11 +186,7 @@ static partial class FunctionDecompiler
                 {
                     for (int i = 0; i < section.Length; i++)
                     {
-                        if (section[i].Name != "call")
-                        {
-                            continue;
-                        }
-
+                        if (section[i].Name != "call") { continue; }
                         changedSomethingNow |= InferTypesForCall(function, section, i);
                     }
 

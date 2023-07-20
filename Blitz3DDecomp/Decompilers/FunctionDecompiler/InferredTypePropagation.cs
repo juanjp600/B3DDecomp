@@ -56,7 +56,7 @@ static class InferredTypePropagation
             if (location.StartsWith("ebp-0x"))
             {
                 // This is a local
-                int varIndex = (int.Parse(location[6..], NumberStyles.HexNumber) >> 2) - 1;
+                int varIndex = (int.Parse(location[6..], NumberStyles.HexNumber) - 0x4) >> 2;
                 if (varIndex >= 0
                     && varIndex < function.LocalVariables.Count)
                 {
@@ -67,7 +67,7 @@ static class InferredTypePropagation
             if (location.StartsWith("ebp+0x"))
             {
                 // This is an argument
-                int paramIndex = (int.Parse(location[6..], NumberStyles.HexNumber) >> 2) - 1;
+                int paramIndex = (int.Parse(location[6..], NumberStyles.HexNumber) - 0x14) >> 2;
                 if (paramIndex >= 0
                     && paramIndex < function.Arguments.Count)
                 {

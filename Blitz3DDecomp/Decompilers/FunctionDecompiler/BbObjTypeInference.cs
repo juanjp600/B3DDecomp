@@ -69,7 +69,7 @@ static partial class FunctionDecompiler
                 if (function.LocalVariables[i].DeclType != DeclType.Unknown) { continue; }
 
                 DeclType? typeAtTop = null;
-                var trackedLocation = $"ebp-0x{((i + 1) * 4):x1}";
+                var trackedLocation = $"ebp-0x{(i * 4) + 0x4:x1}";
                 for (int j = instructions.Length - 1; j >= 0; j--)
                 {
                     var instruction = instructions[j];
@@ -175,7 +175,7 @@ static partial class FunctionDecompiler
                         or "jne" or "jnz" or "jg"
                         or "jge" or "jl" or "jle")
                     {
-                        trackedLocation = $"ebp-0x{((i + 1) * 4):x1}";
+                        trackedLocation = $"ebp-0x{(i * 4) + 0x4:x1}";
                     }
                 }
             }

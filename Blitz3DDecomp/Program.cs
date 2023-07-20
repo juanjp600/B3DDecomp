@@ -6,7 +6,7 @@ internal static class Program
     public static void Main(string[] args)
     {
         string disasmPath = "C:/Users/juanj/Desktop/Blitz3D/ReverseEng/game_disasm/";
-        disasmPath = "/Users/juanjp/Desktop/Repos/BlitzBasicGames/game_disasm/";
+        disasmPath = "C:/Users/juanj/Repos/Blitz3DDecomp/SamplePrograms/Sample1/Sample1_disasm/";
         string decompPath = disasmPath.Replace("_disasm", "_decomp");
         if (Directory.Exists(decompPath)) { Directory.Delete(decompPath, true); }
         Directory.CreateDirectory(decompPath);

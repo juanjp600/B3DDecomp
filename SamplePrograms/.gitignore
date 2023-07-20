@@ -1,0 +1,5 @@
+*.bb_bak
+*.exe
+*.dat
+*_disasm
+*_decomp

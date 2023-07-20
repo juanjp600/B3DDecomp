@@ -6,16 +6,21 @@ static partial class FunctionDecompiler
 {
     public static class BasicFloatPropagation
     {
-        private static bool CheckInstructionForMarkAsFloat(Function function, ref BasicDeclaration declaration, string declarationDesc, Function.Instruction instruction, ref DeclType? typeAtTop)
+        private static bool CheckInstructionForMarkAsFloat(Function function, ref BasicDeclaration declaration, string declarationDesc, Function.Instruction instruction, int smearDir, ref DeclType? typeBeyondInstruction)
         {
             bool changedSomething = false;
             if (instruction.Name.Contains("_markAsFloat"))
             {
-                if (typeAtTop is null)
+                // fild: Load an int, convert to float and push float to stack -> src is an int, dest is a float
+                // fistp: Pop float from stack, convert to int and store an int -> dest is an int, src is a float
+
+                var intToFltName = smearDir > 0 ? "fild" : "fistp";
+                var fltToIntName = smearDir > 0 ? "fistp" : "fild";
+
+                if (typeBeyondInstruction is null)
                 {
-                    if (instruction.Name.StartsWith("fistp"))
+                    if (instruction.Name.StartsWith(intToFltName))
                     {
-                        // Convert from float to int and pop -> argument is getting an int
                         declaration = declaration with { DeclType = DeclType.Int };
                         Console.WriteLine($"{function.Name}: {declarationDesc} is int");
                     }
@@ -31,14 +36,13 @@ static partial class FunctionDecompiler
                     changedSomething = true;
                 }
 
-                if (instruction.Name.StartsWith("fild"))
+                if (instruction.Name.StartsWith(fltToIntName))
                 {
-                    // Load an int, convert to float and push float to stack -> type at top is an int
-                    typeAtTop = DeclType.Int;
+                    typeBeyondInstruction = DeclType.Int;
                 }
                 else
                 {
-                    typeAtTop = DeclType.Float;
+                    typeBeyondInstruction = DeclType.Float;
                 }
             }
             return changedSomething;
@@ -90,7 +94,7 @@ static partial class FunctionDecompiler
                     if (instruction.LeftArg.StripDeref() == trackedLocation)
                     {
                         var arg = callee.Arguments[i];
-                        changedSomething |= CheckInstructionForMarkAsFloat(function, ref arg, $"{calleeName} arg {i}", instruction, ref typeAtTop);
+                        changedSomething |= CheckInstructionForMarkAsFloat(function, ref arg, $"{calleeName} arg {i}", instruction, smearDir: -1, ref typeAtTop);
                         callee.Arguments[i] = arg;
                     }
 
@@ -125,51 +129,75 @@ static partial class FunctionDecompiler
         private static bool InferTypesForLocals(Function function, Function.Instruction[] instructions)
         {
             bool changedSomething = false;
-            for (int i = 0; i < function.LocalVariables.Count; i++)
+            
+            void processDeclaration(ref BasicDeclaration declaration, string initialLocation, string declarationDesc, int smearDir)
             {
-                if (function.LocalVariables[i].DeclType != DeclType.Unknown) { continue; }
+                if (declaration.DeclType != DeclType.Unknown) { return; }
 
-                DeclType? typeAtTop = null;
-                var trackedLocation = $"ebp-0x{((i + 1) * 4):x1}";
-                for (int j = instructions.Length - 1; j >= 0; j--)
+                DeclType? typeBeyondInstruction = null;
+                var trackedLocation = initialLocation;
+                for (int j = smearDir > 0 ? 0 : instructions.Length - 1;
+                     j >= 0 && j < instructions.Length;
+                     j += smearDir)
                 {
                     var instruction = instructions[j];
                     if (instruction.LeftArg.StripDeref() == trackedLocation)
                     {
-                        var variable = function.LocalVariables[i];
-                        changedSomething |= CheckInstructionForMarkAsFloat(function, ref variable, $"local {i}", instruction, ref typeAtTop);
-                        function.LocalVariables[i] = variable;
+                        changedSomething |= CheckInstructionForMarkAsFloat(function, ref declaration, declarationDesc, instruction, smearDir: smearDir, ref typeBeyondInstruction);
                     }
 
-                    if (instruction.Name is "mov" or "lea" or "xchg" && instruction.LeftArg.StripDeref() == trackedLocation)
+                    var (destArg, srcArg) = (instruction.LeftArg.StripDeref(), instruction.RightArg.StripDeref());
+                    if (smearDir < 0)
                     {
-                        trackedLocation = instruction.RightArg.StripDeref();
+                        (destArg, srcArg) = (srcArg, destArg);
+                    }
+                    
+                    if (instruction.Name is "mov" or "lea" or "xchg" && srcArg == trackedLocation)
+                    {
+                        trackedLocation = destArg;
                     }
 
-                    if (changedSomething) { break; }
-
-                    if (instruction.Name is "call")
+                    // Return type propagation can only happen in an upwards smear
+                    // because a downwards smear would reach a call before anything
+                    // about its return type can be known
+                    if (smearDir < 0 && instruction.Name is "call")
                     {
                         if (trackedLocation == "eax")
                         {
-                            if (function.LocalVariables[i].DeclType != DeclType.Unknown)
+                            if (declaration.DeclType != DeclType.Unknown)
                             {
                                 Debugger.Break();
                             }
-                            var variable = function.LocalVariables[i];
-                            changedSomething |= HandlePropagationForReturnType(function, ref variable, $"local {i}", instruction, typeAtTop);
-                            function.LocalVariables[i] = variable;
+                            changedSomething |= HandlePropagationForReturnType(function, ref declaration, declarationDesc, instruction, typeBeyondInstruction);
                         }
                     }
+
+                    if (changedSomething) { break; }
 
                     if (instruction.Name is
                         "call" or "jmp" or "je" or "jz"
                         or "jne" or "jnz" or "jg"
                         or "jge" or "jl" or "jle")
                     {
-                        trackedLocation = $"ebp-0x{((i + 1) * 4):x1}";
+                        trackedLocation = initialLocation;
                     }
                 }
+            }
+
+            for (int i = 0; i < function.LocalVariables.Count; i++)
+            {
+                var variable = function.LocalVariables[i];
+                processDeclaration(ref variable, $"ebp-0x{(i * 4) + 0x4:x1}", $"local {i}", smearDir: -1);
+                processDeclaration(ref variable, $"ebp-0x{(i * 4) + 0x4:x1}", $"local {i}", smearDir: 1);
+                function.LocalVariables[i] = variable;
+            }
+            
+            for (int i = 0; i < function.Arguments.Count; i++)
+            {
+                var variable = function.Arguments[i];
+                processDeclaration(ref variable, $"ebp+0x{((i * 4) + 0x14):x1}", $"arg {i}", smearDir: -1);
+                processDeclaration(ref variable, $"ebp+0x{((i * 4) + 0x14):x1}", $"arg {i}", smearDir: 1);
+                function.Arguments[i] = variable;
             }
 
             return changedSomething;

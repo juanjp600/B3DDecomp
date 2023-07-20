@@ -78,12 +78,12 @@ static class InferredTypePropagation
             return DeclType.Unknown;
         }
 
-        for (int localIndex = 0; localIndex < function.LocalVariables.Count; localIndex++)
+        void smear(ref BasicDeclaration declaration, string initialLocation, string declarationDesc, int smearDir)
         {
-            if (function.LocalVariables[localIndex].DeclType != DeclType.Unknown) { continue; }
-
-            var trackedLocation = $"ebp-0x{localIndex * 4:x1}";
-            for (int i = instructions.Length - 1; i >= 0; i--)
+            var trackedLocation = initialLocation;
+            for (int i = smearDir > 0 ? 0 : instructions.Length - 1;
+                 i >= 0 && i < instructions.Length;
+                 i += smearDir)
             {
                 var instruction = instructions[i];
 
@@ -92,56 +92,48 @@ static class InferredTypePropagation
                     or "jne" or "jnz" or "jg"
                     or "jge" or "jl" or "jle")
                 {
-                    trackedLocation = $"ebp-0x{localIndex * 4:x1}";
+                    trackedLocation = initialLocation;
                 }
 
-                if (instruction.Name is "mov" or "lea" or "xchg" && instruction.LeftArg.StripDeref() == trackedLocation)
+                var (destArg, srcArg) = (instruction.LeftArg.StripDeref(), instruction.RightArg.StripDeref());
+                if (smearDir < 0)
                 {
-                    trackedLocation = instruction.RightArg.StripDeref();
+                    (destArg, srcArg) = (srcArg, destArg);
+                }
+
+                if (instruction.Name is "mov" or "lea" or "xchg" && srcArg == trackedLocation)
+                {
+                    trackedLocation = destArg;
                     var newType = getTypeForLocation(trackedLocation);
                     if (newType != DeclType.Unknown)
                     {
-                        function.LocalVariables[localIndex] =
-                            function.LocalVariables[localIndex] with { DeclType = newType };
-                        Console.WriteLine($"{function.Name}: local {localIndex} is {newType} because {trackedLocation}");
+                        declaration = declaration with { DeclType = newType };
+                        Console.WriteLine($"{function.Name}: {declarationDesc} is {newType} because {trackedLocation}");
                         changedSomething = true;
                         break;
                     }
                 }
             }
         }
+
+        for (int localIndex = 0; localIndex < function.LocalVariables.Count; localIndex++)
+        {
+            if (function.LocalVariables[localIndex].DeclType != DeclType.Unknown) { continue; }
+
+            var variable = function.LocalVariables[localIndex];
+            smear(ref variable, $"ebp-0x{(localIndex * 4) + 0x4:x1}", $"local {localIndex}", smearDir: -1);
+            smear(ref variable, $"ebp-0x{(localIndex * 4) + 0x4:x1}", $"local {localIndex}", smearDir: 1);
+            function.LocalVariables[localIndex] = variable;
+        }
         
         for (int argIndex = 0; argIndex < function.Arguments.Count; argIndex++)
         {
             if (function.Arguments[argIndex].DeclType != DeclType.Unknown) { continue; }
 
-            var trackedLocation = $"ebp+0x{argIndex * 4:x1}";
-            for (int i = 0; i < instructions.Length; i++)
-            {
-                var instruction = instructions[i];
-
-                if (instruction.Name is
-                    "call" or "jmp" or "je" or "jz"
-                    or "jne" or "jnz" or "jg"
-                    or "jge" or "jl" or "jle")
-                {
-                    trackedLocation = $"ebp+0x{argIndex * 4:x1}";
-                }
-
-                if (instruction.Name is "mov" or "lea" or "xchg" && instruction.RightArg.StripDeref() == trackedLocation)
-                {
-                    trackedLocation = instruction.LeftArg.StripDeref();
-                    var newType = getTypeForLocation(trackedLocation);
-                    if (newType != DeclType.Unknown)
-                    {
-                        function.Arguments[argIndex] =
-                            function.Arguments[argIndex] with { DeclType = newType };
-                        Console.WriteLine($"{function.Name}: arg {argIndex} is {newType} because {trackedLocation}");
-                        changedSomething = true;
-                        break;
-                    }
-                }
-            }
+            var variable = function.Arguments[argIndex];
+            smear(ref variable, $"ebp+0x{(argIndex * 4) + 0x14:x1}", $"arg {argIndex}", smearDir: 1);
+            smear(ref variable, $"ebp+0x{(argIndex * 4) + 0x14:x1}", $"arg {argIndex}", smearDir: -1);
+            function.Arguments[argIndex] = variable;
         }
 
         return changedSomething;

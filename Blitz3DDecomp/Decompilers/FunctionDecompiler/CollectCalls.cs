@@ -12,8 +12,6 @@ static partial class FunctionDecompiler
         
         static void CrawlUp(Function.Instruction[] instructions, int startIndex, out int espDiff, out int finalI, int dep)
         {
-            string depSpacer = string.Concat(Enumerable.Repeat("   ", dep));
-
             finalI = 0;
             var startInstruction = instructions[startIndex];
 

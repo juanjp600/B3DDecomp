@@ -578,15 +578,15 @@ sealed class Function
         new Function("_builtIn__bbFMod", 2),
         
         new Function("_builtIn__bbStrConst", 1) { ReturnType = DeclType.String },
-        new Function("_builtIn__bbStrFromInt", 1) { ReturnType = DeclType.String },
-        new Function("_builtIn__bbStrFromFloat", 1) { ReturnType = DeclType.String },
-        new Function("_builtIn__bbStrToInt", 1) { ReturnType = DeclType.Int },
-        new Function("_builtIn__bbStrToFloat", 1) { ReturnType = DeclType.Float },
-        new Function("_builtIn__bbStrLoad", 1),
+        new Function("_builtIn__bbStrFromInt", DeclType.Int) { ReturnType = DeclType.String },
+        new Function("_builtIn__bbStrFromFloat", DeclType.Float) { ReturnType = DeclType.String },
+        new Function("_builtIn__bbStrToInt", DeclType.String) { ReturnType = DeclType.Int },
+        new Function("_builtIn__bbStrToFloat", DeclType.String) { ReturnType = DeclType.Float },
+        new Function("_builtIn__bbStrLoad", DeclType.String) { ReturnType = DeclType.String },
         new Function("_builtIn__bbStrRelease", 1),
         new Function("_builtIn__bbStrStore", 2),
-        new Function("_builtIn__bbStrConcat", 2),
-        new Function("_builtIn__bbStrCompare", 2),
+        new Function("_builtIn__bbStrConcat", DeclType.String, DeclType.String) { ReturnType = DeclType.String },
+        new Function("_builtIn__bbStrCompare", DeclType.String, DeclType.String) { ReturnType = DeclType.Int },
         
         new Function("_builtIn__bbReadStr", 0),
         new Function("_builtIn_ferrorlog", 0),
@@ -685,6 +685,14 @@ sealed class Function
         Arguments = Enumerable.Range(0, argCount)
             .Select(i => new BasicDeclaration { DeclType = DeclType.Unknown, Name = $"arg{i}" })
             .ToList();
+    }
+
+    public Function(string name, params DeclType[] types) : this(name, types.Length)
+    {
+        for (int i = 0; i < types.Length; i++)
+        {
+            Arguments[i] = Arguments[i] with { DeclType = types[i] };
+        }
     }
 
     public Function(string name, Dictionary<string, Instruction[]> assemblySections)

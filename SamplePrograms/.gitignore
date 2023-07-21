@@ -1,4 +1,4 @@
-*.bb_bak
+*.bb_bak*
 *.exe
 *.dat
 *_disasm

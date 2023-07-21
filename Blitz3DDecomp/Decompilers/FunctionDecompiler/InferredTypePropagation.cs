@@ -22,6 +22,17 @@ static class InferredTypePropagation
                 or "jne" or "jnz" or "jg"
                 or "jge" or "jl" or "jle")
             {
+                if (instruction.Name is "call" && trackedLocation == "eax")
+                {
+                    var calleeName = instruction.LeftArg[1..];
+                    var calleeFunction = Function.AllFunctions.FirstOrDefault(f => f.Name == calleeName || f.Name == calleeName[2..]);
+                    if (calleeFunction != null && calleeFunction.ReturnType != DeclType.Unknown)
+                    {
+                        function.ReturnType = calleeFunction.ReturnType;
+                        Console.WriteLine($"{function.Name} returns {function.ReturnType} because {instruction}");
+                        return true;
+                    }
+                }
                 trackedLocation = "";
             }
 

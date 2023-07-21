@@ -16,11 +16,16 @@ static partial class FunctionDecompiler
                     ? function.AssemblySections.First(kvp => kvp.Key.EndsWith("_begin__MAIN")).Value
                     : function.AssemblySections[function.CoreSymbolName].Skip(5).ToArray();
 
-            var ebpOffsetRegex = new Regex("\\[ebp-0x([0-9a-f]+)\\]");
+            var ebpOffsetLocalRegex = new Regex("\\[ebp-0x([0-9a-f]+)\\]");
+            var ebpOffsetArgRegex = new Regex("\\[ebp\\+0x([0-9a-f]+)\\]");
             var ebpOffsets = new HashSet<int>();
             foreach (var instruction in coreSection)
             {
-                if (instruction.Name == "mov" && ebpOffsetRegex.Match(instruction.LeftArg) is { Success: true } ebpOffsetMatch)
+                if (ebpOffsetArgRegex.Match(instruction.LeftArg) is { Success: true })
+                {
+                    break;
+                }
+                if (instruction.Name == "mov" && ebpOffsetLocalRegex.Match(instruction.LeftArg) is { Success: true } ebpOffsetMatch)
                 {
                     if (!ebpOffsets.Add(int.Parse(ebpOffsetMatch.Groups[1].Value, NumberStyles.HexNumber)))
                     {

@@ -31,7 +31,13 @@ readonly record struct DeclType(string Suffix)
         var descRegex = new Regex("Vector_[0-9]+(_.+)_sz([0-9]+)");
         var match = descRegex.Match(descStr);
         var baseDesc = FromDesc(match.Groups[1].Value);
-        var sz = match.Groups[2].Value;
-        return new DeclType($"{baseDesc.Suffix}[{sz}]");
+
+        var sz = int.Parse(match.Groups[2].Value);
+
+        // BlitzBasic is dumb so the following:
+        //     Local myVar$[10]
+        // is actually an 11 element array,
+        // so we need to decrement the size here :)
+        return new DeclType($"{baseDesc.Suffix}[{sz - 1}]");
     }
 }

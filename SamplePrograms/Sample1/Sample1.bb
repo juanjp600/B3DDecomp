@@ -18,12 +18,8 @@ End Function
 Function SelectStatementWithALocal$(Arg0%)
 	Local Local0% = Arg0
 	Select Local0
-		Case 0, 1
-			Return "Zero or one"
-		Case 2
-			Return "Two"
-		Case 3
-			Return "Three"
+		Case 0
+			Return "Zero"
 		Default
 			Return "Something else"	
 	End Select
@@ -66,6 +62,16 @@ Function IntArithmeticAndCastingFromSomeType.SomeType(Arg.SomeType)
 	Local RetVal.SomeType = New SomeType
 	RetVal\Field0 = IntArithmeticAndCasting(Arg\Field0, Arg\Field1, Arg\Field2)
 	Return RetVal
+End Function
+
+Function EmptyFunction$()
+End Function
+
+Function EmptyFunction2$()
+End Function
+
+Function ReturnEmptyString$()
+    Return ""
 End Function
 
 Print SelectStatement(0)

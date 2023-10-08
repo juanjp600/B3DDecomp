@@ -12,7 +12,7 @@ internal static class Program
         Directory.CreateDirectory(decompPath);
 
         StringConstantDecompiler.FromDir(disasmPath, decompPath);
-        TypeDecompiler.FromDir(disasmPath, decompPath);
+        var types = TypeDecompiler.FromDir(disasmPath, decompPath);
         FunctionDecompiler.IngestFiles.FromDir(disasmPath);
         foreach (var function in Function.AllFunctions)
         {
@@ -38,15 +38,10 @@ internal static class Program
             FunctionDecompiler.CollectCalls.Process(function);
         }
 
-        /*foreach (var instruction in Function.AllFunctions.SelectMany(f => f.AssemblySections.Values).SelectMany(s => s))
-        {
-            if (instruction.Name != "call") { continue; }
-            Console.WriteLine(instruction.ToString());
-        }*/
-
         foreach (var function in Function.AllFunctions)
         {
             FunctionDecompiler.CountLocals.Process(function);
+            UnambiguousIntegerInstructions.Process(function);
         }
 
         bool shouldLoop = true;

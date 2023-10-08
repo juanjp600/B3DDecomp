@@ -58,36 +58,98 @@ static class InferredTypePropagation
         return false;
     }
 
+    private static bool HandleSubCall(Function function, DeclType argType, Function.Instruction[] instructions, int assignmentLocation)
+    {
+        if (argType == DeclType.Unknown) { return false; }
+
+        var trackedLocation = "esp";
+        for (int i = assignmentLocation; i >= 0; i--)
+        {
+            var instruction = instructions[i];
+            if (instruction.Name is "mov" or "lea" or "xchg" &&
+                instruction.LeftArg.StripDeref() == trackedLocation)
+            {
+                trackedLocation = instruction.RightArg.StripDeref();
+
+                if (trackedLocation.StartsWith("ebp") && GetTypeForLocation(function, trackedLocation) == DeclType.Unknown)
+                {
+                    if (trackedLocation.StartsWith("ebp-0x"))
+                    {
+                        // This is a local
+                        int varIndex = (int.Parse(trackedLocation[6..], NumberStyles.HexNumber) - 0x4) >> 2;
+                        if (varIndex >= 0
+                            && varIndex < function.LocalVariables.Count)
+                        {
+                            function.LocalVariables[varIndex] = function.LocalVariables[varIndex] with { DeclType = argType };
+                        }
+                    }
+                    else if (trackedLocation.StartsWith("ebp+0x"))
+                    {
+                        // This is an argument
+                        int paramIndex = (int.Parse(trackedLocation[6..], NumberStyles.HexNumber) - 0x14) >> 2;
+                        if (paramIndex >= 0
+                            && paramIndex < function.Arguments.Count)
+                        {
+                            function.Arguments[paramIndex] = function.Arguments[paramIndex] with { DeclType = argType };
+                        }
+                    }
+
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    private static bool HandleSubCalls(Function function, Function.Instruction[] instructions)
+    {
+        for (int i = instructions.Length - 1; i >= 0; i--)
+        {
+            if (instructions[i].Name != "call") { continue; }
+            var assignmentLocations = instructions[i].CallParameterAssignmentIndices ?? Array.Empty<int>();
+
+            for (var argIndex = 0; argIndex < assignmentLocations.Length; argIndex++)
+            {
+                var callee = Function.AllFunctions.Find(f => f.Name == instructions[i].LeftArg[1..] || f.Name == instructions[i].LeftArg[3..]);
+                var assignmentLocation = assignmentLocations[argIndex];
+                HandleSubCall(function, callee.Arguments[argIndex].DeclType, instructions, assignmentLocation);
+            }
+        }
+
+        return false;
+    }
+
+    private static DeclType GetTypeForLocation(Function function, string location)
+    {
+        if (location.StartsWith("ebp-0x"))
+        {
+            // This is a local
+            int varIndex = (int.Parse(location[6..], NumberStyles.HexNumber) - 0x4) >> 2;
+            if (varIndex >= 0
+                && varIndex < function.LocalVariables.Count)
+            {
+                return function.LocalVariables[varIndex].DeclType;
+            }
+        }
+
+        if (location.StartsWith("ebp+0x"))
+        {
+            // This is an argument
+            int paramIndex = (int.Parse(location[6..], NumberStyles.HexNumber) - 0x14) >> 2;
+            if (paramIndex >= 0
+                && paramIndex < function.Arguments.Count)
+            {
+                return function.Arguments[paramIndex].DeclType;
+            }
+        }
+
+        return DeclType.Unknown;
+    }
+
     private static bool SmearLocalsAndArgs(Function function, Function.Instruction[] instructions)
     {
         bool changedSomething = false;
-
-        DeclType getTypeForLocation(string location)
-        {
-            if (location.StartsWith("ebp-0x"))
-            {
-                // This is a local
-                int varIndex = (int.Parse(location[6..], NumberStyles.HexNumber) - 0x4) >> 2;
-                if (varIndex >= 0
-                    && varIndex < function.LocalVariables.Count)
-                {
-                    return function.LocalVariables[varIndex].DeclType;
-                }
-            }
-
-            if (location.StartsWith("ebp+0x"))
-            {
-                // This is an argument
-                int paramIndex = (int.Parse(location[6..], NumberStyles.HexNumber) - 0x14) >> 2;
-                if (paramIndex >= 0
-                    && paramIndex < function.Arguments.Count)
-                {
-                    return function.Arguments[paramIndex].DeclType;
-                }
-            }
-
-            return DeclType.Unknown;
-        }
 
         void smear(ref BasicDeclaration declaration, string initialLocation, string declarationDesc, int smearDir)
         {
@@ -115,7 +177,7 @@ static class InferredTypePropagation
                 if (instruction.Name is "mov" or "lea" or "xchg" && srcArg == trackedLocation)
                 {
                     trackedLocation = destArg;
-                    var newType = getTypeForLocation(trackedLocation);
+                    var newType = GetTypeForLocation(function, trackedLocation);
                     if (newType != DeclType.Unknown)
                     {
                         declaration = declaration with { DeclType = newType };
@@ -156,6 +218,7 @@ static class InferredTypePropagation
 
         foreach (var section in function.AssemblySections.Values)
         {
+            changedSomething |= HandleSubCalls(function, section);
             changedSomething |= InferReturnTypeInSection(function, section);
             changedSomething |= SmearLocalsAndArgs(function, section);
         }

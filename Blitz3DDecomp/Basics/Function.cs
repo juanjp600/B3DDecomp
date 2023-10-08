@@ -583,7 +583,7 @@ sealed class Function
         new Function("_builtIn__bbStrToInt", DeclType.String) { ReturnType = DeclType.Int },
         new Function("_builtIn__bbStrToFloat", DeclType.String) { ReturnType = DeclType.Float },
         new Function("_builtIn__bbStrLoad", DeclType.String) { ReturnType = DeclType.String },
-        new Function("_builtIn__bbStrRelease", 1),
+        new Function("_builtIn__bbStrRelease", DeclType.String),
         new Function("_builtIn__bbStrStore", 2),
         new Function("_builtIn__bbStrConcat", DeclType.String, DeclType.String) { ReturnType = DeclType.String },
         new Function("_builtIn__bbStrCompare", DeclType.String, DeclType.String) { ReturnType = DeclType.Int },

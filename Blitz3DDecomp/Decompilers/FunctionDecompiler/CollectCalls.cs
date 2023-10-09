@@ -111,6 +111,7 @@ static partial class FunctionDecompiler
                 }
 
                 Function.AllFunctions.Add(new Function(functionName, foundArgCount));
+                if (foundArgCount == 0) { foundArgs.Clear(); }
             }
 
             startInstruction.CallParameterAssignmentIndices =

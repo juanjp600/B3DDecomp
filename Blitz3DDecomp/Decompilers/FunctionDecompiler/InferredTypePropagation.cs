@@ -62,7 +62,7 @@ static class InferredTypePropagation
     {
         if (argType == DeclType.Unknown) { return false; }
 
-        var trackedLocation = instructions[assignmentLocation].LeftArg;
+        var trackedLocation = instructions[assignmentLocation].LeftArg.StripDeref();
         for (int i = assignmentLocation; i >= 0; i--)
         {
             var instruction = instructions[i];

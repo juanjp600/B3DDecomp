@@ -22,7 +22,7 @@ static class UnambiguousIntegerInstructions
                     }
                     return declaration;
                 }
-                    
+
                 var offset = int.Parse(location[6..], NumberStyles.HexNumber) >> 2;
                 if (location[3] == '+')
                 {

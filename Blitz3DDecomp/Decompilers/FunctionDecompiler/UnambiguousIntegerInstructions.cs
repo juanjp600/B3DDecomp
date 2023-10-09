@@ -28,12 +28,14 @@ static class UnambiguousIntegerInstructions
                 {
                     // location is argument
                     int index = offset - 5;
+                    if (index < 0 || index >= function.Arguments.Count) { continue; }
                     function.Arguments[index] = markDeclarationAsInt(function.Arguments[index]);
                 }
                 else if (location[3] == '-')
                 {
                     // location is local variable
                     int index = offset - 1;
+                    if (index < 0 || index >= function.LocalVariables.Count) { continue; }
                     function.LocalVariables[index] = markDeclarationAsInt(function.LocalVariables[index]);
                 }
             }

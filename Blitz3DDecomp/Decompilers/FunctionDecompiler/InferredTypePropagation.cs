@@ -58,9 +58,9 @@ static class InferredTypePropagation
         return false;
     }
 
-    private static bool HandleSubCall(Function function, DeclType argType, Function.Instruction[] instructions, int assignmentLocation)
+    private static bool HandleSubCall(Function function, Function callee, int argIndex, Function.Instruction[] instructions, int assignmentLocation)
     {
-        if (argType == DeclType.Unknown) { return false; }
+        var argType = callee.Arguments[argIndex].DeclType;
 
         var trackedLocation = instructions[assignmentLocation].LeftArg.StripDeref();
         for (int i = assignmentLocation; i >= 0; i--)
@@ -71,8 +71,35 @@ static class InferredTypePropagation
             {
                 trackedLocation = instruction.RightArg.StripDeref();
 
-                if (trackedLocation.StartsWith("ebp") && GetTypeForLocation(function, trackedLocation) == DeclType.Unknown)
+                if (trackedLocation.StartsWith("ebp"))
                 {
+                    var typeForLocation = GetTypeForLocation(function, trackedLocation);
+                    if (typeForLocation != DeclType.Unknown && argType != DeclType.Unknown)
+                    {
+                        // Nothing needs to change here because the types of
+                        // both the given argument and its source are known
+                        return false;
+                    }
+
+                    if (typeForLocation == DeclType.Unknown && argType == DeclType.Unknown)
+                    {
+                        // Nothing can change here because both types are unknown
+                        return false;
+                    }
+
+                    void propagateType(Action propagateFromArgToSource)
+                    {
+                        if (typeForLocation == DeclType.Unknown)
+                        {
+                            propagateFromArgToSource();
+                        }
+                        else if (argType == DeclType.Unknown
+                                 && !callee.Name.StartsWith("_builtIn"))
+                        {
+                            callee.Arguments[argIndex] = callee.Arguments[argIndex] with { DeclType = typeForLocation };
+                        }
+                    }
+                    
                     if (trackedLocation.StartsWith("ebp-0x"))
                     {
                         // This is a local
@@ -80,7 +107,8 @@ static class InferredTypePropagation
                         if (varIndex >= 0
                             && varIndex < function.LocalVariables.Count)
                         {
-                            function.LocalVariables[varIndex] = function.LocalVariables[varIndex] with { DeclType = argType };
+                            propagateType(
+                                propagateFromArgToSource: () => function.LocalVariables[varIndex] = function.LocalVariables[varIndex] with { DeclType = argType });
                         }
                     }
                     else if (trackedLocation.StartsWith("ebp+0x"))
@@ -90,7 +118,8 @@ static class InferredTypePropagation
                         if (paramIndex >= 0
                             && paramIndex < function.Arguments.Count)
                         {
-                            function.Arguments[paramIndex] = function.Arguments[paramIndex] with { DeclType = argType };
+                            propagateType(
+                                propagateFromArgToSource: () => function.Arguments[paramIndex] = function.Arguments[paramIndex] with { DeclType = argType });
                         }
                     }
 
@@ -111,9 +140,10 @@ static class InferredTypePropagation
 
             for (var argIndex = 0; argIndex < assignmentLocations.Length; argIndex++)
             {
-                var callee = Function.AllFunctions.Find(f => f.Name == instructions[i].LeftArg[1..] || f.Name == instructions[i].LeftArg[3..]);
+                var callee = Function.AllFunctions.Find(f => f.Name == instructions[i].LeftArg[1..] || f.Name == instructions[i].LeftArg[3..])
+                    ?? throw new Exception($"Function {instructions[i].LeftArg} not found");
                 var assignmentLocation = assignmentLocations[argIndex];
-                HandleSubCall(function, callee.Arguments[argIndex].DeclType, instructions, assignmentLocation);
+                HandleSubCall(function, callee, argIndex, instructions, assignmentLocation);
             }
         }
 

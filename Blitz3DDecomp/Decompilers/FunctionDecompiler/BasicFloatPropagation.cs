@@ -6,7 +6,7 @@ static partial class FunctionDecompiler
 {
     public static class BasicFloatPropagation
     {
-        private static bool CheckInstructionForMarkAsFloat(Function function, ref BasicDeclaration declaration, string declarationDesc, Function.Instruction instruction, int smearDir, ref DeclType? typeBeyondInstruction)
+        private static bool CheckInstructionForMarkAsFloat(Function function, Variable declaration, string declarationDesc, Function.Instruction instruction, int smearDir, ref DeclType? typeBeyondInstruction)
         {
             bool changedSomething = false;
             if (instruction.Name.Contains("_markAsFloat"))
@@ -21,7 +21,7 @@ static partial class FunctionDecompiler
                 {
                     if (instruction.Name.StartsWith(intToFltName))
                     {
-                        declaration = declaration with { DeclType = DeclType.Int };
+                        declaration.DeclType = DeclType.Int;
                         Console.WriteLine($"{function.Name}: {declarationDesc} is int");
                     }
                     else
@@ -30,7 +30,7 @@ static partial class FunctionDecompiler
                         {
                             Debugger.Break();
                         }
-                        declaration = declaration with { DeclType = DeclType.Float };
+                        declaration.DeclType = DeclType.Float;
                         Console.WriteLine($"{function.Name}: {declarationDesc} is float");
                     }
                     changedSomething = true;
@@ -48,7 +48,7 @@ static partial class FunctionDecompiler
             return changedSomething;
         }
 
-        private static bool HandlePropagationForReturnType(Function function, ref BasicDeclaration declaration, string declarationDesc, Function.Instruction instruction, DeclType? typeAtTop)
+        private static bool HandlePropagationForReturnType(Function function, Variable declaration, string declarationDesc, Function.Instruction instruction, DeclType? typeAtTop)
         {
             bool changedSomething = false;
             var calleeName2 = instruction.LeftArg[1..];
@@ -65,37 +65,38 @@ static partial class FunctionDecompiler
             }
             else
             {
-                declaration = declaration with { DeclType = callee2Function.ReturnType };
+                declaration.DeclType = callee2Function.ReturnType;
                 Console.WriteLine($"{function.Name}: {declarationDesc} is {callee2Function.ReturnType} because {calleeName2}");
                 changedSomething = true;
             }
             return changedSomething;
         }
 
-        private static bool InferTypesForCall(Function function, Function.Instruction[] instructions, int callLocation)
+        private static bool InferTypesForCall(Function function, Function.AssemblySection section, int callLocation)
         {
-            var callInstruction = instructions[callLocation];
+            var callInstruction = section.Instructions[callLocation];
             if (callInstruction.CallParameterAssignmentIndices is not { Length: >0 } callParameterAssignmentIndices) { return false; }
 
             bool changedSomething = false;
             
             var calleeName = callInstruction.LeftArg[1..];
             var callee = Function.AllFunctions.FirstOrDefault(f => f.Name == calleeName || f.Name == calleeName[2..]);
-            for (int i = 0; i < callee.Arguments.Count; i++)
+            if (callee.Name.StartsWith("_builtIn")) { return false; }
+            for (int i = 0; i < callee.Parameters.Count; i++)
             {
-                if (callee.Arguments[i].DeclType != DeclType.Unknown) { continue; }
+                if (callee.Parameters[i].DeclType != DeclType.Unknown) { continue; }
                 var assignmentLocation = callParameterAssignmentIndices[i];
-                var assignmentInstruction = instructions[assignmentLocation];
+                var assignmentInstruction = section.Instructions[assignmentLocation];
                 var trackedLocation = assignmentInstruction.RightArg.StripDeref();
                 DeclType? typeAtTop = null;
                 for (int j = assignmentLocation - 1; j >= 0; j--)
                 {
-                    var instruction = instructions[j];
+                    var instruction = section.Instructions[j];
                     if (instruction.LeftArg.StripDeref() == trackedLocation)
                     {
-                        var arg = callee.Arguments[i];
-                        changedSomething |= CheckInstructionForMarkAsFloat(function, ref arg, $"{calleeName} arg {i}", instruction, smearDir: -1, ref typeAtTop);
-                        callee.Arguments[i] = arg;
+                        var arg = callee.Parameters[i];
+                        changedSomething |= CheckInstructionForMarkAsFloat(function, arg, $"{calleeName} arg {i}", instruction, smearDir: -1, ref typeAtTop);
+                        callee.Parameters[i] = arg;
                     }
 
                     if (instruction.Name is "mov" or "lea" or "xchg" && instruction.LeftArg.StripDeref() == trackedLocation)
@@ -107,9 +108,9 @@ static partial class FunctionDecompiler
                     {
                         if (trackedLocation == "eax")
                         {
-                            var arg = callee.Arguments[i];
-                            changedSomething |= HandlePropagationForReturnType(function, ref arg, $"{calleeName} arg {i}", instruction, typeAtTop);
-                            callee.Arguments[i] = arg;
+                            var arg = callee.Parameters[i];
+                            changedSomething |= HandlePropagationForReturnType(function, arg, $"{calleeName} arg {i}", instruction, typeAtTop);
+                            callee.Parameters[i] = arg;
                         }
                         break;
                     }
@@ -126,24 +127,24 @@ static partial class FunctionDecompiler
             return changedSomething;
         }
 
-        private static bool InferTypesForLocals(Function function, Function.Instruction[] instructions)
+        private static bool InferTypesForLocals(Function function, Function.AssemblySection section)
         {
             bool changedSomething = false;
-            
-            void processDeclaration(ref BasicDeclaration declaration, string initialLocation, string declarationDesc, int smearDir)
+
+            void processDeclaration(Variable declaration, string initialLocation, string declarationDesc, int smearDir)
             {
                 if (declaration.DeclType != DeclType.Unknown) { return; }
 
                 DeclType? typeBeyondInstruction = null;
                 var trackedLocation = initialLocation;
-                for (int j = smearDir > 0 ? 0 : instructions.Length - 1;
-                     j >= 0 && j < instructions.Length;
+                for (int j = smearDir > 0 ? 0 : section.Instructions.Count - 1;
+                     j >= 0 && j < section.Instructions.Count;
                      j += smearDir)
                 {
-                    var instruction = instructions[j];
+                    var instruction = section.Instructions[j];
                     if (instruction.LeftArg.StripDeref() == trackedLocation)
                     {
-                        changedSomething |= CheckInstructionForMarkAsFloat(function, ref declaration, declarationDesc, instruction, smearDir: smearDir, ref typeBeyondInstruction);
+                        changedSomething |= CheckInstructionForMarkAsFloat(function, declaration, declarationDesc, instruction, smearDir: smearDir, ref typeBeyondInstruction);
                     }
 
                     var (destArg, srcArg) = (instruction.LeftArg.StripDeref(), instruction.RightArg.StripDeref());
@@ -168,7 +169,7 @@ static partial class FunctionDecompiler
                             {
                                 Debugger.Break();
                             }
-                            changedSomething |= HandlePropagationForReturnType(function, ref declaration, declarationDesc, instruction, typeBeyondInstruction);
+                            changedSomething |= HandlePropagationForReturnType(function, declaration, declarationDesc, instruction, typeBeyondInstruction);
                         }
                     }
 
@@ -187,17 +188,17 @@ static partial class FunctionDecompiler
             for (int i = 0; i < function.LocalVariables.Count; i++)
             {
                 var variable = function.LocalVariables[i];
-                processDeclaration(ref variable, $"ebp-0x{(i * 4) + 0x4:x1}", $"local {i}", smearDir: -1);
-                processDeclaration(ref variable, $"ebp-0x{(i * 4) + 0x4:x1}", $"local {i}", smearDir: 1);
+                processDeclaration(variable, $"ebp-0x{(i * 4) + 0x4:x1}", $"local {i}", smearDir: -1);
+                processDeclaration(variable, $"ebp-0x{(i * 4) + 0x4:x1}", $"local {i}", smearDir: 1);
                 function.LocalVariables[i] = variable;
             }
             
-            for (int i = 0; i < function.Arguments.Count; i++)
+            for (int i = 0; i < function.Parameters.Count; i++)
             {
-                var variable = function.Arguments[i];
-                processDeclaration(ref variable, $"ebp+0x{((i * 4) + 0x14):x1}", $"arg {i}", smearDir: -1);
-                processDeclaration(ref variable, $"ebp+0x{((i * 4) + 0x14):x1}", $"arg {i}", smearDir: 1);
-                function.Arguments[i] = variable;
+                var variable = function.Parameters[i];
+                processDeclaration(variable, $"ebp+0x{((i * 4) + 0x14):x1}", $"arg {i}", smearDir: -1);
+                processDeclaration(variable, $"ebp+0x{((i * 4) + 0x14):x1}", $"arg {i}", smearDir: 1);
+                function.Parameters[i] = variable;
             }
 
             return changedSomething;
@@ -205,6 +206,8 @@ static partial class FunctionDecompiler
         
         public static bool Process(Function function)
         {
+            if (function.Name.StartsWith("_builtIn")) { return false; }
+
             bool changedSomething = false;
 
             while (true)
@@ -212,9 +215,9 @@ static partial class FunctionDecompiler
                 bool changedSomethingNow = false;
                 foreach (var section in function.AssemblySections.Values)
                 {
-                    for (int i = 0; i < section.Length; i++)
+                    for (int i = 0; i < section.Instructions.Count; i++)
                     {
-                        if (section[i].Name != "call") { continue; }
+                        if (section.Instructions[i].Name != "call") { continue; }
                         changedSomethingNow |= InferTypesForCall(function, section, i);
                     }
 

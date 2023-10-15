@@ -11,11 +11,11 @@ static partial class FunctionDecompiler
             foreach (var kvp in function.AssemblySections.ToList())
             {
                 var section = kvp.Value;
-                for (int i = 0; i < section.Length - 2; i++)
+                for (int i = 0; i < section.Instructions.Count - 2; i++)
                 {
-                    var instruction = section[i];
-                    var nextInstruction = section[i + 1];
-                    var instructionAfterNext = section[i + 2];
+                    var instruction = section.Instructions[i];
+                    var nextInstruction = section.Instructions[i + 1];
+                    var instructionAfterNext = section.Instructions[i + 2];
                     if (instruction.Name == "push" && instructionAfterNext.Name == "pop"
                         && instruction.LeftArg == instructionAfterNext.LeftArg)
                     {
@@ -23,8 +23,9 @@ static partial class FunctionDecompiler
 
                         instruction.Name = nextInstruction.Name + "_markAsFloat";
 
-                        section = section[..(i + 1)].Concat(section[(i + 3)..]).ToArray();
-                        section[i] = instruction;
+                        section.Instructions.RemoveAt(i + 2);
+                        section.Instructions.RemoveAt(i + 1);
+                        section.Instructions[i] = instruction;
                         function.AssemblySections[kvp.Key] = section;
                     }
                 }

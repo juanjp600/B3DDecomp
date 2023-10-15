@@ -7,20 +7,21 @@ internal static class Program
     {
         string disasmPath = "C:/Users/juanj/Desktop/Blitz3D/ReverseEng/game_disasm/";
         disasmPath = "C:/Users/juanj/Repos/Blitz3DDecomp/SamplePrograms/Sample1/Sample1_disasm/";
+        disasmPath = "C:/Users/juanj/Desktop/Blitz3D/ReverseEng/game_disasm/";
         string decompPath = disasmPath.Replace("_disasm", "_decomp");
         if (Directory.Exists(decompPath)) { Directory.Delete(decompPath, true); }
         Directory.CreateDirectory(decompPath);
 
         StringConstantDecompiler.FromDir(disasmPath, decompPath);
-        var types = TypeDecompiler.FromDir(disasmPath, decompPath);
-        FunctionDecompiler.IngestFiles.FromDir(disasmPath);
+        TypeDecompiler.FromDir(disasmPath, decompPath);
+        IngestCodeFiles.FromDir(disasmPath);
         foreach (var function in Function.AllFunctions)
         {
             FunctionDecompiler.MarkAsFloat.Process(function);
         }
         var usedInstructions = Function.AllFunctions.SelectMany(f => f.AssemblySections.Values)
-            .SelectMany(instrs => instrs).Select(instr => instr.Name).ToHashSet();
-        
+            .SelectMany(section => section.Instructions).Select(instr => instr.Name).ToHashSet();
+
         foreach (var function in Function.AllFunctions)
         {
             FunctionDecompiler.CountArguments.Process(function);
@@ -50,9 +51,18 @@ internal static class Program
             shouldLoop = false;
             foreach (var function in Function.AllFunctions)
             {
-                shouldLoop |= FunctionDecompiler.BbObjTypeInference.Process(function);
-                shouldLoop |= FunctionDecompiler.BasicFloatPropagation.Process(function);
-                shouldLoop |= InferredTypePropagation.Process(function);
+                void handleNeedForLooping(bool result, string msg)
+                {
+                    if (result)
+                    {
+                        if (!shouldLoop) { Console.WriteLine(msg); }
+                        shouldLoop = true;
+                    }
+                }
+
+                handleNeedForLooping(FunctionDecompiler.BbObjTypeInference.Process(function), "BbObjTypeInference.Process returned true");
+                handleNeedForLooping(FunctionDecompiler.BasicFloatPropagation.Process(function), "BasicFloatPropagation.Process returned true");
+                handleNeedForLooping(InferredTypePropagation.Process(function), "InferredTypePropagation.Process returned true");
             }
         }
 
@@ -62,21 +72,21 @@ internal static class Program
         var dingus = sjdfsd
             .Where(f =>
                 f.ReturnType != DeclType.Unknown
-                || f.Arguments.Any(a => a.DeclType != DeclType.Unknown)
+                || f.Parameters.Any(a => a.DeclType != DeclType.Unknown)
                 || f.LocalVariables.Any(v => v.DeclType != DeclType.Unknown))
             .ToArray();
         var dingus2 = dingus
             .Where(f =>
                 f.ReturnType == DeclType.String
-                || f.Arguments.Any(a => a.DeclType == DeclType.String)
+                || f.Parameters.Any(a => a.DeclType == DeclType.String)
                 || f.LocalVariables.Any(v => v.DeclType == DeclType.String))
             .ToArray();
 
-        var djdjdjd = Function.AllFunctions
-            .Where(f => f.CoreSymbolName.Contains("_builtIn"))
+        var djdjdjd = sjdfsd
             .Where(f => f.ReturnType == DeclType.Unknown)
-            .Where(f => f.Arguments.All(a => a.DeclType == DeclType.Unknown))
+            .Where(f => f.Parameters.All(a => a.DeclType == DeclType.Unknown))
             .Where(f => f.LocalVariables.All(v => v.DeclType == DeclType.Unknown))
+            .OrderByDescending(f => f.LocalVariables.Count + f.Parameters.Count)
             .ToArray();
 
         Debugger.Break();

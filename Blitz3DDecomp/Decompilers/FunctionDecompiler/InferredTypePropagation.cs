@@ -5,14 +5,14 @@ namespace Blitz3DDecomp;
 
 static class InferredTypePropagation
 {
-    private static bool InferReturnTypeInSection(Function function, Function.Instruction[] instructions)
+    private static bool InferReturnTypeInSection(Function function, Function.AssemblySection section)
     {
         if (function.ReturnType != DeclType.Unknown) { return false; }
 
         var trackedLocation = "";
-        for (int i = instructions.Length - 1; i >= 0; i--)
+        for (int i = section.Instructions.Count - 1; i >= 0; i--)
         {
-            var instruction = instructions[i];
+            var instruction = section.Instructions[i];
             if (instruction.Name is "jmp" && instruction.LeftArg.Contains("_leave"))
             {
                 trackedLocation = "eax";
@@ -58,14 +58,14 @@ static class InferredTypePropagation
         return false;
     }
 
-    private static bool HandleSubCall(Function function, Function callee, int argIndex, Function.Instruction[] instructions, int assignmentLocation)
+    private static bool HandleSubCall(Function function, Function callee, int argIndex, Function.AssemblySection section, int assignmentLocation)
     {
-        var argType = callee.Arguments[argIndex].DeclType;
+        var argType = callee.Parameters[argIndex].DeclType;
 
-        var trackedLocation = instructions[assignmentLocation].LeftArg.StripDeref();
+        var trackedLocation = section.Instructions[assignmentLocation].LeftArg.StripDeref();
         for (int i = assignmentLocation; i >= 0; i--)
         {
-            var instruction = instructions[i];
+            var instruction = section.Instructions[i];
             if (instruction.Name is "mov" or "lea" or "xchg" &&
                 instruction.LeftArg.StripDeref() == trackedLocation)
             {
@@ -87,17 +87,22 @@ static class InferredTypePropagation
                         return false;
                     }
 
-                    void propagateType(Action propagateFromArgToSource)
+                    bool propagateType(string sourceDesc, Action propagateFromArgToSource)
                     {
                         if (typeForLocation == DeclType.Unknown)
                         {
+                            Console.WriteLine($"{sourceDesc} is {callee.Parameters[argIndex].DeclType} because {callee.Name}'s arg {argIndex}");
                             propagateFromArgToSource();
+                            return true;
                         }
                         else if (argType == DeclType.Unknown
                                  && !callee.Name.StartsWith("_builtIn"))
                         {
-                            callee.Arguments[argIndex] = callee.Arguments[argIndex] with { DeclType = typeForLocation };
+                            Console.WriteLine($"{callee.Name}'s arg {argIndex} is {typeForLocation} because {sourceDesc}");
+                            callee.Parameters[argIndex].DeclType = typeForLocation;
+                            return true;
                         }
+                        return false;
                     }
                     
                     if (trackedLocation.StartsWith("ebp-0x"))
@@ -107,8 +112,9 @@ static class InferredTypePropagation
                         if (varIndex >= 0
                             && varIndex < function.LocalVariables.Count)
                         {
-                            propagateType(
-                                propagateFromArgToSource: () => function.LocalVariables[varIndex] = function.LocalVariables[varIndex] with { DeclType = argType });
+                            return propagateType(
+                                sourceDesc: $"{function.Name}'s local {varIndex}",
+                                propagateFromArgToSource: () => function.LocalVariables[varIndex] .DeclType = argType);
                         }
                     }
                     else if (trackedLocation.StartsWith("ebp+0x"))
@@ -116,14 +122,15 @@ static class InferredTypePropagation
                         // This is an argument
                         int paramIndex = (int.Parse(trackedLocation[6..], NumberStyles.HexNumber) - 0x14) >> 2;
                         if (paramIndex >= 0
-                            && paramIndex < function.Arguments.Count)
+                            && paramIndex < function.Parameters.Count)
                         {
-                            propagateType(
-                                propagateFromArgToSource: () => function.Arguments[paramIndex] = function.Arguments[paramIndex] with { DeclType = argType });
+                            return propagateType(
+                                sourceDesc: $"{function.Name}'s arg {paramIndex}",
+                                propagateFromArgToSource: () => function.Parameters[paramIndex].DeclType = argType);
                         }
                     }
 
-                    return true;
+                    return false;
                 }
             }
         }
@@ -131,23 +138,24 @@ static class InferredTypePropagation
         return false;
     }
 
-    private static bool HandleSubCalls(Function function, Function.Instruction[] instructions)
+    private static bool HandleSubCalls(Function function, Function.AssemblySection section)
     {
-        for (int i = instructions.Length - 1; i >= 0; i--)
+        bool changesMade = false;
+        for (int i = section.Instructions.Count - 1; i >= 0; i--)
         {
-            if (instructions[i].Name != "call") { continue; }
-            var assignmentLocations = instructions[i].CallParameterAssignmentIndices ?? Array.Empty<int>();
+            if (section.Instructions[i].Name != "call") { continue; }
+            var assignmentLocations = section.Instructions[i].CallParameterAssignmentIndices ?? Array.Empty<int>();
 
             for (var argIndex = 0; argIndex < assignmentLocations.Length; argIndex++)
             {
-                var callee = Function.AllFunctions.Find(f => f.Name == instructions[i].LeftArg[1..] || f.Name == instructions[i].LeftArg[3..])
-                    ?? throw new Exception($"Function {instructions[i].LeftArg} not found");
+                var callee = Function.AllFunctions.Find(f => f.Name == section.Instructions[i].LeftArg[1..] || f.Name == section.Instructions[i].LeftArg[3..])
+                    ?? throw new Exception($"Function {section.Instructions[i].LeftArg} not found");
                 var assignmentLocation = assignmentLocations[argIndex];
-                HandleSubCall(function, callee, argIndex, instructions, assignmentLocation);
+                changesMade |= HandleSubCall(function, callee, argIndex, section, assignmentLocation);
             }
         }
 
-        return false;
+        return changesMade;
     }
 
     private static DeclType GetTypeForLocation(Function function, string location)
@@ -168,27 +176,27 @@ static class InferredTypePropagation
             // This is an argument
             int paramIndex = (int.Parse(location[6..], NumberStyles.HexNumber) - 0x14) >> 2;
             if (paramIndex >= 0
-                && paramIndex < function.Arguments.Count)
+                && paramIndex < function.Parameters.Count)
             {
-                return function.Arguments[paramIndex].DeclType;
+                return function.Parameters[paramIndex].DeclType;
             }
         }
 
         return DeclType.Unknown;
     }
 
-    private static bool SmearLocalsAndArgs(Function function, Function.Instruction[] instructions)
+    private static bool SmearLocalsAndArgs(Function function, Function.AssemblySection section)
     {
         bool changedSomething = false;
 
-        void smear(ref BasicDeclaration declaration, string initialLocation, string declarationDesc, int smearDir)
+        void smear(Variable declaration, string initialLocation, string declarationDesc, int smearDir)
         {
             var trackedLocation = initialLocation;
-            for (int i = smearDir > 0 ? 0 : instructions.Length - 1;
-                 i >= 0 && i < instructions.Length;
+            for (int i = smearDir > 0 ? 0 : section.Instructions.Count - 1;
+                 i >= 0 && i < section.Instructions.Count;
                  i += smearDir)
             {
-                var instruction = instructions[i];
+                var instruction = section.Instructions[i];
 
                 if (instruction.Name is
                     "call" or "jmp" or "je" or "jz"
@@ -210,7 +218,7 @@ static class InferredTypePropagation
                     var newType = GetTypeForLocation(function, trackedLocation);
                     if (newType != DeclType.Unknown)
                     {
-                        declaration = declaration with { DeclType = newType };
+                        declaration.DeclType = newType;
                         Console.WriteLine($"{function.Name}: {declarationDesc} is {newType} because {trackedLocation}");
                         changedSomething = true;
                         break;
@@ -224,19 +232,19 @@ static class InferredTypePropagation
             if (function.LocalVariables[localIndex].DeclType != DeclType.Unknown) { continue; }
 
             var variable = function.LocalVariables[localIndex];
-            smear(ref variable, $"ebp-0x{(localIndex * 4) + 0x4:x1}", $"local {localIndex}", smearDir: -1);
-            smear(ref variable, $"ebp-0x{(localIndex * 4) + 0x4:x1}", $"local {localIndex}", smearDir: 1);
+            smear(variable, $"ebp-0x{(localIndex * 4) + 0x4:x1}", $"local {localIndex}", smearDir: -1);
+            smear(variable, $"ebp-0x{(localIndex * 4) + 0x4:x1}", $"local {localIndex}", smearDir: 1);
             function.LocalVariables[localIndex] = variable;
         }
         
-        for (int argIndex = 0; argIndex < function.Arguments.Count; argIndex++)
+        for (int argIndex = 0; argIndex < function.Parameters.Count; argIndex++)
         {
-            if (function.Arguments[argIndex].DeclType != DeclType.Unknown) { continue; }
+            if (function.Parameters[argIndex].DeclType != DeclType.Unknown) { continue; }
 
-            var variable = function.Arguments[argIndex];
-            smear(ref variable, $"ebp+0x{(argIndex * 4) + 0x14:x1}", $"arg {argIndex}", smearDir: 1);
-            smear(ref variable, $"ebp+0x{(argIndex * 4) + 0x14:x1}", $"arg {argIndex}", smearDir: -1);
-            function.Arguments[argIndex] = variable;
+            var variable = function.Parameters[argIndex];
+            smear(variable, $"ebp+0x{(argIndex * 4) + 0x14:x1}", $"arg {argIndex}", smearDir: 1);
+            smear(variable, $"ebp+0x{(argIndex * 4) + 0x14:x1}", $"arg {argIndex}", smearDir: -1);
+            function.Parameters[argIndex] = variable;
         }
 
         return changedSomething;

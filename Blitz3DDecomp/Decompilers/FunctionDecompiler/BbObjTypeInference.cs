@@ -6,17 +6,17 @@ static partial class FunctionDecompiler
 {
     public static class BbObjTypeInference
     {
-        private static void InferTypesForCall(Function function, Function.Instruction[] instructions, int callLocation)
+        private static void InferTypesForCall(Function function, Function.AssemblySection section, int callLocation)
         {
-            var callInstruction = instructions[callLocation];
+            var callInstruction = section.Instructions[callLocation];
             if (!string.IsNullOrEmpty(callInstruction.BbObjType)) { return; }
             if (callInstruction.CallParameterAssignmentIndices is not { Length: >0 } callParameterAssignmentIndices) { return; }
             var calleeName = callInstruction.LeftArg[1..];
             var callee = Function.AllFunctions.FirstOrDefault(f => f.Name == calleeName || f.Name == calleeName[2..]);
-            for (int i = 0; i < callee.Arguments.Count; i++)
+            for (int i = 0; i < callee.Parameters.Count; i++)
             {
                 var assignmentLocation = callParameterAssignmentIndices[i];
-                var assignmentInstruction = instructions[assignmentLocation];
+                var assignmentInstruction = section.Instructions[assignmentLocation];
                 if (assignmentInstruction.RightArg.StartsWith("@_t"))
                 {
                     callInstruction.BbObjType = assignmentInstruction.RightArg[1..];
@@ -25,7 +25,7 @@ static partial class FunctionDecompiler
                 var trackedLocation = assignmentInstruction.RightArg.StripDeref();
                 for (int j = assignmentLocation - 1; j >= 0; j--)
                 {
-                    var instruction = instructions[j];
+                    var instruction = section.Instructions[j];
                     if (instruction.Name is "mov" or "lea" or "xchg" && instruction.LeftArg.StripDeref() == trackedLocation)
                     {
                         trackedLocation = instruction.RightArg.StripDeref();
@@ -61,7 +61,7 @@ static partial class FunctionDecompiler
             }
         }
 
-        private static bool InferTypesForLocals(Function function, Function.Instruction[] instructions)
+        private static bool InferTypesForLocals(Function function, Function.AssemblySection section)
         {
             bool changedSomething = false;
             for (int i = 0; i < function.LocalVariables.Count; i++)
@@ -70,9 +70,9 @@ static partial class FunctionDecompiler
 
                 DeclType? typeAtTop = null;
                 var trackedLocation = $"ebp-0x{(i * 4) + 0x4:x1}";
-                for (int j = instructions.Length - 1; j >= 0; j--)
+                for (int j = section.Instructions.Count - 1; j >= 0; j--)
                 {
-                    var instruction = instructions[j];
+                    var instruction = section.Instructions[j];
                     if (instruction.Name is "mov" or "lea" or "xchg" && instruction.LeftArg.StripDeref() == trackedLocation)
                     {
                         trackedLocation = instruction.RightArg.StripDeref();
@@ -95,10 +95,10 @@ static partial class FunctionDecompiler
                             if (string.IsNullOrEmpty(bbObjType))
                             {
                                 var secondParamAssignmentLocation = instruction.CallParameterAssignmentIndices[1];
-                                var tl3 = instructions[secondParamAssignmentLocation].LeftArg.StripDeref();
+                                var tl3 = section.Instructions[secondParamAssignmentLocation].LeftArg.StripDeref();
                                 for (int k = secondParamAssignmentLocation; k >= 0; k--)
                                 {
-                                    var instruction2 = instructions[k];
+                                    var instruction2 = section.Instructions[k];
 
                                     if (instruction2.Name is
                                         "call" or "jmp" or "je" or "jz"
@@ -130,10 +130,10 @@ static partial class FunctionDecompiler
                             if (!string.IsNullOrEmpty(bbObjType))
                             {
                                 var firstParamAssignmentLocation = instruction.CallParameterAssignmentIndices[0];
-                                var tl2 = instructions[firstParamAssignmentLocation].LeftArg.StripDeref();
+                                var tl2 = section.Instructions[firstParamAssignmentLocation].LeftArg.StripDeref();
                                 for (int k = firstParamAssignmentLocation; k >= 0; k--)
                                 {
-                                    var instruction2 = instructions[k];
+                                    var instruction2 = section.Instructions[k];
 
                                     if (instruction2.Name is
                                         "call" or "jmp" or "je" or "jz"
@@ -163,7 +163,7 @@ static partial class FunctionDecompiler
 
                         if (!string.IsNullOrEmpty(bbObjType) && instrIsConstructor)
                         {
-                            function.LocalVariables[i] = function.LocalVariables[i] with { DeclType = new DeclType("."+bbObjType[2..]) };
+                            function.LocalVariables[i].DeclType = new DeclType("."+bbObjType[2..]);
                             Console.WriteLine($"{function.Name}: local {i} is {function.LocalVariables[i].DeclType} because {instruction.LeftArg}");
                             changedSomething = true;
                             break;
@@ -192,9 +192,9 @@ static partial class FunctionDecompiler
                 bool changedSomethingNow = false;
                 foreach (var section in function.AssemblySections.Values)
                 {
-                    for (int i=0;i<section.Length;i++)
+                    for (int i = 0; i < section.Instructions.Count; i++)
                     {
-                        if (section[i].Name != "call") { continue; }
+                        if (section.Instructions[i].Name != "call") { continue; }
                         InferTypesForCall(function, section, i);
                     }
                     changedSomethingNow |= InferTypesForLocals(function, section);

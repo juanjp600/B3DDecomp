@@ -1,13 +1,26 @@
-﻿using System.Security.Cryptography;
-
-namespace Blitz3DDecomp;
+﻿namespace Blitz3DDecomp;
 
 sealed class Function
 {
-    public readonly string Name;
-    public readonly Dictionary<string, Instruction[]> AssemblySections;
+    public sealed class AssemblySection
+    {
+        public readonly List<Instruction> Instructions = new List<Instruction>();
+    }
 
-    public int TotalInstructionCount => AssemblySections.Values.Select(s => s.Length).Sum();
+    public sealed class Parameter : Variable
+    {
+        public Parameter(string name) : base(name) { }
+    }
+
+    public sealed class LocalVariable : Variable
+    {
+        public LocalVariable(string name) : base(name) { }
+    }
+
+    public readonly string Name;
+    public readonly Dictionary<string, AssemblySection> AssemblySections;
+
+    public int TotalInstructionCount => AssemblySections.Values.Select(s => s.Instructions.Count).Sum();
 
     public static readonly List<Function> AllFunctions = new Function[]
     {
@@ -616,8 +629,8 @@ sealed class Function
                 : $"_f{Name}";
 
     public DeclType ReturnType = DeclType.Unknown;
-    public readonly List<BasicDeclaration> Arguments = new List<BasicDeclaration>();
-    public readonly List<BasicDeclaration> LocalVariables = new List<BasicDeclaration>();
+    public readonly List<Parameter> Parameters = new List<Parameter>();
+    public readonly List<LocalVariable> LocalVariables = new List<LocalVariable>();
 
     public sealed class Instruction
     {
@@ -638,7 +651,7 @@ sealed class Function
 
     private static Function rtSym(string str)
     {
-        static DeclType ripReturnTypeFromStr(ref string str)
+        static DeclType ripTypeFromStr(ref string str, DeclType defaultType)
         {
             if (str[0] == '#')
             {
@@ -655,35 +668,35 @@ sealed class Function
                 str = str[1..];
                 return DeclType.String;
             }
-            return DeclType.Int;
+            return defaultType;
         }
 
-        DeclType returnType = ripReturnTypeFromStr(ref str);
+        DeclType returnType = ripTypeFromStr(ref str, DeclType.Unknown);
 
         str = str
             .Replace("%", " %")
             .Replace("#", " #")
             .Replace("$", " $");
         var split = str.Split(" ");
-        var args = new List<BasicDeclaration>();
+        var parameters = new List<Parameter>();
         foreach (var s in split.Skip(1))
         {
             var argName = s;
-            var argType = ripReturnTypeFromStr(ref argName);
-            args.Add(new BasicDeclaration { Name = argName, DeclType = argType });
+            var argType = ripTypeFromStr(ref argName, DeclType.Int);
+            parameters.Add(new Parameter(argName) { DeclType = argType });
         }
 
-        var newFunction = new Function($"_builtIn_f{split[0].ToLowerInvariant()}", 0);
-        newFunction.Arguments.Clear(); newFunction.Arguments.AddRange(args);
+        var newFunction = new Function($"_builtIn_f{split[0].ToLowerInvariant()}", 0) { ReturnType = returnType };
+        newFunction.Parameters.Clear(); newFunction.Parameters.AddRange(parameters);
         return newFunction;
     }
 
     public Function(string name, int argCount)
     {
         Name = name;
-        AssemblySections = new Dictionary<string, Instruction[]>();
-        Arguments = Enumerable.Range(0, argCount)
-            .Select(i => new BasicDeclaration { DeclType = DeclType.Unknown, Name = $"arg{i}" })
+        AssemblySections = new Dictionary<string, AssemblySection>();
+        Parameters = Enumerable.Range(0, argCount)
+            .Select(i => new Parameter($"arg{i}") { DeclType = DeclType.Unknown })
             .ToList();
     }
 
@@ -691,11 +704,11 @@ sealed class Function
     {
         for (int i = 0; i < types.Length; i++)
         {
-            Arguments[i] = Arguments[i] with { DeclType = types[i] };
+            Parameters[i].DeclType = types[i];
         }
     }
 
-    public Function(string name, Dictionary<string, Instruction[]> assemblySections)
+    public Function(string name, Dictionary<string, AssemblySection> assemblySections)
     {
         Name = name;
         AssemblySections = assemblySections;

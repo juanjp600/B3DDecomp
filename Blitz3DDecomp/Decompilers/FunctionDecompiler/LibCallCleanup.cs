@@ -6,14 +6,14 @@ static partial class FunctionDecompiler
 {
     public static class LibCallCleanup
     {
-        private static void CrawlUp(Function.Instruction[] instructions, int startIndex)
+        private static void CrawlUp(Function.AssemblySection section, int startIndex)
         {
-            var startInstruction = instructions[startIndex];
+            var startInstruction = section.Instructions[startIndex];
 
             var register = startInstruction.LeftArg;
             for (int i = startIndex - 1; i >= 0; i--)
             {
-                var instruction = instructions[i];
+                var instruction = section.Instructions[i];
                 if ((instruction.Name == "mov" && instruction.LeftArg == register)
                     || (instruction.Name == "xchg" && (instruction.LeftArg == register || instruction.RightArg == register)))
                 {
@@ -26,7 +26,7 @@ static partial class FunctionDecompiler
                     {
                         source = source[1..^1];
                         startInstruction.LeftArg = source;
-                        instructions[startIndex] = startInstruction;
+                        section.Instructions[startIndex] = startInstruction;
                         break;
                     }
                 }
@@ -37,13 +37,13 @@ static partial class FunctionDecompiler
         {
             foreach (var kvp in function.AssemblySections)
             {
-                var instructions = kvp.Value;
-                for (int i = 0; i < instructions.Length; i++)
+                var section = kvp.Value;
+                for (int i = 0; i < section.Instructions.Count; i++)
                 {
-                    var instruction = instructions[i];
+                    var instruction = section.Instructions[i];
                     if (instruction.Name != "call") { continue; }
                     if (!instruction.LeftArg.ContainsRegister()) { continue; }
-                    CrawlUp(instructions, i);
+                    CrawlUp(section, i);
                 }
             }
         }

@@ -11,15 +11,15 @@ static partial class FunctionDecompiler
         public static void Process(Function function)
         {
             if (!function.AssemblySections.Any()) { return; }
-            var coreSection =
+            var coreSectionInstructions =
                 function.Name == "__MAIN"
-                    ? function.AssemblySections.First(kvp => kvp.Key.EndsWith("_begin__MAIN")).Value
-                    : function.AssemblySections[function.CoreSymbolName].Skip(5).ToArray();
+                    ? function.AssemblySections.First(kvp => kvp.Key.EndsWith("_begin__MAIN")).Value.Instructions.ToArray()
+                    : function.AssemblySections[function.CoreSymbolName].Instructions.Skip(5).ToArray();
 
             var ebpOffsetLocalRegex = new Regex("\\[ebp-0x([0-9a-f]+)\\]");
             var ebpOffsetArgRegex = new Regex("\\[ebp\\+0x([0-9a-f]+)\\]");
             var ebpOffsets = new HashSet<int>();
-            foreach (var instruction in coreSection)
+            foreach (var instruction in coreSectionInstructions)
             {
                 if (ebpOffsetArgRegex.Match(instruction.LeftArg) is { Success: true })
                 {
@@ -47,7 +47,7 @@ static partial class FunctionDecompiler
                     Debugger.Break();
                 }
             }
-            function.LocalVariables.AddRange(Enumerable.Range(0, ebpOffsets.Count).Select(i => new BasicDeclaration { DeclType = DeclType.Unknown, Name = $"local{i}"}));
+            function.LocalVariables.AddRange(Enumerable.Range(0, ebpOffsets.Count).Select(i => new Function.LocalVariable($"local{i}") { DeclType = DeclType.Unknown }));
         }
     }
 }

@@ -4,23 +4,27 @@ namespace Blitz3DDecomp;
 
 static class UnambiguousIntegerInstructions
 {
-    private static void Process(Function function, Function.Instruction[] section)
+    private static void Process(Function function, Function.AssemblySection section)
     {
-        foreach (var instruction in section)
+        foreach (var instruction in section.Instructions)
         {
-            if (instruction.Name == "cmp" && instruction.RightArg != "0x0")
+            var (arg0, arg1) = (instruction.LeftArg.StripDeref(), instruction.RightArg.StripDeref());
+            if (arg1.StartsWith("ebp"))
+            {
+                (arg0, arg1) = (arg1, arg0);
+            }
+            if (instruction.Name == "cmp" && arg1 != "0x0")
             {
                 // cmp with a non-zero argument is almost definitely working with integers
-                var location = instruction.LeftArg.StripDeref();
+                var location = arg0;
                 if (!location.StartsWith("ebp")) { continue; }
 
-                static BasicDeclaration markDeclarationAsInt(BasicDeclaration declaration)
+                static void markDeclarationAsInt(Variable declaration)
                 {
                     if (declaration.DeclType == DeclType.Unknown)
                     {
-                        return declaration with { DeclType = DeclType.Int };
+                        declaration.DeclType = DeclType.Int;
                     }
-                    return declaration;
                 }
 
                 var offset = int.Parse(location[6..], NumberStyles.HexNumber) >> 2;
@@ -28,15 +32,15 @@ static class UnambiguousIntegerInstructions
                 {
                     // location is argument
                     int index = offset - 5;
-                    if (index < 0 || index >= function.Arguments.Count) { continue; }
-                    function.Arguments[index] = markDeclarationAsInt(function.Arguments[index]);
+                    if (index < 0 || index >= function.Parameters.Count) { continue; }
+                    markDeclarationAsInt(function.Parameters[index]);
                 }
                 else if (location[3] == '-')
                 {
                     // location is local variable
                     int index = offset - 1;
                     if (index < 0 || index >= function.LocalVariables.Count) { continue; }
-                    function.LocalVariables[index] = markDeclarationAsInt(function.LocalVariables[index]);
+                    markDeclarationAsInt(function.LocalVariables[index]);
                 }
             }
         }

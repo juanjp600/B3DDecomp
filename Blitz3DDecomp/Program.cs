@@ -14,6 +14,8 @@ internal static class Program
 
         StringConstantDecompiler.FromDir(disasmPath, decompPath);
         TypeDecompiler.FromDir(disasmPath, decompPath);
+        LoadGlobalList.FromDir(disasmPath);
+        var allGlobals = GlobalVariable.AllGlobals;
         IngestCodeFiles.FromDir(disasmPath);
         foreach (var function in Function.AllFunctions)
         {
@@ -66,29 +68,53 @@ internal static class Program
             }
         }
 
-        var sjdfsd = Function.AllFunctions
+        var functionsWithAssemblySections = Function.AllFunctions
             .Where(f => f.AssemblySections.Any())
             .ToArray();
-        var dingus = sjdfsd
+        var functionsWithSomeGoodBits = functionsWithAssemblySections
             .Where(f =>
                 f.ReturnType != DeclType.Unknown
                 || f.Parameters.Any(a => a.DeclType != DeclType.Unknown)
                 || f.LocalVariables.Any(v => v.DeclType != DeclType.Unknown))
             .ToArray();
-        var dingus2 = dingus
+        var megaGoodFunctions = functionsWithAssemblySections
+            .Where(f => f.ReturnType != DeclType.Unknown)
+            .Where(f => f.Parameters.All(a => a.DeclType != DeclType.Unknown))
+            .Where(f => f.LocalVariables.All(v => v.DeclType != DeclType.Unknown))
+            .OrderByDescending(f => f.LocalVariables.Count + f.Parameters.Count)
+            .ToArray();
+        var goodFunctionsWithStringInSignature = functionsWithSomeGoodBits
             .Where(f =>
                 f.ReturnType == DeclType.String
                 || f.Parameters.Any(a => a.DeclType == DeclType.String)
                 || f.LocalVariables.Any(v => v.DeclType == DeclType.String))
             .ToArray();
 
-        var djdjdjd = sjdfsd
+        var badFunctions = functionsWithAssemblySections
+            .Where(f =>
+                f.ReturnType == DeclType.Unknown
+                || f.Parameters.Any(a => a.DeclType == DeclType.Unknown)
+                || f.LocalVariables.Any(v => v.DeclType == DeclType.Unknown))
+            .OrderByDescending(f => f.LocalVariables.Count(v => v.DeclType == DeclType.Unknown)
+                                    + f.Parameters.Count(p => p.DeclType == DeclType.Unknown))
+            .ToArray();
+
+        var megaBadFunctions = functionsWithAssemblySections
             .Where(f => f.ReturnType == DeclType.Unknown)
             .Where(f => f.Parameters.All(a => a.DeclType == DeclType.Unknown))
             .Where(f => f.LocalVariables.All(v => v.DeclType == DeclType.Unknown))
             .OrderByDescending(f => f.LocalVariables.Count + f.Parameters.Count)
             .ToArray();
 
+        var goodGlobals = GlobalVariable
+            .AllGlobals
+            .Where(v => v.DeclType != DeclType.Unknown)
+            .ToArray();
+        var badGlobals = GlobalVariable
+            .AllGlobals
+            .Where(v => v.DeclType == DeclType.Unknown)
+            .ToArray();
+        
         Debugger.Break();
     }
 }

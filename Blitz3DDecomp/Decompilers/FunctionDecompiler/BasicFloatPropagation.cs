@@ -31,6 +31,10 @@ static partial class FunctionDecompiler
                             Debugger.Break();
                         }
                         declaration.DeclType = DeclType.Float;
+                        if (declarationDesc.Contains("_fdrawtick arg 2"))
+                        {
+                            Debugger.Break();
+                        }
                         Console.WriteLine($"{function.Name}: {declarationDesc} is float");
                     }
                     changedSomething = true;
@@ -94,14 +98,23 @@ static partial class FunctionDecompiler
                     var instruction = section.Instructions[j];
                     if (instruction.LeftArg.StripDeref() == trackedLocation)
                     {
-                        var arg = callee.Parameters[i];
-                        changedSomething |= CheckInstructionForMarkAsFloat(function, arg, $"{calleeName} arg {i}", instruction, smearDir: -1, ref typeAtTop);
-                        callee.Parameters[i] = arg;
+                        changedSomething |= CheckInstructionForMarkAsFloat(function, callee.Parameters[i], $"{calleeName} arg {i}", instruction, smearDir: -1, ref typeAtTop);
                     }
 
-                    if (instruction.Name is "mov" or "lea" or "xchg" && instruction.LeftArg.StripDeref() == trackedLocation)
+                    if (instruction.LeftArg.StripDeref() == trackedLocation)
                     {
-                        trackedLocation = instruction.RightArg.StripDeref();
+                        if (instruction.Name is "mov" or "lea" or "xchg")
+                        {
+                            trackedLocation = instruction.RightArg.StripDeref();
+                        }
+
+                        if (instruction.Name == "movzx")
+                        {
+                            Console.WriteLine($"{calleeName} arg {i} is int because {instruction}");
+                            callee.Parameters[i].DeclType = DeclType.Int;
+                            changedSomething = true;
+                            break;
+                        }
                     }
 
                     if (instruction.Name is "call")
@@ -152,10 +165,21 @@ static partial class FunctionDecompiler
                     {
                         (destArg, srcArg) = (srcArg, destArg);
                     }
-                    
-                    if (instruction.Name is "mov" or "lea" or "xchg" && srcArg == trackedLocation)
+
+                    if (srcArg == trackedLocation)
                     {
-                        trackedLocation = destArg;
+                        if (instruction.Name is "mov" or "lea" or "xchg")
+                        {
+                            trackedLocation = destArg;
+                        }
+
+                        if (instruction.Name == "movzx" && smearDir < 0)
+                        {
+                            Console.WriteLine($"{declarationDesc} is int because {instruction}");
+                            declaration.DeclType = DeclType.Int;
+                            changedSomething = true;
+                            break;
+                        }
                     }
 
                     // Return type propagation can only happen in an upwards smear
@@ -175,10 +199,7 @@ static partial class FunctionDecompiler
 
                     if (changedSomething) { break; }
 
-                    if (instruction.Name is
-                        "call" or "jmp" or "je" or "jz"
-                        or "jne" or "jnz" or "jg"
-                        or "jge" or "jl" or "jle")
+                    if (instruction.IsJumpOrCall)
                     {
                         trackedLocation = initialLocation;
                     }

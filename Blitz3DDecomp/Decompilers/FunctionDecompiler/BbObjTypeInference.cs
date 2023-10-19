@@ -36,10 +36,7 @@ static partial class FunctionDecompiler
                         }
                     }
 
-                    if (instruction.Name is
-                        "call" or "jmp" or "je" or "jz"
-                        or "jne" or "jnz" or "jg" or "jge"
-                        or "jl" or "jle")
+                    if (instruction.IsJumpOrCall)
                     {
                         break;
                     }
@@ -100,10 +97,7 @@ static partial class FunctionDecompiler
                                 {
                                     var instruction2 = section.Instructions[k];
 
-                                    if (instruction2.Name is
-                                        "call" or "jmp" or "je" or "jz"
-                                        or "jne" or "jnz" or "jg"
-                                        or "jge" or "jl" or "jle")
+                                    if (instruction2.IsJumpOrCall)
                                     {
                                         if (!string.IsNullOrEmpty(instruction2.BbObjType))
                                         {
@@ -135,10 +129,7 @@ static partial class FunctionDecompiler
                                 {
                                     var instruction2 = section.Instructions[k];
 
-                                    if (instruction2.Name is
-                                        "call" or "jmp" or "je" or "jz"
-                                        or "jne" or "jnz" or "jg"
-                                        or "jge" or "jl" or "jle")
+                                    if (instruction2.IsJumpOrCall)
                                     {
                                         break;
                                     }
@@ -170,10 +161,7 @@ static partial class FunctionDecompiler
                         }
                     }
 
-                    if (instruction.Name is
-                        "call" or "jmp" or "je" or "jz"
-                        or "jne" or "jnz" or "jg"
-                        or "jge" or "jl" or "jle")
+                    if (instruction.IsJumpOrCall)
                     {
                         trackedLocation = $"ebp-0x{(i * 4) + 0x4:x1}";
                     }

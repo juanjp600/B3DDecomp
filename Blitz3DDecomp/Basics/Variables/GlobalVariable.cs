@@ -1,4 +1,6 @@
-﻿namespace Blitz3DDecomp;
+﻿using System.Diagnostics;
+
+namespace Blitz3DDecomp;
 
 sealed class GlobalVariable : Variable
 {

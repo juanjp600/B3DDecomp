@@ -17,10 +17,7 @@ static class InferredTypePropagation
             {
                 trackedLocation = "eax";
             }
-            else if (instruction.Name is
-                "call" or "jmp" or "je" or "jz"
-                or "jne" or "jnz" or "jg"
-                or "jge" or "jl" or "jle")
+            else if (instruction.IsJumpOrCall)
             {
                 if (instruction.Name is "call" && trackedLocation == "eax")
                 {
@@ -41,17 +38,13 @@ static class InferredTypePropagation
                 trackedLocation = instruction.RightArg.StripDeref();
             }
 
-            if (trackedLocation.Contains("ebp-0x"))
+            var variable = function.InstructionArgumentToVariable(trackedLocation);
+
+            if (variable != null && variable.DeclType != DeclType.Unknown)
             {
-                int varIndex = (int.Parse(trackedLocation[6..], NumberStyles.HexNumber) >> 2) - 1;
-                if (varIndex >= 0
-                    && varIndex < function.LocalVariables.Count
-                    && function.LocalVariables[varIndex].DeclType != DeclType.Unknown)
-                {
-                    function.ReturnType = function.LocalVariables[varIndex].DeclType;
-                    Console.WriteLine($"{function.Name} returns {function.ReturnType} because local {varIndex}");
-                    return true;
-                }
+                function.ReturnType = variable.DeclType;
+                Console.WriteLine($"{function.Name} returns {function.ReturnType} because {variable.Name}");
+                return true;
             }
         }
 
@@ -66,68 +59,46 @@ static class InferredTypePropagation
         for (int i = assignmentLocation; i >= 0; i--)
         {
             var instruction = section.Instructions[i];
+
+            if (instruction.IsJumpOrCall)
+            {
+                return false;
+            }
+
             if (instruction.Name is "mov" or "lea" or "xchg" &&
                 instruction.LeftArg.StripDeref() == trackedLocation)
             {
                 trackedLocation = instruction.RightArg.StripDeref();
 
-                if (trackedLocation.StartsWith("ebp"))
+                var variable = function.InstructionArgumentToVariable(trackedLocation);
+                if (variable != null)
                 {
-                    var typeForLocation = GetTypeForLocation(function, trackedLocation);
-                    if (typeForLocation != DeclType.Unknown && argType != DeclType.Unknown)
+                    if (variable.DeclType != DeclType.Unknown && argType != DeclType.Unknown)
                     {
                         // Nothing needs to change here because the types of
                         // both the given argument and its source are known
                         return false;
                     }
 
-                    if (typeForLocation == DeclType.Unknown && argType == DeclType.Unknown)
+                    if (variable.DeclType == DeclType.Unknown && argType == DeclType.Unknown)
                     {
                         // Nothing can change here because both types are unknown
                         return false;
                     }
 
-                    bool propagateType(string sourceDesc, Action propagateFromArgToSource)
+                    if (variable.DeclType == DeclType.Unknown)
                     {
-                        if (typeForLocation == DeclType.Unknown)
-                        {
-                            Console.WriteLine($"{sourceDesc} is {callee.Parameters[argIndex].DeclType} because {callee.Name}'s arg {argIndex}");
-                            propagateFromArgToSource();
-                            return true;
-                        }
-                        else if (argType == DeclType.Unknown
-                                 && !callee.Name.StartsWith("_builtIn"))
-                        {
-                            Console.WriteLine($"{callee.Name}'s arg {argIndex} is {typeForLocation} because {sourceDesc}");
-                            callee.Parameters[argIndex].DeclType = typeForLocation;
-                            return true;
-                        }
-                        return false;
+                        Console.WriteLine($"{function.Name}'s {variable.Name} is {callee.Parameters[argIndex].DeclType} because {callee.Name}'s arg {argIndex}");
+
+                        variable.DeclType = callee.Parameters[argIndex].DeclType;
+                        return true;
                     }
-                    
-                    if (trackedLocation.StartsWith("ebp-0x"))
+                    else if (argType == DeclType.Unknown
+                             && !callee.Name.StartsWith("_builtIn"))
                     {
-                        // This is a local
-                        int varIndex = (int.Parse(trackedLocation[6..], NumberStyles.HexNumber) - 0x4) >> 2;
-                        if (varIndex >= 0
-                            && varIndex < function.LocalVariables.Count)
-                        {
-                            return propagateType(
-                                sourceDesc: $"{function.Name}'s local {varIndex}",
-                                propagateFromArgToSource: () => function.LocalVariables[varIndex] .DeclType = argType);
-                        }
-                    }
-                    else if (trackedLocation.StartsWith("ebp+0x"))
-                    {
-                        // This is an argument
-                        int paramIndex = (int.Parse(trackedLocation[6..], NumberStyles.HexNumber) - 0x14) >> 2;
-                        if (paramIndex >= 0
-                            && paramIndex < function.Parameters.Count)
-                        {
-                            return propagateType(
-                                sourceDesc: $"{function.Name}'s arg {paramIndex}",
-                                propagateFromArgToSource: () => function.Parameters[paramIndex].DeclType = argType);
-                        }
+                        Console.WriteLine($"{callee.Name}'s arg {argIndex} is {variable.DeclType} because {function.Name}'s {variable.Name}");
+                        callee.Parameters[argIndex].DeclType = variable.DeclType;
+                        return true;
                     }
 
                     return false;
@@ -158,33 +129,6 @@ static class InferredTypePropagation
         return changesMade;
     }
 
-    private static DeclType GetTypeForLocation(Function function, string location)
-    {
-        if (location.StartsWith("ebp-0x"))
-        {
-            // This is a local
-            int varIndex = (int.Parse(location[6..], NumberStyles.HexNumber) - 0x4) >> 2;
-            if (varIndex >= 0
-                && varIndex < function.LocalVariables.Count)
-            {
-                return function.LocalVariables[varIndex].DeclType;
-            }
-        }
-
-        if (location.StartsWith("ebp+0x"))
-        {
-            // This is an argument
-            int paramIndex = (int.Parse(location[6..], NumberStyles.HexNumber) - 0x14) >> 2;
-            if (paramIndex >= 0
-                && paramIndex < function.Parameters.Count)
-            {
-                return function.Parameters[paramIndex].DeclType;
-            }
-        }
-
-        return DeclType.Unknown;
-    }
-
     private static bool SmearLocalsAndArgs(Function function, Function.AssemblySection section)
     {
         bool changedSomething = false;
@@ -198,10 +142,7 @@ static class InferredTypePropagation
             {
                 var instruction = section.Instructions[i];
 
-                if (instruction.Name is
-                    "call" or "jmp" or "je" or "jz"
-                    or "jne" or "jnz" or "jg"
-                    or "jge" or "jl" or "jle")
+                if (instruction.IsJumpOrCall)
                 {
                     trackedLocation = initialLocation;
                 }
@@ -215,11 +156,11 @@ static class InferredTypePropagation
                 if (instruction.Name is "mov" or "lea" or "xchg" && srcArg == trackedLocation)
                 {
                     trackedLocation = destArg;
-                    var newType = GetTypeForLocation(function, trackedLocation);
-                    if (newType != DeclType.Unknown)
+                    var variable = function.InstructionArgumentToVariable(trackedLocation);
+                    if (variable != null && variable.DeclType != DeclType.Unknown)
                     {
-                        declaration.DeclType = newType;
-                        Console.WriteLine($"{function.Name}: {declarationDesc} is {newType} because {trackedLocation}");
+                        declaration.DeclType = variable.DeclType;
+                        Console.WriteLine($"{function.Name}: {declarationDesc} is {variable.DeclType} because {variable.Name}");
                         changedSomething = true;
                         break;
                     }

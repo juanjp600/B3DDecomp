@@ -4,7 +4,7 @@ namespace Blitz3DDecomp;
 
 static class UnambiguousIntegerInstructions
 {
-    private static void Process(Function function, Function.AssemblySection section)
+    private static void ProcessCmp(Function function, Function.AssemblySection section)
     {
         foreach (var instruction in section.Instructions)
         {
@@ -17,40 +17,21 @@ static class UnambiguousIntegerInstructions
             {
                 // cmp with a non-zero argument is almost definitely working with integers
                 var location = arg0;
-                if (!location.StartsWith("ebp")) { continue; }
 
-                static void markDeclarationAsInt(Variable declaration)
+                var variable = function.InstructionArgumentToVariable(location);
+                if (variable != null && variable.DeclType == DeclType.Unknown)
                 {
-                    if (declaration.DeclType == DeclType.Unknown)
-                    {
-                        declaration.DeclType = DeclType.Int;
-                    }
-                }
-
-                var offset = int.Parse(location[6..], NumberStyles.HexNumber) >> 2;
-                if (location[3] == '+')
-                {
-                    // location is argument
-                    int index = offset - 5;
-                    if (index < 0 || index >= function.Parameters.Count) { continue; }
-                    markDeclarationAsInt(function.Parameters[index]);
-                }
-                else if (location[3] == '-')
-                {
-                    // location is local variable
-                    int index = offset - 1;
-                    if (index < 0 || index >= function.LocalVariables.Count) { continue; }
-                    markDeclarationAsInt(function.LocalVariables[index]);
+                    variable.DeclType = DeclType.Int;
                 }
             }
         }
     }
-    
+
     public static void Process(Function function)
     {
         foreach (var section in function.AssemblySections.Values)
         {
-            Process(function, section);
+            ProcessCmp(function, section);
         }
     }
 }

@@ -9,17 +9,17 @@ static class InferredTypePropagation
     {
         if (function.ReturnType != DeclType.Unknown) { return false; }
 
-        var trackedLocation = "";
+        var locationTracker = new LocationTracker(trackDirection: -1, initialLocation: "");
         for (int i = section.Instructions.Count - 1; i >= 0; i--)
         {
             var instruction = section.Instructions[i];
             if (instruction.Name is "jmp" && instruction.LeftArg.Contains("_leave"))
             {
-                trackedLocation = "eax";
+                locationTracker.Location = "eax";
             }
             else if (instruction.IsJumpOrCall)
             {
-                if (instruction.Name is "call" && trackedLocation == "eax")
+                if (instruction.Name is "call" && locationTracker.Location == "eax")
                 {
                     var calleeName = instruction.LeftArg[1..];
                     var calleeFunction = Function.AllFunctions.FirstOrDefault(f => f.Name == calleeName || f.Name == calleeName[2..]);
@@ -30,15 +30,12 @@ static class InferredTypePropagation
                         return true;
                     }
                 }
-                trackedLocation = "";
+                locationTracker.Location = "";
             }
 
-            if (instruction.Name is "mov" or "lea" or "xchg" && instruction.LeftArg.StripDeref() == trackedLocation)
-            {
-                trackedLocation = instruction.RightArg.StripDeref();
-            }
+            locationTracker.ProcessInstruction(instruction);
 
-            var variable = function.InstructionArgumentToVariable(trackedLocation);
+            var variable = function.InstructionArgumentToVariable(locationTracker.Location);
 
             if (variable != null && variable.DeclType != DeclType.Unknown)
             {
@@ -55,7 +52,7 @@ static class InferredTypePropagation
     {
         var argType = callee.Parameters[argIndex].DeclType;
 
-        var trackedLocation = section.Instructions[assignmentLocation].LeftArg.StripDeref();
+        var locationTracker = new LocationTracker(trackDirection: -1, section.Instructions[assignmentLocation].LeftArg.StripDeref());
         for (int i = assignmentLocation; i >= 0; i--)
         {
             var instruction = section.Instructions[i];
@@ -65,44 +62,40 @@ static class InferredTypePropagation
                 return false;
             }
 
-            if (instruction.Name is "mov" or "lea" or "xchg" &&
-                instruction.LeftArg.StripDeref() == trackedLocation)
+            if (!locationTracker.ProcessInstruction(instruction)) { continue; }
+
+            var variable = function.InstructionArgumentToVariable(locationTracker.Location);
+            if (variable != null)
             {
-                trackedLocation = instruction.RightArg.StripDeref();
-
-                var variable = function.InstructionArgumentToVariable(trackedLocation);
-                if (variable != null)
+                if (variable.DeclType != DeclType.Unknown && argType != DeclType.Unknown)
                 {
-                    if (variable.DeclType != DeclType.Unknown && argType != DeclType.Unknown)
-                    {
-                        // Nothing needs to change here because the types of
-                        // both the given argument and its source are known
-                        return false;
-                    }
-
-                    if (variable.DeclType == DeclType.Unknown && argType == DeclType.Unknown)
-                    {
-                        // Nothing can change here because both types are unknown
-                        return false;
-                    }
-
-                    if (variable.DeclType == DeclType.Unknown)
-                    {
-                        Console.WriteLine($"{function.Name}'s {variable.Name} is {callee.Parameters[argIndex].DeclType} because {callee.Name}'s arg {argIndex}");
-
-                        variable.DeclType = callee.Parameters[argIndex].DeclType;
-                        return true;
-                    }
-                    else if (argType == DeclType.Unknown
-                             && !callee.Name.StartsWith("_builtIn"))
-                    {
-                        Console.WriteLine($"{callee.Name}'s arg {argIndex} is {variable.DeclType} because {function.Name}'s {variable.Name}");
-                        callee.Parameters[argIndex].DeclType = variable.DeclType;
-                        return true;
-                    }
-
+                    // Nothing needs to change here because the types of
+                    // both the given argument and its source are known
                     return false;
                 }
+
+                if (variable.DeclType == DeclType.Unknown && argType == DeclType.Unknown)
+                {
+                    // Nothing can change here because both types are unknown
+                    return false;
+                }
+
+                if (variable.DeclType == DeclType.Unknown)
+                {
+                    Console.WriteLine($"{function.Name}'s {variable.Name} is {callee.Parameters[argIndex].DeclType} because {callee.Name}'s arg {argIndex}");
+
+                    variable.DeclType = callee.Parameters[argIndex].DeclType;
+                    return true;
+                }
+                else if (argType == DeclType.Unknown
+                         && !callee.Name.StartsWith("_builtIn"))
+                {
+                    Console.WriteLine($"{callee.Name}'s arg {argIndex} is {variable.DeclType} because {function.Name}'s {variable.Name}");
+                    callee.Parameters[argIndex].DeclType = variable.DeclType;
+                    return true;
+                }
+
+                return false;
             }
         }
 
@@ -135,7 +128,7 @@ static class InferredTypePropagation
 
         void smear(Variable declaration, string initialLocation, string declarationDesc, int smearDir)
         {
-            var trackedLocation = initialLocation;
+            var locationTracker = new LocationTracker(trackDirection: smearDir, initialLocation: initialLocation);
             for (int i = smearDir > 0 ? 0 : section.Instructions.Count - 1;
                  i >= 0 && i < section.Instructions.Count;
                  i += smearDir)
@@ -144,7 +137,7 @@ static class InferredTypePropagation
 
                 if (instruction.IsJumpOrCall)
                 {
-                    trackedLocation = initialLocation;
+                    locationTracker.Location = initialLocation;
                 }
 
                 var (destArg, srcArg) = (instruction.LeftArg.StripDeref(), instruction.RightArg.StripDeref());
@@ -153,17 +146,15 @@ static class InferredTypePropagation
                     (destArg, srcArg) = (srcArg, destArg);
                 }
 
-                if (instruction.Name is "mov" or "lea" or "xchg" && srcArg == trackedLocation)
+                if (!locationTracker.ProcessInstruction(instruction)) { continue; }
+
+                var variable = function.InstructionArgumentToVariable(locationTracker.Location);
+                if (variable != null && variable.DeclType != DeclType.Unknown)
                 {
-                    trackedLocation = destArg;
-                    var variable = function.InstructionArgumentToVariable(trackedLocation);
-                    if (variable != null && variable.DeclType != DeclType.Unknown)
-                    {
-                        declaration.DeclType = variable.DeclType;
-                        Console.WriteLine($"{function.Name}: {declarationDesc} is {variable.DeclType} because {variable.Name}");
-                        changedSomething = true;
-                        break;
-                    }
+                    declaration.DeclType = variable.DeclType;
+                    Console.WriteLine($"{function.Name}: {declarationDesc} is {variable.DeclType} because {variable.Name}");
+                    changedSomething = true;
+                    break;
                 }
             }
         }

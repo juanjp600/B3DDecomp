@@ -624,6 +624,9 @@ sealed class Function
         new Function("_builtIn__bbObjDelete", 1),
     }.ToList();
 
+    public bool IsBuiltIn
+        => Name.StartsWith("_builtIn");
+
     public string CoreSymbolName
         => Name == "EntryPoint"
             ? "__MAIN"

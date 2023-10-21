@@ -8,46 +8,45 @@ static partial class FunctionDecompiler
     {
         private static bool CheckInstructionForMarkAsFloat(Function function, Variable declaration, string declarationDesc, Function.Instruction instruction, int smearDir, ref DeclType? typeBeyondInstruction)
         {
+            if (!instruction.Name.Contains("_markAsFloat")) { return false; }
+            
             bool changedSomething = false;
-            if (instruction.Name.Contains("_markAsFloat"))
+            // fild: Load an int, convert to float and push float to stack -> src is an int, dest is a float
+            // fistp: Pop float from stack, convert to int and store an int -> dest is an int, src is a float
+
+            var intToFltName = smearDir > 0 ? "fild" : "fistp";
+            var fltToIntName = smearDir > 0 ? "fistp" : "fild";
+
+            if (typeBeyondInstruction is null)
             {
-                // fild: Load an int, convert to float and push float to stack -> src is an int, dest is a float
-                // fistp: Pop float from stack, convert to int and store an int -> dest is an int, src is a float
-
-                var intToFltName = smearDir > 0 ? "fild" : "fistp";
-                var fltToIntName = smearDir > 0 ? "fistp" : "fild";
-
-                if (typeBeyondInstruction is null)
+                if (instruction.Name.StartsWith(intToFltName))
                 {
-                    if (instruction.Name.StartsWith(intToFltName))
-                    {
-                        declaration.DeclType = DeclType.Int;
-                        Console.WriteLine($"{function.Name}: {declarationDesc} is int");
-                    }
-                    else
-                    {
-                        if (function.Name.Contains("bbStrLoad") || function.Name.Contains("bbFieldPtrAdd"))
-                        {
-                            Debugger.Break();
-                        }
-                        declaration.DeclType = DeclType.Float;
-                        if (declarationDesc.Contains("_fdrawtick arg 2"))
-                        {
-                            Debugger.Break();
-                        }
-                        Console.WriteLine($"{function.Name}: {declarationDesc} is float");
-                    }
-                    changedSomething = true;
-                }
-
-                if (instruction.Name.StartsWith(fltToIntName))
-                {
-                    typeBeyondInstruction = DeclType.Int;
+                    declaration.DeclType = DeclType.Int;
+                    Console.WriteLine($"{function.Name}: {declarationDesc} is int because {instruction}");
                 }
                 else
                 {
-                    typeBeyondInstruction = DeclType.Float;
+                    if (function.Name.Contains("bbStrLoad") || function.Name.Contains("bbFieldPtrAdd"))
+                    {
+                        Debugger.Break();
+                    }
+                    declaration.DeclType = DeclType.Float;
+                    if (declarationDesc.Contains("_fdrawtick arg 2"))
+                    {
+                        Debugger.Break();
+                    }
+                    Console.WriteLine($"{function.Name}: {declarationDesc} is float because {instruction}");
                 }
+                changedSomething = true;
+            }
+
+            if (instruction.Name.StartsWith(fltToIntName))
+            {
+                typeBeyondInstruction = DeclType.Int;
+            }
+            else
+            {
+                typeBeyondInstruction = DeclType.Float;
             }
             return changedSomething;
         }
@@ -91,22 +90,15 @@ static partial class FunctionDecompiler
                 if (callee.Parameters[i].DeclType != DeclType.Unknown) { continue; }
                 var assignmentLocation = callParameterAssignmentIndices[i];
                 var assignmentInstruction = section.Instructions[assignmentLocation];
-                var trackedLocation = assignmentInstruction.RightArg.StripDeref();
+                var locationTracker = new LocationTracker(trackDirection: -1, initialLocation: assignmentInstruction.RightArg.StripDeref());
                 DeclType? typeAtTop = null;
                 for (int j = assignmentLocation - 1; j >= 0; j--)
                 {
                     var instruction = section.Instructions[j];
-                    if (instruction.LeftArg.StripDeref() == trackedLocation)
+
+                    if (instruction.LeftArg.StripDeref() == locationTracker.Location)
                     {
                         changedSomething |= CheckInstructionForMarkAsFloat(function, callee.Parameters[i], $"{calleeName} arg {i}", instruction, smearDir: -1, ref typeAtTop);
-                    }
-
-                    if (instruction.LeftArg.StripDeref() == trackedLocation)
-                    {
-                        if (instruction.Name is "mov" or "lea" or "xchg")
-                        {
-                            trackedLocation = instruction.RightArg.StripDeref();
-                        }
 
                         if (instruction.Name == "movzx")
                         {
@@ -117,9 +109,11 @@ static partial class FunctionDecompiler
                         }
                     }
 
+                    locationTracker.ProcessInstruction(instruction);
+
                     if (instruction.Name is "call")
                     {
-                        if (trackedLocation == "eax")
+                        if (locationTracker.Location == "eax")
                         {
                             var arg = callee.Parameters[i];
                             changedSomething |= HandlePropagationForReturnType(function, arg, $"{calleeName} arg {i}", instruction, typeAtTop);
@@ -149,31 +143,18 @@ static partial class FunctionDecompiler
                 if (declaration.DeclType != DeclType.Unknown) { return; }
 
                 DeclType? typeBeyondInstruction = null;
-                var trackedLocation = initialLocation;
+                var locationTracker = new LocationTracker(trackDirection: smearDir, initialLocation);
                 for (int j = smearDir > 0 ? 0 : section.Instructions.Count - 1;
                      j >= 0 && j < section.Instructions.Count;
                      j += smearDir)
                 {
                     var instruction = section.Instructions[j];
-                    if (instruction.LeftArg.StripDeref() == trackedLocation)
+
+                    if (instruction.LeftArg.StripDeref() == locationTracker.Location)
                     {
                         changedSomething |= CheckInstructionForMarkAsFloat(function, declaration, declarationDesc, instruction, smearDir: smearDir, ref typeBeyondInstruction);
-                    }
 
-                    var (destArg, srcArg) = (instruction.LeftArg.StripDeref(), instruction.RightArg.StripDeref());
-                    if (smearDir < 0)
-                    {
-                        (destArg, srcArg) = (srcArg, destArg);
-                    }
-
-                    if (srcArg == trackedLocation)
-                    {
-                        if (instruction.Name is "mov" or "lea" or "xchg")
-                        {
-                            trackedLocation = destArg;
-                        }
-
-                        if (instruction.Name == "movzx" && smearDir < 0)
+                        if (smearDir < 0 && instruction.Name == "movzx")
                         {
                             Console.WriteLine($"{declarationDesc} is int because {instruction}");
                             declaration.DeclType = DeclType.Int;
@@ -182,12 +163,14 @@ static partial class FunctionDecompiler
                         }
                     }
 
+                    locationTracker.ProcessInstruction(instruction);
+
                     // Return type propagation can only happen in an upwards smear
                     // because a downwards smear would reach a call before anything
                     // about its return type can be known
                     if (smearDir < 0 && instruction.Name is "call")
                     {
-                        if (trackedLocation == "eax")
+                        if (locationTracker.Location == "eax")
                         {
                             if (declaration.DeclType != DeclType.Unknown)
                             {
@@ -201,7 +184,7 @@ static partial class FunctionDecompiler
 
                     if (instruction.IsJumpOrCall)
                     {
-                        trackedLocation = initialLocation;
+                        locationTracker.Location = initialLocation;
                     }
                 }
             }

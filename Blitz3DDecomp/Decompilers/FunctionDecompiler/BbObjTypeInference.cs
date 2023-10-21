@@ -65,7 +65,6 @@ static partial class FunctionDecompiler
         {
             if (variable.DeclType != DeclType.Unknown) { return false; }
 
-            DeclType? typeAtTop = null;
             var locationTracker = new LocationTracker(trackDirection: -1, initialLocation: initialLocation);
             for (int j = section.Instructions.Count - 1; j >= 0; j--)
             {
@@ -183,22 +182,16 @@ static partial class FunctionDecompiler
             }
 
             var referencedGlobals = section
-                .Instructions
-                .SelectMany(i => new[] { i.LeftArg, i.RightArg })
-                .Select(s => s.StripDeref())
-                .Where(s => s.StartsWith("@_v"))
-                .Select(s =>
-                    GlobalVariable.AllGlobals.FirstOrDefault(
-                        g => s.EndsWith(g.Name, StringComparison.OrdinalIgnoreCase)))
-                .Where(g => g != null && g.DeclType == DeclType.Unknown)
+                .ReferencedGlobals
+                .Where(g => g.DeclType == DeclType.Unknown)
                 .ToArray();
             foreach (var global in referencedGlobals)
             {
                 changedSomething |= InferTypeForVariable(
                     function,
                     section,
-                    global!,
-                    $"@_v{global!.Name}");
+                    global,
+                    $"@_v{global.Name}");
             }
 
             return changedSomething;

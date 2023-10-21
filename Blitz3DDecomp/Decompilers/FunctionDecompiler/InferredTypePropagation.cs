@@ -126,8 +126,10 @@ static class InferredTypePropagation
     {
         bool changedSomething = false;
 
-        void smear(Variable declaration, string initialLocation, string declarationDesc, int smearDir)
+        void smear(Variable declaration, string initialLocation, int smearDir)
         {
+            if (declaration.DeclType != DeclType.Unknown) { return; }
+
             var locationTracker = new LocationTracker(trackDirection: smearDir, initialLocation: initialLocation);
             for (int i = smearDir > 0 ? 0 : section.Instructions.Count - 1;
                  i >= 0 && i < section.Instructions.Count;
@@ -152,31 +154,32 @@ static class InferredTypePropagation
                 if (variable != null && variable.DeclType != DeclType.Unknown)
                 {
                     declaration.DeclType = variable.DeclType;
-                    Console.WriteLine($"{function.Name}: {declarationDesc} is {variable.DeclType} because {variable.Name}");
+                    Console.WriteLine($"{function.Name}: {variable.Name} is {variable.DeclType} because {variable.Name}");
                     changedSomething = true;
                     break;
                 }
             }
         }
 
+        void smearBothWays(Variable variable, string initialLocation)
+        {
+            smear(variable, initialLocation, smearDir: -1);
+            smear(variable, initialLocation, smearDir: 1);
+        }
+
         for (int localIndex = 0; localIndex < function.LocalVariables.Count; localIndex++)
         {
-            if (function.LocalVariables[localIndex].DeclType != DeclType.Unknown) { continue; }
-
-            var variable = function.LocalVariables[localIndex];
-            smear(variable, $"ebp-0x{(localIndex * 4) + 0x4:x1}", $"local {localIndex}", smearDir: -1);
-            smear(variable, $"ebp-0x{(localIndex * 4) + 0x4:x1}", $"local {localIndex}", smearDir: 1);
-            function.LocalVariables[localIndex] = variable;
+            smearBothWays(function.LocalVariables[localIndex], $"ebp-0x{(localIndex * 4) + 0x4:x1}");
         }
         
         for (int argIndex = 0; argIndex < function.Parameters.Count; argIndex++)
         {
-            if (function.Parameters[argIndex].DeclType != DeclType.Unknown) { continue; }
+            smearBothWays(function.Parameters[argIndex], $"ebp+0x{(argIndex * 4) + 0x14:x1}");
+        }
 
-            var variable = function.Parameters[argIndex];
-            smear(variable, $"ebp+0x{(argIndex * 4) + 0x14:x1}", $"arg {argIndex}", smearDir: 1);
-            smear(variable, $"ebp+0x{(argIndex * 4) + 0x14:x1}", $"arg {argIndex}", smearDir: -1);
-            function.Parameters[argIndex] = variable;
+        foreach (var global in section.ReferencedGlobals)
+        {
+            smearBothWays(global, $"@_v{global.Name}");
         }
 
         return changedSomething;

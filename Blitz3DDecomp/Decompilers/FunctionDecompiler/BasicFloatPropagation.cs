@@ -134,11 +134,11 @@ static partial class FunctionDecompiler
             return changedSomething;
         }
 
-        private static bool InferTypesForLocals(Function function, Function.AssemblySection section)
+        private static bool InferTypesForVariables(Function function, Function.AssemblySection section)
         {
             bool changedSomething = false;
 
-            void processDeclaration(Variable declaration, string initialLocation, string declarationDesc, int smearDir)
+            void smear(Variable declaration, string initialLocation, int smearDir)
             {
                 if (declaration.DeclType != DeclType.Unknown) { return; }
 
@@ -152,11 +152,11 @@ static partial class FunctionDecompiler
 
                     if (instruction.LeftArg.StripDeref() == locationTracker.Location)
                     {
-                        changedSomething |= CheckInstructionForMarkAsFloat(function, declaration, declarationDesc, instruction, smearDir: smearDir, ref typeBeyondInstruction);
+                        changedSomething |= CheckInstructionForMarkAsFloat(function, declaration, declaration.Name, instruction, smearDir: smearDir, ref typeBeyondInstruction);
 
                         if (smearDir < 0 && instruction.Name == "movzx")
                         {
-                            Console.WriteLine($"{declarationDesc} is int because {instruction}");
+                            Console.WriteLine($"{declaration.Name} is int because {instruction}");
                             declaration.DeclType = DeclType.Int;
                             changedSomething = true;
                             break;
@@ -176,7 +176,7 @@ static partial class FunctionDecompiler
                             {
                                 Debugger.Break();
                             }
-                            changedSomething |= HandlePropagationForReturnType(function, declaration, declarationDesc, instruction, typeBeyondInstruction);
+                            changedSomething |= HandlePropagationForReturnType(function, declaration, declaration.Name, instruction, typeBeyondInstruction);
                         }
                     }
 
@@ -189,20 +189,25 @@ static partial class FunctionDecompiler
                 }
             }
 
+            void smearBothWays(Variable variable, string initialLocation)
+            {
+                smear(variable, initialLocation, smearDir: -1);
+                smear(variable, initialLocation, smearDir: 1);
+            }
+
             for (int i = 0; i < function.LocalVariables.Count; i++)
             {
-                var variable = function.LocalVariables[i];
-                processDeclaration(variable, $"ebp-0x{(i * 4) + 0x4:x1}", $"local {i}", smearDir: -1);
-                processDeclaration(variable, $"ebp-0x{(i * 4) + 0x4:x1}", $"local {i}", smearDir: 1);
-                function.LocalVariables[i] = variable;
+                smearBothWays(function.LocalVariables[i], $"ebp-0x{(i * 4) + 0x4:x1}");
             }
             
             for (int i = 0; i < function.Parameters.Count; i++)
             {
-                var variable = function.Parameters[i];
-                processDeclaration(variable, $"ebp+0x{((i * 4) + 0x14):x1}", $"arg {i}", smearDir: -1);
-                processDeclaration(variable, $"ebp+0x{((i * 4) + 0x14):x1}", $"arg {i}", smearDir: 1);
-                function.Parameters[i] = variable;
+                smearBothWays(function.Parameters[i], $"ebp+0x{((i * 4) + 0x14):x1}");
+            }
+
+            foreach (var global in section.ReferencedGlobals)
+            {
+                smearBothWays(global, $"@_v{global.Name}");
             }
 
             return changedSomething;
@@ -225,7 +230,7 @@ static partial class FunctionDecompiler
                         changedSomethingNow |= InferTypesForCall(function, section, i);
                     }
 
-                    changedSomethingNow |= InferTypesForLocals(function, section);
+                    changedSomethingNow |= InferTypesForVariables(function, section);
                 }
                 if (!changedSomethingNow) { break; }
 

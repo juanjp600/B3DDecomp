@@ -7,6 +7,17 @@ sealed class Function
     public sealed class AssemblySection
     {
         public readonly List<Instruction> Instructions = new List<Instruction>();
+
+        public IEnumerable<GlobalVariable> ReferencedGlobals
+            => Instructions
+                .SelectMany(i => new[] { i.LeftArg, i.RightArg })
+                .Select(s => s.StripDeref())
+                .Where(s => s.StartsWith("@_v"))
+                .Select(s =>
+                    GlobalVariable.AllGlobals.FirstOrDefault(
+                        g => s.EndsWith(g.Name, StringComparison.OrdinalIgnoreCase)))
+                .OfType<GlobalVariable>() // Removes null entries
+                .Distinct();
     }
 
     public sealed class Parameter : Variable

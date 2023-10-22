@@ -8,21 +8,17 @@ static class UnambiguousIntegerInstructions
     {
         foreach (var instruction in section.Instructions)
         {
-            var (arg0, arg1) = (instruction.LeftArg.StripDeref(), instruction.RightArg.StripDeref());
-            if (arg1.StartsWith("ebp"))
-            {
-                (arg0, arg1) = (arg1, arg0);
-            }
-            if (instruction.Name == "cmp" && arg1 != "0x0")
-            {
-                // cmp with a non-zero argument is almost definitely working with integers
-                var location = arg0;
+            if (instruction.Name != "cmp") { continue; }
 
-                var variable = function.InstructionArgumentToVariable(location);
-                if (variable != null && variable.DeclType == DeclType.Unknown)
-                {
-                    variable.DeclType = DeclType.Int;
-                }
+            var (arg0, arg1) = (instruction.LeftArg.StripDeref(), instruction.RightArg.StripDeref());
+
+            var variable = function.InstructionArgumentToVariable(arg0) ?? function.InstructionArgumentToVariable(arg1);
+
+            if (variable != null && variable.DeclType == DeclType.Unknown
+                && arg0 != "0x0" && arg1 != "0x0")
+            {
+                variable.DeclType = DeclType.Int;
+                Console.WriteLine($"{function.Name}: {variable.Name} is int because {instruction}");
             }
         }
     }

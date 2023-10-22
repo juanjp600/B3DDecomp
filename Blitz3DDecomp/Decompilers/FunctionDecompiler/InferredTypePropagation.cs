@@ -112,7 +112,7 @@ static class InferredTypePropagation
 
             for (var argIndex = 0; argIndex < assignmentLocations.Length; argIndex++)
             {
-                var callee = Function.AllFunctions.Find(f => f.Name == section.Instructions[i].LeftArg[1..] || f.Name == section.Instructions[i].LeftArg[3..])
+                var callee = Function.GetFunctionWithName(section.Instructions[i].LeftArg)
                     ?? throw new Exception($"Function {section.Instructions[i].LeftArg} not found");
                 var assignmentLocation = assignmentLocations[argIndex];
                 changesMade |= HandleSubCall(function, callee, argIndex, section, assignmentLocation);
@@ -128,8 +128,6 @@ static class InferredTypePropagation
 
         void smear(Variable declaration, string initialLocation, int smearDir)
         {
-            if (declaration.DeclType != DeclType.Unknown) { return; }
-
             var locationTracker = new LocationTracker(trackDirection: smearDir, initialLocation: initialLocation);
             for (int i = smearDir > 0 ? 0 : section.Instructions.Count - 1;
                  i >= 0 && i < section.Instructions.Count;
@@ -139,16 +137,25 @@ static class InferredTypePropagation
 
                 if (instruction.IsJumpOrCall)
                 {
+                    if (smearDir < 0
+                        && declaration.DeclType != DeclType.Unknown
+                        && instruction.Name == "call"
+                        && locationTracker.Location == "eax")
+                    {
+                        var callee = Function.GetFunctionWithName(section.Instructions[i].LeftArg)
+                            ?? throw new Exception($"Function {section.Instructions[i].LeftArg} not found");
+                        if (callee.AssemblySections.Any() && callee.ReturnType == DeclType.Unknown)
+                        {
+                            Console.WriteLine($"{function.Name}: {callee.Name}'s return type is {declaration.DeclType} because {declaration.Name}");
+                            callee.ReturnType = declaration.DeclType;
+                        }
+                    }
+                    
                     locationTracker.Location = initialLocation;
                 }
 
-                var (destArg, srcArg) = (instruction.LeftArg.StripDeref(), instruction.RightArg.StripDeref());
-                if (smearDir < 0)
-                {
-                    (destArg, srcArg) = (srcArg, destArg);
-                }
-
                 if (!locationTracker.ProcessInstruction(instruction)) { continue; }
+                if (declaration.DeclType != DeclType.Unknown) { continue; }
 
                 var variable = function.InstructionArgumentToVariable(locationTracker.Location);
                 if (variable != null && variable.DeclType != DeclType.Unknown)

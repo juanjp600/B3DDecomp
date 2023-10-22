@@ -17,7 +17,7 @@ static partial class FunctionDecompiler
             var intToFltName = smearDir > 0 ? "fild" : "fistp";
             var fltToIntName = smearDir > 0 ? "fistp" : "fild";
 
-            if (typeBeyondInstruction is null)
+            if (typeBeyondInstruction is null && declaration.DeclType == DeclType.Unknown)
             {
                 if (instruction.Name.StartsWith(intToFltName))
                 {
@@ -26,15 +26,7 @@ static partial class FunctionDecompiler
                 }
                 else
                 {
-                    if (function.Name.Contains("bbStrLoad") || function.Name.Contains("bbFieldPtrAdd"))
-                    {
-                        Debugger.Break();
-                    }
                     declaration.DeclType = DeclType.Float;
-                    if (declarationDesc.Contains("_fdrawtick arg 2"))
-                    {
-                        Debugger.Break();
-                    }
                     Console.WriteLine($"{function.Name}: {declarationDesc} is float because {instruction}");
                 }
                 changedSomething = true;
@@ -54,37 +46,36 @@ static partial class FunctionDecompiler
         private static bool HandlePropagationForReturnType(Function function, Variable declaration, string declarationDesc, Function.Instruction instruction, DeclType? typeAtTop)
         {
             bool changedSomething = false;
-            var calleeName2 = instruction.LeftArg[1..];
-            var callee2Function = Function.AllFunctions.FirstOrDefault(f => f.Name == calleeName2 || f.Name == calleeName2[2..]);
-            if (callee2Function.ReturnType == DeclType.Unknown)
+            var calleeFunction = Function.GetFunctionWithName(instruction.LeftArg.StripDeref());
+            if (calleeFunction.ReturnType == DeclType.Unknown)
             {
                 if (typeAtTop != null)
                 {
-                    if (calleeName2.Contains("bbFieldPtrAdd")) { return false; }
-                    callee2Function.ReturnType = typeAtTop.Value;
-                    Console.WriteLine($"{function.Name}: {calleeName2} returns {(typeAtTop == DeclType.Int ? "int" : "float")}");
+                    if (calleeFunction.IsBuiltIn) { return false; }
+                    calleeFunction.ReturnType = typeAtTop.Value;
+                    Console.WriteLine($"{function.Name}: {calleeFunction.Name} returns {(typeAtTop == DeclType.Int ? "int" : "float")} because {declarationDesc}");
                     changedSomething = true;
                 }
             }
-            else
+            else if (declaration.DeclType == DeclType.Unknown)
             {
-                declaration.DeclType = callee2Function.ReturnType;
-                Console.WriteLine($"{function.Name}: {declarationDesc} is {callee2Function.ReturnType} because {calleeName2}");
+                declaration.DeclType = calleeFunction.ReturnType;
+                Console.WriteLine($"{function.Name}: {declarationDesc} is {calleeFunction.ReturnType} because {calleeFunction.Name}");
                 changedSomething = true;
             }
             return changedSomething;
         }
 
-        private static bool InferTypesForCall(Function function, Function.AssemblySection section, int callLocation)
+        private static bool InferTypesForCallInstruction(Function function, Function.AssemblySection section, int callLocation)
         {
             var callInstruction = section.Instructions[callLocation];
             if (callInstruction.CallParameterAssignmentIndices is not { Length: >0 } callParameterAssignmentIndices) { return false; }
 
             bool changedSomething = false;
-            
-            var calleeName = callInstruction.LeftArg[1..];
-            var callee = Function.AllFunctions.FirstOrDefault(f => f.Name == calleeName || f.Name == calleeName[2..]);
-            if (callee.Name.StartsWith("_builtIn")) { return false; }
+
+            var callee = Function.GetFunctionWithName(callInstruction.LeftArg);
+            if (callee.IsBuiltIn) { return false; }
+
             for (int i = 0; i < callee.Parameters.Count; i++)
             {
                 if (callee.Parameters[i].DeclType != DeclType.Unknown) { continue; }
@@ -98,11 +89,11 @@ static partial class FunctionDecompiler
 
                     if (instruction.LeftArg.StripDeref() == locationTracker.Location)
                     {
-                        changedSomething |= CheckInstructionForMarkAsFloat(function, callee.Parameters[i], $"{calleeName} arg {i}", instruction, smearDir: -1, ref typeAtTop);
+                        changedSomething |= CheckInstructionForMarkAsFloat(function, callee.Parameters[i], $"{callee.Name} arg {i}", instruction, smearDir: -1, ref typeAtTop);
 
                         if (instruction.Name == "movzx")
                         {
-                            Console.WriteLine($"{calleeName} arg {i} is int because {instruction}");
+                            Console.WriteLine($"{callee.Name} arg {i} is int because {instruction}");
                             callee.Parameters[i].DeclType = DeclType.Int;
                             changedSomething = true;
                             break;
@@ -115,17 +106,12 @@ static partial class FunctionDecompiler
                     {
                         if (locationTracker.Location == "eax")
                         {
-                            var arg = callee.Parameters[i];
-                            changedSomething |= HandlePropagationForReturnType(function, arg, $"{calleeName} arg {i}", instruction, typeAtTop);
-                            callee.Parameters[i] = arg;
+                            changedSomething |= HandlePropagationForReturnType(function, callee.Parameters[i], $"{callee.Name} arg {i}", instruction, typeAtTop);
                         }
                         break;
                     }
 
-                    if (instruction.Name is
-                        "jmp" or "je" or "jz"
-                        or "jne" or "jnz" or "jg"
-                        or "jge" or "jl" or "jle")
+                    if (instruction.IsJumpOrCall)
                     {
                         break;
                     }
@@ -140,8 +126,6 @@ static partial class FunctionDecompiler
 
             void smear(Variable declaration, string initialLocation, int smearDir)
             {
-                if (declaration.DeclType != DeclType.Unknown) { return; }
-
                 DeclType? typeBeyondInstruction = null;
                 var locationTracker = new LocationTracker(trackDirection: smearDir, initialLocation);
                 for (int j = smearDir > 0 ? 0 : section.Instructions.Count - 1;
@@ -154,12 +138,12 @@ static partial class FunctionDecompiler
                     {
                         changedSomething |= CheckInstructionForMarkAsFloat(function, declaration, declaration.Name, instruction, smearDir: smearDir, ref typeBeyondInstruction);
 
-                        if (smearDir < 0 && instruction.Name == "movzx")
+                        if (smearDir < 0 && instruction.Name == "movzx" && declaration.DeclType == DeclType.Unknown)
                         {
                             Console.WriteLine($"{declaration.Name} is int because {instruction}");
                             declaration.DeclType = DeclType.Int;
                             changedSomething = true;
-                            break;
+                            locationTracker.Location = initialLocation;
                         }
                     }
 
@@ -172,15 +156,9 @@ static partial class FunctionDecompiler
                     {
                         if (locationTracker.Location == "eax")
                         {
-                            if (declaration.DeclType != DeclType.Unknown)
-                            {
-                                Debugger.Break();
-                            }
                             changedSomething |= HandlePropagationForReturnType(function, declaration, declaration.Name, instruction, typeBeyondInstruction);
                         }
                     }
-
-                    if (changedSomething) { break; }
 
                     if (instruction.IsJumpOrCall)
                     {
@@ -215,7 +193,7 @@ static partial class FunctionDecompiler
         
         public static bool Process(Function function)
         {
-            if (function.Name.StartsWith("_builtIn")) { return false; }
+            if (function.IsBuiltIn) { return false; }
 
             bool changedSomething = false;
 
@@ -227,7 +205,7 @@ static partial class FunctionDecompiler
                     for (int i = 0; i < section.Instructions.Count; i++)
                     {
                         if (section.Instructions[i].Name != "call") { continue; }
-                        changedSomethingNow |= InferTypesForCall(function, section, i);
+                        changedSomethingNow |= InferTypesForCallInstruction(function, section, i);
                     }
 
                     changedSomethingNow |= InferTypesForVariables(function, section);

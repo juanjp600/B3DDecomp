@@ -12,7 +12,7 @@ static partial class FunctionDecompiler
         {
             if (!function.AssemblySections.Any()) { return; }
             var coreSectionInstructions =
-                function.Name == "__MAIN"
+                function.CoreSymbolName == "__MAIN"
                     ? function.AssemblySections.First(kvp => kvp.Key.EndsWith("_begin__MAIN")).Value.Instructions.ToArray()
                     : function.AssemblySections[function.CoreSymbolName].Instructions.Skip(5).ToArray();
 

@@ -24,11 +24,13 @@ public static class IngestCodeFiles
 
             var lines = File.ReadAllLines(filePath);
             string currentSectionName = "";
-            var currentSection = new Function.AssemblySection();
+            Function.AssemblySection? currentSection = null;
             var sections = new Dictionary<string, Function.AssemblySection>();
 
             void commitCurrentSection()
             {
+                if (currentSection is null) { return; }
+
                 currentSection.Instructions.RemoveAll(i => i.Name == "nop");
                 if (!string.IsNullOrWhiteSpace(currentSectionName))
                 {
@@ -37,7 +39,7 @@ public static class IngestCodeFiles
             }
             foreach (var line in lines)
             {
-                if (instructionTrimRegex.Match(line) is { Success: true } instructionTrimMatch)
+                if (currentSection is not null && instructionTrimRegex.Match(line) is { Success: true } instructionTrimMatch)
                 {
                     var instructionStr = instructionTrimMatch.Groups[2].Value;
                     var parseNameMatch = instructionNameParseRegex.Match(instructionStr);
@@ -60,7 +62,7 @@ public static class IngestCodeFiles
                 {
                     commitCurrentSection();
                     currentSectionName = symbolDescMatch.Groups[2].Value;
-                    currentSection = new Function.AssemblySection();
+                    currentSection = new Function.AssemblySection(currentSectionName);
                 }
             }
             commitCurrentSection();

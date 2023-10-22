@@ -6,7 +6,13 @@ sealed class Function
 {
     public sealed class AssemblySection
     {
+        public readonly string Name;
         public readonly List<Instruction> Instructions = new List<Instruction>();
+
+        public AssemblySection(string name)
+        {
+            Name = name;
+        }
 
         public IEnumerable<GlobalVariable> ReferencedGlobals
             => Instructions
@@ -623,7 +629,7 @@ sealed class Function
         new Function("_builtIn__bbObjEachFirst2", 2),
         new Function("_builtIn__bbObjEachNext2", 1),
         new Function("_builtIn__bbObjFromHandle", 2),
-        new Function("_builtIn__bbObjToHandle", 1),
+        new Function("_builtIn__bbObjToHandle", 1) { ReturnType = DeclType.Int },
         new Function("_builtIn__bbObjNew", 1),
         new Function("_builtIn__bbObjNext", 1),
         new Function("_builtIn__bbObjPrev", 1),
@@ -634,6 +640,13 @@ sealed class Function
         new Function("_builtIn__bbFieldPtrAdd", 2),
         new Function("_builtIn__bbObjDelete", 1),
     }.ToList();
+
+    public static Function? GetFunctionWithName(string name)
+        => AllFunctions.FirstOrDefault(f =>
+            f.Name == name
+            || f.Name == name[1..]
+            || f.Name == name[2..]
+            || f.Name == name[3..]);
 
     public bool IsBuiltIn
         => Name.StartsWith("_builtIn");
@@ -764,5 +777,11 @@ sealed class Function
         Name = name;
         AssemblySections = assemblySections;
         AllFunctions.Add(this);
+    }
+
+    public override string ToString()
+    {
+        return Name + ReturnType.Suffix + "("
+               + string.Join(", ", Parameters) + ")";
     }
 }

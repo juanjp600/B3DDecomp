@@ -5,6 +5,10 @@ sealed class CustomType
     public sealed class Field : Variable
     {
         public Field(string name) : base(name) { }
+        public override string ToInstructionArg()
+        {
+            return $"\\{Name}";
+        }
     }
     
     public static readonly List<CustomType> AllTypes = new List<CustomType>();

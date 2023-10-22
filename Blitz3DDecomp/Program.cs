@@ -9,7 +9,7 @@ internal static class Program
 
         string disasmPath = "C:/Users/juanj/Desktop/Blitz3D/ReverseEng/game_disasm/";
         disasmPath = "C:/Users/juanj/Repos/Blitz3DDecomp/SamplePrograms/Sample1/Sample1_disasm/";
-        disasmPath = "/Users/juanjp/Desktop/b3d_reveng/SCPCBR_disasm/";
+        disasmPath = "/Users/juanjp/Desktop/b3d_reveng/SCP - Containment Breach v0.2_disasm/";
         string decompPath = disasmPath.Replace("_disasm", "_decomp");
         if (Directory.Exists(decompPath)) { Directory.Delete(decompPath, true); }
         Directory.CreateDirectory(decompPath);
@@ -67,6 +67,7 @@ internal static class Program
                 handleNeedForLooping(FunctionDecompiler.BbObjTypeInference.Process(function), "BbObjTypeInference.Process returned true");
                 handleNeedForLooping(FunctionDecompiler.BasicFloatPropagation.Process(function), "BasicFloatPropagation.Process returned true");
                 handleNeedForLooping(InferredTypePropagation.Process(function), "InferredTypePropagation.Process returned true");
+                BbObjMemberAccess.Process(function);
             }
         }
 

@@ -40,4 +40,10 @@ readonly record struct DeclType(string Suffix)
         // so we need to decrement the size here :)
         return new DeclType($"{baseDesc.Suffix}[{sz - 1}]");
     }
+
+    public bool IsCustomType
+        => Suffix[0] == '.';
+
+    public bool IsArrayType
+        => Suffix[^1] == ']';
 }

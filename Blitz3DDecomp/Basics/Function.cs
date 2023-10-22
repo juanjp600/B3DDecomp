@@ -30,12 +30,28 @@ sealed class Function
 
     public sealed class Parameter : Variable
     {
-        public Parameter(string name) : base(name) { }
+        public readonly int Index;
+
+        public Parameter(string name, int index) : base(name)
+        {
+            Index = index;
+        }
+
+        public override string ToInstructionArg()
+            => $"ebp+0x{((Index << 2) + 0x14):x1}";
     }
 
     public sealed class LocalVariable : Variable
     {
-        public LocalVariable(string name) : base(name) { }
+        public readonly int Index;
+
+        public LocalVariable(string name, int index) : base(name)
+        {
+            Index = index;
+        }
+        
+        public override string ToInstructionArg()
+            => $"ebp+0x{((Index << 2) + 0x14):x1}";
     }
 
     public readonly string Name;
@@ -764,14 +780,16 @@ sealed class Function
             .Replace("$", " $");
         var split = str.Split(" ");
         var parameters = new List<Parameter>();
-        foreach (var s in split.Skip(1))
+        var funcName = split[0].ToLowerInvariant();
+        split = split.Skip(1).ToArray();
+        for (var argIndex = 0; argIndex < split.Length; argIndex++)
         {
-            var argName = s;
+            var argName = split[argIndex];
             var argType = ripTypeFromStr(ref argName, DeclType.Int);
-            parameters.Add(new Parameter(argName) { DeclType = argType });
+            parameters.Add(new Parameter(argName, argIndex) { DeclType = argType });
         }
 
-        var newFunction = new Function($"_builtIn_f{split[0].ToLowerInvariant()}", 0) { ReturnType = returnType };
+        var newFunction = new Function($"_builtIn_f{funcName}", 0) { ReturnType = returnType };
         newFunction.Parameters.Clear(); newFunction.Parameters.AddRange(parameters);
         return newFunction;
     }
@@ -779,7 +797,7 @@ sealed class Function
     public Function(string name, int argCount) : this(name, new Dictionary<string, AssemblySection>())
     {
         Parameters = Enumerable.Range(0, argCount)
-            .Select(i => new Parameter($"arg{i}") { DeclType = DeclType.Unknown })
+            .Select(i => new Parameter($"arg{i}", i) { DeclType = DeclType.Unknown })
             .ToList();
     }
 

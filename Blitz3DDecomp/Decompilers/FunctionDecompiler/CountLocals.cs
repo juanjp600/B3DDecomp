@@ -22,7 +22,7 @@ static partial class FunctionDecompiler
                 .Max();
             function.LocalVariables.AddRange(
                 Enumerable.Range(0, lastLocalIndex)
-                .Select(i => new Function.LocalVariable($"local{i}")));
+                .Select(i => new Function.LocalVariable($"local{i}", i)));
         }
     }
 }

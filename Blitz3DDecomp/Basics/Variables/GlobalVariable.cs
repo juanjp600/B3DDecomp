@@ -10,4 +10,7 @@ sealed class GlobalVariable : Variable
     {
         AllGlobals.Add(this);
     }
+
+    public override string ToInstructionArg()
+        => $"@_v{Name.ToLowerInvariant()}";
 }

@@ -10,6 +10,8 @@ abstract class Variable
         Name = name;
     }
 
+    public abstract string ToInstructionArg();
+
     public override string ToString()
         => $"{Name}{DeclType.Suffix}";
 }

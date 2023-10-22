@@ -5,9 +5,11 @@ internal static class Program
 {
     public static void Main(string[] args)
     {
+        Function.InitBuiltIn();
+
         string disasmPath = "C:/Users/juanj/Desktop/Blitz3D/ReverseEng/game_disasm/";
         disasmPath = "C:/Users/juanj/Repos/Blitz3DDecomp/SamplePrograms/Sample1/Sample1_disasm/";
-        disasmPath = "C:/Users/juanj/Desktop/Blitz3D/ReverseEng/game_disasm/";
+        disasmPath = "/Users/juanjp/Desktop/b3d_reveng/SCPCBR_disasm/";
         string decompPath = disasmPath.Replace("_disasm", "_decomp");
         if (Directory.Exists(decompPath)) { Directory.Delete(decompPath, true); }
         Directory.CreateDirectory(decompPath);
@@ -109,12 +111,13 @@ internal static class Program
         var goodGlobals = GlobalVariable
             .AllGlobals
             .Where(v => v.DeclType != DeclType.Unknown)
+            .OrderBy(v => v.Name)
             .ToArray();
         var badGlobals = GlobalVariable
             .AllGlobals
             .Where(v => v.DeclType == DeclType.Unknown)
             .ToArray();
-        
+
         Debugger.Break();
     }
 }

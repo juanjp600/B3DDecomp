@@ -21,7 +21,7 @@ static partial class FunctionDecompiler
             }
 
             var functionName = startInstruction.LeftArg[1..];
-            var function = Function.AllFunctions.FirstOrDefault(f => f.Name == functionName || f.Name == functionName[2..]);
+            var function = Function.GetFunctionWithName(functionName);
             espDiff = 0;
             if (function is { Parameters.Count: 0 })
             {
@@ -46,6 +46,7 @@ static partial class FunctionDecompiler
                 else if (instruction.Name == "call")
                 {
                     CrawlUp(section, i, out int newEspDiff, out i, dep + 1);
+                    function = Function.GetFunctionWithName(functionName);
                     espDiff += newEspDiff;
                 }
                 else if (instruction.Name == "mov" && instruction.LeftArg.Contains("[esp"))
@@ -110,7 +111,7 @@ static partial class FunctionDecompiler
                     espDiff = 0;
                 }
 
-                Function.AllFunctions.Add(new Function(functionName, foundArgCount));
+                _ = new Function(functionName, foundArgCount);
                 if (foundArgCount == 0) { foundArgs.Clear(); }
             }
 

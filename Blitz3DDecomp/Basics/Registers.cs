@@ -18,7 +18,10 @@ static class Registers
 
     public static string StripDeref(this string s)
     {
-        if (s.IndexOf("[") is var startIndex and >= 0 && s.IndexOf("]") is var endIndex and >= 0)
+        if (s.Length <= 3) { return s; }
+
+        if (s.IndexOf('[', StringComparison.Ordinal) is var startIndex and >= 0
+            && s.IndexOf(']', StringComparison.Ordinal) is var endIndex and >= 0)
         {
             return s[(startIndex+1)..endIndex];
         }

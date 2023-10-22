@@ -46,4 +46,7 @@ readonly record struct DeclType(string Suffix)
 
     public bool IsArrayType
         => Suffix[^1] == ']';
+
+    public override string ToString()
+        => $"DeclType({Suffix})";
 }

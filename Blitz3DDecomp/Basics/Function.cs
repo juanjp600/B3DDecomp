@@ -19,15 +19,16 @@ sealed class Function
         }
 
         public IEnumerable<GlobalVariable> ReferencedGlobals
+            => ReferencedVariables
+                .OfType<GlobalVariable>();
+
+        public IEnumerable<Variable> ReferencedVariables
             => Instructions
                 .SelectMany(i => new[] { i.LeftArg, i.RightArg })
                 .Select(s => s.StripDeref())
-                .Where(s => s.StartsWith("@_v"))
-                .Select(s =>
-                    GlobalVariable.AllGlobals.FirstOrDefault(
-                        g => s.EndsWith(g.Name, StringComparison.OrdinalIgnoreCase)))
-                .OfType<GlobalVariable>() // Removes null entries
-                .Distinct();
+                .Select(Owner.InstructionArgumentToVariable)
+                .OfType<Variable>()
+                .Distinct(); // Removes null entries
     }
 
     public sealed class Parameter : Variable

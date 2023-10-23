@@ -16,9 +16,7 @@ static class BbObjMemberAccess
             => variable.DeclType.IsCustomType;
 
         var variablesOfCustomType
-            = function.LocalVariables.Where(isVarOfCustomType).Cast<Variable>()
-                .Concat(function.Parameters.Where(isVarOfCustomType))
-                .Concat(section.ReferencedGlobals.Where(isVarOfCustomType))
+            = section.ReferencedVariables.Where(isVarOfCustomType)
                 .ToArray();
 
         foreach (var variable in variablesOfCustomType)

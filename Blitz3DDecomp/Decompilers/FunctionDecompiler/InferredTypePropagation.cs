@@ -174,19 +174,9 @@ static class InferredTypePropagation
             smear(variable, initialLocation, smearDir: 1);
         }
 
-        for (int localIndex = 0; localIndex < function.LocalVariables.Count; localIndex++)
+        foreach (var variable in section.ReferencedVariables)
         {
-            smearBothWays(function.LocalVariables[localIndex], $"ebp-0x{(localIndex * 4) + 0x4:x1}");
-        }
-        
-        for (int argIndex = 0; argIndex < function.Parameters.Count; argIndex++)
-        {
-            smearBothWays(function.Parameters[argIndex], $"ebp+0x{(argIndex * 4) + 0x14:x1}");
-        }
-
-        foreach (var global in section.ReferencedGlobals)
-        {
-            smearBothWays(global, $"@_v{global.Name}");
+            smearBothWays(variable, variable.ToInstructionArg().StripDeref());
         }
 
         return changedSomething;

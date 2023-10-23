@@ -164,34 +164,17 @@ static partial class FunctionDecompiler
         private static bool InferTypesForLocals(Function function, Function.AssemblySection section)
         {
             bool changedSomething = false;
-            for (int i = 0; i < function.LocalVariables.Count; i++)
-            {
-                changedSomething |= InferTypeForVariable(
-                    function,
-                    section,
-                    function.LocalVariables[i],
-                    $"ebp-0x{(i * 4) + 0x4:x1}");
-            }
-            for (int i = 0; i < function.Parameters.Count; i++)
-            {
-                changedSomething |= InferTypeForVariable(
-                    function,
-                    section,
-                    function.Parameters[i],
-                    $"ebp+0x{(i * 4) + 0x14:x1}");
-            }
-
-            var referencedGlobals = section
-                .ReferencedGlobals
+            var variables = section
+                .ReferencedVariables
                 .Where(g => g.DeclType == DeclType.Unknown)
                 .ToArray();
-            foreach (var global in referencedGlobals)
+            foreach (var variable in variables)
             {
                 changedSomething |= InferTypeForVariable(
                     function,
                     section,
-                    global,
-                    $"@_v{global.Name}");
+                    variable,
+                    variable.ToInstructionArg().StripDeref());
             }
 
             return changedSomething;

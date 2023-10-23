@@ -173,19 +173,9 @@ static partial class FunctionDecompiler
                 smear(variable, initialLocation, smearDir: 1);
             }
 
-            for (int i = 0; i < function.LocalVariables.Count; i++)
+            foreach (var variable in section.ReferencedVariables)
             {
-                smearBothWays(function.LocalVariables[i], $"ebp-0x{(i * 4) + 0x4:x1}");
-            }
-            
-            for (int i = 0; i < function.Parameters.Count; i++)
-            {
-                smearBothWays(function.Parameters[i], $"ebp+0x{((i * 4) + 0x14):x1}");
-            }
-
-            foreach (var global in section.ReferencedGlobals)
-            {
-                smearBothWays(global, $"@_v{global.Name}");
+                smearBothWays(variable, variable.ToInstructionArg().StripDeref());
             }
 
             return changedSomething;

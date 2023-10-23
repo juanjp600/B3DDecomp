@@ -12,24 +12,34 @@ abstract class Variable
         set
         {
             declType = value;
-            Fields.Clear();
+            fields.Clear();
 
             ArrayElement = declType.GetElementType() is { } elementType
                 ? new SubVariable(this, elementType, "ArrayElement")
                 : null;
 
-            if (declType is not { IsArrayType: false, IsCustomType: true }) { return; }
-
-            var customType = CustomType.GetTypeMatchingDeclType(declType);
-            if (customType != null)
-            {
-                Fields.AddRange(customType.Fields.Select(f => new SubVariable(this, f)));
-            }
         }
     }
 
     public SubVariable? ArrayElement { get; private set; } = null;
-    public readonly List<SubVariable> Fields = new List<SubVariable>();
+
+    private readonly List<SubVariable> fields = new List<SubVariable>();
+
+    public IReadOnlyList<SubVariable> Fields
+    {
+        get
+        {
+            if (fields.Count == 0 && declType is { IsArrayType: false, IsCustomType: true })
+            {
+                var customType = CustomType.GetTypeMatchingDeclType(declType);
+                if (customType != null)
+                {
+                    fields.AddRange(customType.Fields.Select(f => new SubVariable(this, f)));
+                }
+            }
+            return fields;
+        }
+    }
 
     protected Variable(string name)
     {

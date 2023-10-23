@@ -15,17 +15,16 @@ abstract class Variable
             fields.Clear();
 
             ArrayElement = declType.GetElementType() is { } elementType
-                ? new SubVariable(this, elementType, "ArrayElement")
+                ? new ArrayElementVariable(this, elementType)
                 : null;
 
         }
     }
 
-    public SubVariable? ArrayElement { get; private set; } = null;
+    public ArrayElementVariable? ArrayElement { get; private set; } = null;
 
-    private readonly List<SubVariable> fields = new List<SubVariable>();
-
-    public IReadOnlyList<SubVariable> Fields
+    private readonly List<FieldVariable> fields = new List<FieldVariable>();
+    public IReadOnlyList<FieldVariable> Fields
     {
         get
         {
@@ -34,7 +33,7 @@ abstract class Variable
                 var customType = CustomType.GetTypeMatchingDeclType(declType);
                 if (customType != null)
                 {
-                    fields.AddRange(customType.Fields.Select(f => new SubVariable(this, f)));
+                    fields.AddRange(customType.Fields.Select(f => new FieldVariable(this, f)));
                 }
             }
             return fields;

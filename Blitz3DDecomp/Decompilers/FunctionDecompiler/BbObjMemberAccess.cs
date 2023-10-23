@@ -50,6 +50,20 @@ static class BbObjMemberAccess
                         instruction.RightArg = $"{variable.Name}\\{field.Name}";
                         section.Instructions[i + 1] = new Function.Instruction(name: "nop");
                         section.Instructions[i + 2] = new Function.Instruction(name: "nop");
+                        if (field.DeclType.IsArrayType && i < section.Instructions.Count - 5)
+                        {
+                            var derefFieldInstruction = section.Instructions[i + 3];
+                            if (derefFieldInstruction.Name == "mov"
+                                && derefFieldInstruction.LeftArg == register
+                                && derefFieldInstruction.RightArg == $"[{register}]")
+                            {
+                                
+                            }
+                            else
+                            {
+                                Debugger.Break();
+                            }
+                        }
                     }
                 }
 

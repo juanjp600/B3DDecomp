@@ -5,7 +5,11 @@ sealed class CustomType
     public sealed record Field(
         CustomType Owner,
         string Name,
-        DeclType DeclType);
+        DeclType DeclType)
+    {
+        public override string ToString()
+            => $"{Name}{DeclType.Suffix}";
+    }
 
     public static readonly List<CustomType> AllTypes = new List<CustomType>();
 

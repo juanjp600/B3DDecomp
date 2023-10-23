@@ -40,7 +40,7 @@ sealed class Function
         }
 
         public override string ToInstructionArg()
-            => $"ebp+0x{((Index << 2) + 0x14):x1}";
+            => $"[ebp+0x{((Index << 2) + 0x14):x1}]";
     }
 
     public sealed class LocalVariable : Variable
@@ -51,9 +51,9 @@ sealed class Function
         {
             Index = index;
         }
-        
+
         public override string ToInstructionArg()
-            => $"ebp+0x{((Index << 2) + 0x14):x1}";
+            => $"[ebp-0x{((Index << 2) + 0x4):x1}]";
     }
 
     public readonly string Name;

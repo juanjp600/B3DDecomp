@@ -12,6 +12,7 @@ ref struct LocationTracker
         TrackDirection = trackDirection;
         Location = initialLocation;
         PreserveDeref = preserveDeref;
+        if (!PreserveDeref) { Location = Location.StripDeref(); }
     }
 
     public bool ProcessInstruction(Function.Instruction instruction)

@@ -133,7 +133,7 @@ internal static class Program
         var exePath = "C:/Program Files (x86)/Steam/steamapps/common/SCP Containment Breach Multiplayer/game.exe";
         //exePath = "/Users/juanjp/Desktop/Repos/BlitzBasicGames/game.exe";
         exePath = "C:/Users/juanj/Repos/Blitz3DDecomp/SamplePrograms/Sample1/Sample1.exe";
-        exePath = "/Users/juanjp/Desktop/b3d_reveng/SCP - Containment Breach v0.2.exe";
+        exePath = "/Users/juanjp/Desktop/b3d_reveng/SCP - Containment Breach v0.9.exe";
         //exePath = "C:/Program Files (x86)/Steam/steamapps/common/SCP Nine-Tailed Fox/SCP Nine-Tailed Fox.exe";
         //exePath = "C:/Users/juanj/Desktop/Blitz3D/ReverseEng/StackAllocTest6.exe";
         //exePath = "C:/Users/juanj/Downloads/SCP - Containment Breach v0.2/SCP - Containment Breach v0.2.exe";

@@ -9,7 +9,7 @@ static class InferredTypePropagation
     {
         if (function.ReturnType != DeclType.Unknown) { return false; }
 
-        var locationTracker = new LocationTracker(trackDirection: -1, initialLocation: "");
+        var locationTracker = new LocationTracker(trackDirection: -1, initialLocation: "", preserveDeref: true);
         for (int i = section.Instructions.Count - 1; i >= 0; i--)
         {
             var instruction = section.Instructions[i];
@@ -52,7 +52,7 @@ static class InferredTypePropagation
     {
         var argType = callee.Parameters[argIndex].DeclType;
 
-        var locationTracker = new LocationTracker(trackDirection: -1, section.Instructions[assignmentLocation].LeftArg.StripDeref());
+        var locationTracker = new LocationTracker(trackDirection: -1, section.Instructions[assignmentLocation].LeftArg.StripDeref(), preserveDeref: true);
         for (int i = assignmentLocation; i >= 0; i--)
         {
             var instruction = section.Instructions[i];
@@ -82,7 +82,7 @@ static class InferredTypePropagation
 
                 if (variable.DeclType == DeclType.Unknown)
                 {
-                    Console.WriteLine($"{function.Name}'s {variable.Name} is {callee.Parameters[argIndex].DeclType} because {callee.Name}'s arg {argIndex}");
+                    Console.WriteLine($"{function.Name}'s {variable.Name} is {callee.Parameters[argIndex].DeclType} because {callee.Name}'s arg {argIndex}. {section.Name}:{i}");
 
                     variable.DeclType = callee.Parameters[argIndex].DeclType;
                     return true;
@@ -90,7 +90,7 @@ static class InferredTypePropagation
                 else if (argType == DeclType.Unknown
                          && !callee.Name.StartsWith("_builtIn"))
                 {
-                    Console.WriteLine($"{callee.Name}'s arg {argIndex} is {variable.DeclType} because {function.Name}'s {variable.Name}");
+                    Console.WriteLine($"{callee.Name}'s arg {argIndex} is {variable.DeclType} because {function.Name}'s {variable.Name}. {section.Name}:{i}");
                     callee.Parameters[argIndex].DeclType = variable.DeclType;
                     return true;
                 }
@@ -128,7 +128,7 @@ static class InferredTypePropagation
 
         void smear(Variable declaration, string initialLocation, int smearDir)
         {
-            var locationTracker = new LocationTracker(trackDirection: smearDir, initialLocation: initialLocation);
+            var locationTracker = new LocationTracker(trackDirection: smearDir, initialLocation: initialLocation, preserveDeref: true);
             for (int i = smearDir > 0 ? 0 : section.Instructions.Count - 1;
                  i >= 0 && i < section.Instructions.Count;
                  i += smearDir)

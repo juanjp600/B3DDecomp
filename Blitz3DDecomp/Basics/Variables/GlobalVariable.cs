@@ -12,5 +12,5 @@ sealed class GlobalVariable : Variable
     }
 
     public override string ToInstructionArg()
-        => $"@_v{Name.ToLowerInvariant()}";
+        => $"[@_v{Name.ToLowerInvariant()}]";
 }

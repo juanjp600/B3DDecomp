@@ -47,6 +47,21 @@ readonly record struct DeclType(string Suffix)
     public bool IsArrayType
         => Suffix[^1] == ']';
 
+    public DeclType? GetElementType()
+    {
+        if (!IsArrayType) { return null; }
+
+        for (int i = Suffix.Length - 1; i >= 0; i--)
+        {
+            if (Suffix[i] == '[')
+            {
+                return new DeclType(Suffix[..i]);
+            }
+        }
+
+        return null;
+    }
+
     public override string ToString()
         => $"DeclType({Suffix})";
 }

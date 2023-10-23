@@ -2,17 +2,22 @@
 
 sealed class CustomType
 {
-    public sealed class Field : Variable
-    {
-        public Field(string name) : base(name) { }
-        public override string ToInstructionArg()
-        {
-            return $"\\{Name}";
-        }
-    }
-    
+    public sealed record Field(
+        CustomType Owner,
+        string Name,
+        DeclType DeclType);
+
     public static readonly List<CustomType> AllTypes = new List<CustomType>();
-    
+
+    public static CustomType? GetTypeWithName(string name)
+    {
+        if (name[0] =='.') { name = name[1..]; }
+        return AllTypes.FirstOrDefault(t => t.Name == name);
+    }
+
+    public static CustomType? GetTypeMatchingDeclType(DeclType declType)
+        => GetTypeWithName(declType.Suffix);
+
     public readonly string Name;
     public readonly List<Field> Fields = new List<Field>();
 

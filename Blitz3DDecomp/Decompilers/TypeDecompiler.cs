@@ -24,7 +24,7 @@ static class TypeDecompiler
                 var symbolValueMatch = symbolValueRegex.Match(fieldLine);
                 var fieldName = $"Field{symbolValueMatch.Groups[1].Value}";
                 var fieldType = DeclType.FromDesc(symbolValueMatch.Groups[2].Value);
-                newType.Fields.Add(new CustomType.Field(fieldName) { DeclType = fieldType });
+                newType.Fields.Add(new CustomType.Field(newType, fieldName, fieldType));
             }
 
             var outputPath = outputDir.AppendToPath($"{typeName}.bb");

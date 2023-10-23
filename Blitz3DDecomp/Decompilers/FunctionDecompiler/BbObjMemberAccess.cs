@@ -44,10 +44,12 @@ static class BbObjMemberAccess
                         && memberAccessInstruction.LeftArg == register)
                     {
                         var fieldIndex = int.Parse(memberAccessInstruction.RightArg[2..], NumberStyles.HexNumber) >> 2;
-                        var customType =
-                            CustomType.AllTypes.First(t => t.Name == variable.DeclType.Suffix[1..]);
+                        var customType = CustomType.GetTypeMatchingDeclType(variable.DeclType);
                         var field = customType.Fields[fieldIndex];
                         Console.WriteLine($"{function.Name}: accesses {variable}\\{field}");
+                        instruction.RightArg = $"{variable.Name}\\{field.Name}";
+                        section.Instructions[i + 1] = new Function.Instruction(name: "nop");
+                        section.Instructions[i + 2] = new Function.Instruction(name: "nop");
                     }
                 }
 

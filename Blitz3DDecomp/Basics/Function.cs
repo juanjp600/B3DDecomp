@@ -8,11 +8,13 @@ sealed class Function
 {
     public sealed class AssemblySection
     {
+        public readonly Function Owner;
         public readonly string Name;
         public readonly List<Instruction> Instructions = new List<Instruction>();
 
-        public AssemblySection(string name)
+        public AssemblySection(Function owner, string name)
         {
+            Owner = owner;
             Name = name;
         }
 
@@ -735,6 +737,13 @@ sealed class Function
 
         public int[]? CallParameterAssignmentIndices;
         public string? BbObjType;
+
+        public Instruction(string name, string leftArg = "", string rightArg = "")
+        {
+            Name = name;
+            LeftArg = leftArg;
+            RightArg = rightArg;
+        }
 
         public bool IsJumpOrCall
             => Name is

@@ -24,8 +24,8 @@ public static class IngestCodeFiles
 
             var lines = File.ReadAllLines(filePath);
             string currentSectionName = "";
+            var newFunction = new Function(functionName, new Dictionary<string, Function.AssemblySection>());
             Function.AssemblySection? currentSection = null;
-            var sections = new Dictionary<string, Function.AssemblySection>();
 
             void commitCurrentSection()
             {
@@ -34,7 +34,7 @@ public static class IngestCodeFiles
                 currentSection.Instructions.RemoveAll(i => i.Name == "nop");
                 if (!string.IsNullOrWhiteSpace(currentSectionName))
                 {
-                    sections[currentSectionName] = currentSection;
+                    newFunction.AssemblySections[currentSectionName] = currentSection;
                 }
             }
             foreach (var line in lines)
@@ -45,7 +45,7 @@ public static class IngestCodeFiles
                     var parseNameMatch = instructionNameParseRegex.Match(instructionStr);
                     if (!parseNameMatch.Success)
                     {
-                        currentSection.Instructions.Add(new Function.Instruction { Name = instructionStr, LeftArg = "", RightArg = "" });
+                        currentSection.Instructions.Add(new Function.Instruction(name: instructionStr));
                         continue;
                     }
                     var instructionName = parseNameMatch.Groups[1].Value;
@@ -53,20 +53,19 @@ public static class IngestCodeFiles
                     var parseArgsMatch = instructionArgsParseRegex.Match(instructionArgsStr);
                     if (!parseArgsMatch.Success)
                     {
-                        currentSection.Instructions.Add(new Function.Instruction { Name = instructionName, LeftArg = instructionArgsStr, RightArg = "" });
+                        currentSection.Instructions.Add(new Function.Instruction(name: instructionName, leftArg: instructionArgsStr));
                         continue;
                     }
-                    currentSection.Instructions.Add(new Function.Instruction { Name = instructionName, LeftArg = parseArgsMatch.Groups[1].Value.Trim(), RightArg = parseArgsMatch.Groups[2].Value.Trim() });
+                    currentSection.Instructions.Add(new Function.Instruction(name: instructionName, leftArg: parseArgsMatch.Groups[1].Value.Trim(), rightArg: parseArgsMatch.Groups[2].Value.Trim()));
                 }
                 else if (symbolDescRegex.Match(line) is { Success: true } symbolDescMatch)
                 {
                     commitCurrentSection();
                     currentSectionName = symbolDescMatch.Groups[2].Value;
-                    currentSection = new Function.AssemblySection(currentSectionName);
+                    currentSection = new Function.AssemblySection(newFunction, currentSectionName);
                 }
             }
             commitCurrentSection();
-            _ = new Function(functionName, sections);
         }
 
         

@@ -9,7 +9,7 @@ internal static class Program
 
         string disasmPath = "C:/Users/juanj/Desktop/Blitz3D/ReverseEng/game_disasm/";
         disasmPath = "C:/Users/juanj/Repos/Blitz3DDecomp/SamplePrograms/Sample1/Sample1_disasm/";
-        disasmPath = "/Users/juanjp/Desktop/b3d_reveng/SCPCBR_disasm/";
+        disasmPath = "/Users/juanjp/Desktop/b3d_reveng/SCP - Containment Breach v0.2_disasm/";
         string decompPath = disasmPath.Replace("_disasm", "_decomp");
         if (Directory.Exists(decompPath)) { Directory.Delete(decompPath, true); }
         Directory.CreateDirectory(decompPath);
@@ -33,25 +33,26 @@ internal static class Program
 
         foreach (var function in Function.AllFunctions)
         {
+            FunctionDecompiler.CountLocals.Process(function);
+            VectorTypeDeduction.Process(function);
+        }
+
+        foreach (var function in Function.AllFunctions)
+        {
+            UnambiguousIntegerInstructions.Process(function);
+        }
+
+        foreach (var function in Function.AllFunctions)
+        {
             FunctionDecompiler.LibCallCleanup.Process(function);
         }
+
         foreach (var function in Function.AllFunctions
                      // Order by total instruction count to minimize lib function signature guess errors
                      .OrderBy(f => f.TotalInstructionCount)
                      .ToList())
         {
             FunctionDecompiler.CollectCalls.Process(function);
-        }
-
-        foreach (var function in Function.AllFunctions)
-        {
-            FunctionDecompiler.CountLocals.Process(function);
-            UnambiguousIntegerInstructions.Process(function);
-        }
-
-        foreach (var function in Function.AllFunctions)
-        {
-            VectorTypeDeduction.Process(function);
         }
 
         bool shouldLoop = true;

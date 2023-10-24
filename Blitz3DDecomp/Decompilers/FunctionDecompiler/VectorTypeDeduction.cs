@@ -1,3 +1,5 @@
+using B3DDecompUtils;
+
 namespace Blitz3DDecomp;
 
 static class VectorTypeDeduction
@@ -28,7 +30,7 @@ static class VectorTypeDeduction
                 && variable != null 
                 && variable.DeclType == DeclType.Unknown)
             {
-                Console.WriteLine($"{function}: {variable.Name} is {vecType} because {vecTypeToRegister}");
+                Logger.WriteLine($"{function}: {variable.Name} is {vecType} because {vecTypeToRegister}");
                 variable.DeclType = vecType;
             }
         }

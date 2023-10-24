@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics;
+using B3DDecompUtils;
 
 namespace Blitz3DDecomp;
 
@@ -22,12 +23,12 @@ static partial class FunctionDecompiler
                 if (instruction.Name.StartsWith(intToFltName))
                 {
                     declaration.DeclType = DeclType.Int;
-                    Console.WriteLine($"{function.Name}: {declarationDesc} is int because {instruction}");
+                    Logger.WriteLine($"{function.Name}: {declarationDesc} is int because {instruction}");
                 }
                 else
                 {
                     declaration.DeclType = DeclType.Float;
-                    Console.WriteLine($"{function.Name}: {declarationDesc} is float because {instruction}");
+                    Logger.WriteLine($"{function.Name}: {declarationDesc} is float because {instruction}");
                 }
                 changedSomething = true;
             }
@@ -53,14 +54,14 @@ static partial class FunctionDecompiler
                 {
                     if (calleeFunction.IsBuiltIn) { return false; }
                     calleeFunction.ReturnType = typeAtTop.Value;
-                    Console.WriteLine($"{function.Name}: {calleeFunction.Name} returns {(typeAtTop == DeclType.Int ? "int" : "float")} because {declarationDesc}");
+                    Logger.WriteLine($"{function.Name}: {calleeFunction.Name} returns {(typeAtTop == DeclType.Int ? "int" : "float")} because {declarationDesc}");
                     changedSomething = true;
                 }
             }
             else if (declaration.DeclType == DeclType.Unknown)
             {
                 declaration.DeclType = calleeFunction.ReturnType;
-                Console.WriteLine($"{function.Name}: {declarationDesc} is {calleeFunction.ReturnType} because {calleeFunction.Name}");
+                Logger.WriteLine($"{function.Name}: {declarationDesc} is {calleeFunction.ReturnType} because {calleeFunction.Name}");
                 changedSomething = true;
             }
             return changedSomething;
@@ -81,19 +82,19 @@ static partial class FunctionDecompiler
                 if (callee.Parameters[i].DeclType != DeclType.Unknown) { continue; }
                 var assignmentLocation = callParameterAssignmentIndices[i];
                 var assignmentInstruction = section.Instructions[assignmentLocation];
-                var locationTracker = new LocationTracker(trackDirection: -1, initialLocation: assignmentInstruction.RightArg.StripDeref());
+                var locationTracker = new LocationTracker(trackDirection: -1, initialLocation: assignmentInstruction.RightArg, preserveDeref: true);
                 DeclType? typeAtTop = null;
                 for (int j = assignmentLocation - 1; j >= 0; j--)
                 {
                     var instruction = section.Instructions[j];
 
-                    if (instruction.LeftArg.StripDeref() == locationTracker.Location)
+                    if (instruction.LeftArg == locationTracker.Location)
                     {
                         changedSomething |= CheckInstructionForMarkAsFloat(function, callee.Parameters[i], $"{callee.Name} arg {i}", instruction, smearDir: -1, ref typeAtTop);
 
                         if (instruction.Name == "movzx")
                         {
-                            Console.WriteLine($"{callee.Name} arg {i} is int because {instruction}");
+                            Logger.WriteLine($"{function.Name}: {callee.Name}'s arg {i} is int because {instruction}");
                             callee.Parameters[i].DeclType = DeclType.Int;
                             changedSomething = true;
                             break;
@@ -127,24 +128,30 @@ static partial class FunctionDecompiler
             void smear(Variable declaration, string initialLocation, int smearDir)
             {
                 DeclType? typeBeyondInstruction = null;
-                var locationTracker = new LocationTracker(trackDirection: smearDir, initialLocation);
+                var locationTracker = new LocationTracker(trackDirection: smearDir, initialLocation, preserveDeref: true);
                 for (int j = smearDir > 0 ? 0 : section.Instructions.Count - 1;
                      j >= 0 && j < section.Instructions.Count;
                      j += smearDir)
                 {
                     var instruction = section.Instructions[j];
 
-                    if (instruction.LeftArg.StripDeref() == locationTracker.Location)
+                    if (instruction.LeftArg == locationTracker.Location)
                     {
                         changedSomething |= CheckInstructionForMarkAsFloat(function, declaration, declaration.Name, instruction, smearDir: smearDir, ref typeBeyondInstruction);
 
                         if (smearDir < 0 && instruction.Name == "movzx" && declaration.DeclType == DeclType.Unknown)
                         {
-                            Console.WriteLine($"{declaration.Name} is int because {instruction}");
+                            Logger.WriteLine($"{declaration.Name} is int because {instruction}");
                             declaration.DeclType = DeclType.Int;
                             changedSomething = true;
                             locationTracker.Location = initialLocation;
                         }
+                    }
+
+                    if (instruction.Name == "mov"
+                        && instruction.RightArg.StartsWith($"[{locationTracker.Location}"))
+                    {
+                        locationTracker.Location = initialLocation;
                     }
 
                     locationTracker.ProcessInstruction(instruction);
@@ -175,7 +182,7 @@ static partial class FunctionDecompiler
 
             foreach (var variable in section.ReferencedVariables)
             {
-                smearBothWays(variable, variable.ToInstructionArg().StripDeref());
+                smearBothWays(variable, variable.ToInstructionArg());
             }
 
             return changedSomething;

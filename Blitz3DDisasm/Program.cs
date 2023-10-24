@@ -6,6 +6,7 @@ using System.ComponentModel.DataAnnotations;
 using System.Diagnostics;
 using System.Text;
 using AsmResolver.PE.Exports;
+using B3DDecompUtils;
 
 internal static class Program
 {
@@ -288,7 +289,7 @@ internal static class Program
                         symbol.ForceSetInferredType(SymbolType.Libs, "__LIBS");
                         symbol.NewName = $"{symbol.Name}__LIBS";
                     }
-                    Console.WriteLine($"Lib function: {libName}.{functionName}@{lookupAddress:X8}");
+                    Logger.WriteLine($"Lib function: {libName}.{functionName}@{lookupAddress:X8}");
                 }
             }
         }
@@ -313,7 +314,7 @@ internal static class Program
         bool inferenceDone = false;
         while (!inferenceDone)
         {
-            Console.WriteLine("Inferring...");
+            Logger.WriteLine("Inferring...");
             inferenceDone = true;
             for (int i = 0; i < symbols.Count; i++)
             {
@@ -388,7 +389,7 @@ internal static class Program
                             }
                             else
                             {
-                                Console.WriteLine($"Oh no! {relocToDecode.SymbolName} {relocToDecode.RelocAddress}");
+                                Logger.WriteLine($"Oh no! {relocToDecode.SymbolName} {relocToDecode.RelocAddress}");
                             }
                             relocs.RemoveAt(0);
                         }
@@ -537,12 +538,12 @@ internal static class Program
                             retVal = retVal.Replace(relocAddressStr, replacementValue);
                             if (oldVal == retVal)
                             {
-                                Console.WriteLine($"Replacement jank in {symbol.Name} ({instr}): can't find {relocAddressStr} ({relocToDecode.SymbolName}, {relocToDecode.OffsetFromSymbol}, {relocToDecode.OriginalValue})");
+                                Logger.WriteLine($"Replacement jank in {symbol.Name} ({instr}): can't find {relocAddressStr} ({relocToDecode.SymbolName}, {relocToDecode.OffsetFromSymbol}, {relocToDecode.OriginalValue})");
                             }
                         }
                         else
                         {
-                            Console.WriteLine($"Oh no! {relocToDecode.SymbolName} {relocToDecode.RelocAddress}");
+                            Logger.WriteLine($"Oh no! {relocToDecode.SymbolName} {relocToDecode.RelocAddress}");
                         }
                         relocs.RemoveAt(0);
                     }
@@ -624,6 +625,6 @@ internal static class Program
         }
 
         File.WriteAllLines(disasmPath + "/symbols.txt", symbols.Select(s => $"@{s.Address:X8}: {s.NameToPrint} {s.Type}"));
-        Console.WriteLine(":tada:");
+        Logger.WriteLine(":tada:");
     }
 }

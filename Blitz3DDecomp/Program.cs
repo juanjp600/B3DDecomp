@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics;
+using B3DDecompUtils;
 using Blitz3DDecomp;
 
 internal static class Program
@@ -65,7 +66,7 @@ internal static class Program
                 {
                     if (result)
                     {
-                        if (!shouldLoop) { Console.WriteLine(msg); }
+                        if (!shouldLoop) { Logger.WriteLine(msg); }
                         shouldLoop = true;
                     }
                 }
@@ -134,6 +135,7 @@ internal static class Program
                         || i.RightArg.Contains('\\'))))
             .ToArray();
 
+        Logger.End();
         Debugger.Break();
     }
 }

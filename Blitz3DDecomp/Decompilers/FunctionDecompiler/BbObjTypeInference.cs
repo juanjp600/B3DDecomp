@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics;
+using B3DDecompUtils;
 
 namespace Blitz3DDecomp;
 
@@ -53,7 +54,7 @@ static partial class FunctionDecompiler
                 {
                     Debugger.Break();
                 }
-                Console.WriteLine($"{function.Name}: {calleeName} -> {callInstruction.BbObjType}");
+                Logger.WriteLine($"{function.Name}: {calleeName} -> {callInstruction.BbObjType}");
             }
         }
 
@@ -147,7 +148,7 @@ static partial class FunctionDecompiler
                     if (!string.IsNullOrEmpty(bbObjType) && instrIsConstructor)
                     {
                         variable.DeclType = new DeclType("."+bbObjType[2..]);
-                        Console.WriteLine($"{function.Name}: {variable.Name} is {variable.DeclType} because {instruction.LeftArg}");
+                        Logger.WriteLine($"{function.Name}: {variable.Name} is {variable.DeclType} because {instruction.LeftArg}");
                         return true;
                     }
                 }

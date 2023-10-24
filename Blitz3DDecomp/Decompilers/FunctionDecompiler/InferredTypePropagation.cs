@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Globalization;
+using B3DDecompUtils;
 
 namespace Blitz3DDecomp;
 
@@ -26,7 +27,7 @@ static class InferredTypePropagation
                     if (calleeFunction != null && calleeFunction.ReturnType != DeclType.Unknown)
                     {
                         function.ReturnType = calleeFunction.ReturnType;
-                        Console.WriteLine($"{function.Name} returns {function.ReturnType} because {instruction}");
+                        Logger.WriteLine($"{function.Name} returns {function.ReturnType} because {instruction}");
                         return true;
                     }
                 }
@@ -40,7 +41,7 @@ static class InferredTypePropagation
             if (variable != null && variable.DeclType != DeclType.Unknown)
             {
                 function.ReturnType = variable.DeclType;
-                Console.WriteLine($"{function.Name} returns {function.ReturnType} because {variable.Name}");
+                Logger.WriteLine($"{function.Name} returns {function.ReturnType} because {variable.Name}");
                 return true;
             }
         }
@@ -52,7 +53,7 @@ static class InferredTypePropagation
     {
         var argType = callee.Parameters[argIndex].DeclType;
 
-        var locationTracker = new LocationTracker(trackDirection: -1, section.Instructions[assignmentLocation].LeftArg.StripDeref(), preserveDeref: true);
+        var locationTracker = new LocationTracker(trackDirection: -1, section.Instructions[assignmentLocation].LeftArg, preserveDeref: true);
         for (int i = assignmentLocation; i >= 0; i--)
         {
             var instruction = section.Instructions[i];
@@ -82,7 +83,7 @@ static class InferredTypePropagation
 
                 if (variable.DeclType == DeclType.Unknown)
                 {
-                    Console.WriteLine($"{function.Name}'s {variable.Name} is {callee.Parameters[argIndex].DeclType} because {callee.Name}'s arg {argIndex}. {section.Name}:{i}");
+                    Logger.WriteLine($"{function.Name}'s {variable.Name} is {callee.Parameters[argIndex].DeclType} because {callee.Name}'s arg {argIndex}. {section.Name}:{i}");
 
                     variable.DeclType = callee.Parameters[argIndex].DeclType;
                     return true;
@@ -90,7 +91,7 @@ static class InferredTypePropagation
                 else if (argType == DeclType.Unknown
                          && !callee.Name.StartsWith("_builtIn"))
                 {
-                    Console.WriteLine($"{callee.Name}'s arg {argIndex} is {variable.DeclType} because {function.Name}'s {variable.Name}. {section.Name}:{i}");
+                    Logger.WriteLine($"{callee.Name}'s arg {argIndex} is {variable.DeclType} because {function.Name}'s {variable.Name}. {section.Name}:{i}");
                     callee.Parameters[argIndex].DeclType = variable.DeclType;
                     return true;
                 }
@@ -146,7 +147,7 @@ static class InferredTypePropagation
                             ?? throw new Exception($"Function {section.Instructions[i].LeftArg} not found");
                         if (callee.AssemblySections.Any() && callee.ReturnType == DeclType.Unknown)
                         {
-                            Console.WriteLine($"{function.Name}: {callee.Name}'s return type is {declaration.DeclType} because {declaration.Name}");
+                            Logger.WriteLine($"{function.Name}: {callee.Name}'s return type is {declaration.DeclType} because {declaration.Name}");
                             callee.ReturnType = declaration.DeclType;
                         }
                     }
@@ -161,7 +162,7 @@ static class InferredTypePropagation
                 if (variable != null && variable.DeclType != DeclType.Unknown)
                 {
                     declaration.DeclType = variable.DeclType;
-                    Console.WriteLine($"{function.Name}: {variable.Name} is {variable.DeclType} because {variable.Name}");
+                    Logger.WriteLine($"{function.Name}: {variable.Name} is {variable.DeclType} because {variable.Name}");
                     changedSomething = true;
                     break;
                 }

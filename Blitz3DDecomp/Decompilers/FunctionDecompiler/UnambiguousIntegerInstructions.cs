@@ -1,4 +1,5 @@
 ﻿using System.Globalization;
+using B3DDecompUtils;
 
 namespace Blitz3DDecomp;
 
@@ -18,7 +19,7 @@ static class UnambiguousIntegerInstructions
                 && arg0 != "0x0" && arg1 != "0x0")
             {
                 variable.DeclType = DeclType.Int;
-                Console.WriteLine($"{function.Name}: {variable.Name} is int because {instruction}");
+                Logger.WriteLine($"{function.Name}: {variable.Name} is int because {instruction}");
             }
         }
     }

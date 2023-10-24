@@ -1,5 +1,6 @@
 ﻿using System.Diagnostics;
 using System.Globalization;
+using B3DDecompUtils;
 
 namespace Blitz3DDecomp;
 
@@ -13,7 +14,8 @@ static class BbObjMemberAccess
     private static void ProcessSectionVanilla(Function function, Function.AssemblySection section)
     {
         bool isVarOfCustomType(Variable variable)
-            => variable.DeclType.IsCustomType;
+            => variable.DeclType.IsCustomType
+                && !variable.DeclType.IsArrayType;
 
         var variablesOfCustomType
             = section.ReferencedVariables.Where(isVarOfCustomType)
@@ -30,6 +32,7 @@ static class BbObjMemberAccess
 
                 if (!tracker.ProcessInstruction(instruction)) { continue; }
 
+                //if (instruction.Name != "mov") { Debugger.Break(); }
                 if (tracker.Location.IsRegister())
                 {
                     var register = tracker.Location;
@@ -71,13 +74,13 @@ static class BbObjMemberAccess
                                 // Read the value of the field and store in the same register
                                 instruction.RightArg = $"[{variable.Name}\\{field.Name}]";
                                 section.Instructions[i + 3] = new Function.Instruction(name: "nop");
-                                Console.WriteLine($"{function.Name}: dereferences {variable}\\{field} into {register}");
+                                Logger.WriteLine($"{function.Name}: dereferences {variable}\\{field} into {register}");
                             }
                             else if (derefFieldInstruction.Name == "mov"
                                      && derefFieldInstruction.RightArg == register)
                             {
                                 // Take the pointer to the field and store it somewhere else
-                                Console.WriteLine($"{function.Name}: stores pointer to {variable}\\{field} into {register}");
+                                Logger.WriteLine($"{function.Name}: stores pointer to {variable}\\{field} into {register}");
                                 // There's no action to be taken here, a LocationTracker should be able to handle this
                             }
                             else if (derefFieldInstruction.Name == "mov"
@@ -87,7 +90,7 @@ static class BbObjMemberAccess
                                 instruction.LeftArg = $"[{variable.Name}\\{field.Name}]";
                                 instruction.RightArg = derefFieldInstruction.RightArg;
                                 section.Instructions[i + 3] = new Function.Instruction(name: "nop");
-                                Console.WriteLine($"{function.Name}: writes {derefFieldInstruction.RightArg} into {variable}\\{field}");
+                                Logger.WriteLine($"{function.Name}: writes {derefFieldInstruction.RightArg} into {variable}\\{field}");
                             }
                             else
                             {
@@ -97,6 +100,10 @@ static class BbObjMemberAccess
 
                         section.CleanupNop();
                     }
+                }
+                else
+                {
+                    Debugger.Break();
                 }
 
                 tracker.Location = initialLocation;

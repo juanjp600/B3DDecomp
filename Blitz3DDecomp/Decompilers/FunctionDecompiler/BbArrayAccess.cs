@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Globalization;
+using B3DDecompUtils;
 
 namespace Blitz3DDecomp;
 
@@ -25,6 +26,7 @@ static class BbArrayAccess
 
                 if (!tracker.ProcessInstruction(instruction)) { continue; }
 
+                if (instruction.Name != "mov") { Debugger.Break(); }
                 if (tracker.Location.IsRegister())
                 {
                     var register = tracker.Location;
@@ -48,15 +50,24 @@ static class BbArrayAccess
                                 && potentialImmediateDeref.LeftArg == register
                                 && potentialImmediateDeref.RightArg == $"[{register}]")
                             {
-                                Console.WriteLine($"{function.Name}: accesses {instruction.RightArg}");
+                                Logger.WriteLine($"{function.Name}: accesses {instruction.RightArg}");
                                 instruction.RightArg = $"[{instruction.RightArg}]";
+                                section.Instructions[i + 1] = new Function.Instruction(name: "nop");
+                                section.CleanupNop();
+                            }
+                            else if (potentialImmediateDeref.Name == "mov"
+                                     && potentialImmediateDeref.LeftArg == $"[{register}]")
+                            {
+                                Logger.WriteLine($"{function.Name}: writes {potentialImmediateDeref.RightArg} into {instruction.RightArg}");
+                                instruction.LeftArg = $"[{instruction.RightArg}]";
+                                instruction.RightArg = potentialImmediateDeref.RightArg;
                                 section.Instructions[i + 1] = new Function.Instruction(name: "nop");
                                 section.CleanupNop();
                             }
                             else
                             {
-                                Console.WriteLine($"{function.Name}: copies pointer to {instruction.RightArg} into {instruction.LeftArg}");
-                                //Debugger.Break();
+                                Logger.WriteLine($"{function.Name}: copies pointer to {instruction.RightArg} into {instruction.LeftArg}");
+                                if (!potentialImmediateDeref.LeftArg.Contains("esp")) { Debugger.Break(); }
                             }
                         }
                         else if (memberAccessInstruction.RightArg == register)
@@ -72,15 +83,24 @@ static class BbArrayAccess
                                 && potentialImmediateDeref.LeftArg == objDerefInstruction.LeftArg
                                 && potentialImmediateDeref.RightArg == $"[{objDerefInstruction.LeftArg}]")
                             {
-                                Console.WriteLine($"{function.Name}: accesses {objDerefInstruction.RightArg}");
+                                Logger.WriteLine($"{function.Name}: accesses {objDerefInstruction.RightArg}");
                                 objDerefInstruction.RightArg = $"[{objDerefInstruction.RightArg}]";
+                                section.Instructions[i + 2] = new Function.Instruction(name: "nop");
+                                section.CleanupNop();
+                            }
+                            else if (potentialImmediateDeref.Name == "mov"
+                                     && potentialImmediateDeref.LeftArg == $"[{objDerefInstruction.LeftArg}]")
+                            {
+                                Logger.WriteLine($"{function.Name}: writes {potentialImmediateDeref.RightArg} into {objDerefInstruction.RightArg}");
+                                objDerefInstruction.LeftArg = $"[{objDerefInstruction.RightArg}]";
+                                objDerefInstruction.RightArg = potentialImmediateDeref.RightArg;
                                 section.Instructions[i + 2] = new Function.Instruction(name: "nop");
                                 section.CleanupNop();
                             }
                             else
                             {
-                                Console.WriteLine($"{function.Name}: copies pointer to {objDerefInstruction.RightArg} into {objDerefInstruction.LeftArg}");
-                                //Debugger.Break();
+                                Logger.WriteLine($"{function.Name}: copies pointer to {objDerefInstruction.RightArg} into {objDerefInstruction.LeftArg}");
+                                if (!potentialImmediateDeref.LeftArg.Contains("esp")) { Debugger.Break(); }
                             }
 
                         }
@@ -95,6 +115,10 @@ static class BbArrayAccess
                     {
                         //Debugger.Break();
                     }
+                }
+                else
+                {
+                    Debugger.Break();
                 }
 
                 tracker.Location = initialLocation;

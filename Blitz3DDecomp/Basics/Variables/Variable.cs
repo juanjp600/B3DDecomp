@@ -13,15 +13,13 @@ abstract class Variable
         {
             declType = value;
             fields.Clear();
-
-            ArrayElement = declType.GetElementType() is { } elementType
-                ? new ArrayElementVariable(this, elementType)
-                : null;
-
         }
     }
 
-    public ArrayElementVariable? ArrayElement { get; private set; } = null;
+    public ArrayElementVariable? GetArrayElement(string index)
+        => declType.GetElementType() is { } elementType
+            ? new ArrayElementVariable(this, elementType, index)
+            : null;
 
     private readonly List<FieldVariable> fields = new List<FieldVariable>();
     public IReadOnlyList<FieldVariable> Fields

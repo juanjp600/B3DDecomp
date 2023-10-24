@@ -4,12 +4,12 @@ sealed class FieldVariable : Variable
 {
     public readonly Variable Owner;
 
-    public FieldVariable(Variable owner, CustomType.Field field) : base(field.Name)
+    public FieldVariable(Variable owner, CustomType.Field field) : base($"{owner.Name}\\{field.Name}")
     {
         Owner = owner;
         DeclType = field.DeclType;
     }
 
     public override string ToInstructionArg()
-        => $"{Owner.Name}\\{Name}";
+        => Name;
 }

@@ -73,6 +73,7 @@ internal static class Program
                 handleNeedForLooping(FunctionDecompiler.BbObjTypeInference.Process(function), "BbObjTypeInference.Process returned true");
                 handleNeedForLooping(FunctionDecompiler.BasicFloatPropagation.Process(function), "BasicFloatPropagation.Process returned true");
                 handleNeedForLooping(InferredTypePropagation.Process(function), "InferredTypePropagation.Process returned true");
+                BbArrayAccess.Process(function);
                 BbObjMemberAccess.Process(function);
             }
         }

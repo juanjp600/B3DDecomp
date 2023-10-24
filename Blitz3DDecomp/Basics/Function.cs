@@ -29,6 +29,28 @@ sealed class Function
                 .Select(Owner.InstructionArgumentToVariable)
                 .OfType<Variable>()
                 .Distinct(); // Removes null entries
+
+        public void CleanupNop()
+        {
+            var nopIndices = Instructions
+                .Select((instr, index) => instr.Name == "nop" ? index : -1)
+                .Where(index => index >= 0)
+                .Reverse()
+                .ToArray();
+
+            foreach (var instruction in Instructions)
+            {
+                if (instruction.CallParameterAssignmentIndices is not { } callParameterAssignmentIndices) { continue; }
+
+                for (int i = 0; i < callParameterAssignmentIndices.Length; i++)
+                {
+                    callParameterAssignmentIndices[i] -=
+                        nopIndices.Count(index => index <= callParameterAssignmentIndices[i]);
+                }
+            }
+
+            Instructions.RemoveAll(instr => instr.Name == "nop");
+        }
     }
 
     public sealed class Parameter : Variable
@@ -725,6 +747,34 @@ sealed class Function
         {
             return GlobalVariable.AllGlobals.FirstOrDefault(
                 v => v.Name.Equals(arg[3..], StringComparison.OrdinalIgnoreCase));
+        }
+        else if (arg.Contains('\\', StringComparison.Ordinal))
+        {
+            var split = arg.Split('\\');
+
+            var matchingRootVar = LocalVariables.Cast<Variable>().Concat(Parameters).Concat(GlobalVariable.AllGlobals)
+                .FirstOrDefault(v => v.Name.Equals(split[0], StringComparison.OrdinalIgnoreCase));
+            if (matchingRootVar is null) { return null; }
+
+            var currVar = matchingRootVar;
+            for (int i = 1; i < split.Length; i++)
+            {
+                var part = split[i];
+                var arrayIndex = "";
+                if (part.IndexOf('[', StringComparison.Ordinal) is var indexerStart and >= 0
+                    && part.IndexOf(']', StringComparison.Ordinal) is var indexerEnd and >= 0)
+                {
+                    arrayIndex = part[(indexerStart + 1)..indexerEnd];
+                    part = part[..indexerStart];
+                }
+                var index = int.Parse(string.Join("", part.Where(char.IsDigit)));
+                currVar = currVar.Fields[index];
+                if (arrayIndex != "" && currVar.GetArrayElement(arrayIndex) is { } arrayElement)
+                {
+                    currVar = arrayElement;
+                }
+            }
+            return currVar;
         }
 
         return null;

@@ -20,10 +20,14 @@ static class Registers
     {
         if (s.Length <= 3) { return s; }
 
-        if (s.IndexOf('[', StringComparison.Ordinal) is var startIndex and >= 0
-            && s.IndexOf(']', StringComparison.Ordinal) is var endIndex and >= 0)
+        if (s.StartsWith("dword [", StringComparison.Ordinal) && s.EndsWith("]", StringComparison.Ordinal))
         {
-            return s[(startIndex+1)..endIndex];
+            return s[7..^1];
+        }
+
+        if (s.StartsWith("[", StringComparison.Ordinal) && s.EndsWith("]", StringComparison.Ordinal))
+        {
+            return s[1..^1];
         }
 
         return s;

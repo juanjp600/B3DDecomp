@@ -24,7 +24,7 @@ static class BbObjMemberAccess
             var initialLocation = variable.ToInstructionArg();
             var tracker = new LocationTracker(trackDirection: 1, initialLocation: initialLocation);
 
-            for (int i = 0; i < section.Instructions.Count - 2; i++)
+            for (int i = 0; i < section.Instructions.Count - 4; i++)
             {
                 var instruction = section.Instructions[i];
 
@@ -44,11 +44,10 @@ static class BbObjMemberAccess
                         var fieldIndex = int.Parse(memberAccessInstruction.RightArg[2..], NumberStyles.HexNumber) >> 2;
                         var customType = CustomType.GetTypeMatchingDeclType(variable.DeclType);
                         var field = customType.Fields[fieldIndex];
-                        Console.WriteLine($"{function.Name}: accesses {variable}\\{field}");
                         instruction.RightArg = $"{variable.Name}\\{field.Name}";
                         section.Instructions[i + 1] = new Function.Instruction(name: "nop");
                         section.Instructions[i + 2] = new Function.Instruction(name: "nop");
-                        if (field.DeclType.IsArrayType && i < section.Instructions.Count - 5)
+                        if (field.DeclType.IsArrayType)
                         {
                             var derefFieldInstruction = section.Instructions[i + 3];
                             if (derefFieldInstruction.Name == "mov"
@@ -62,6 +61,41 @@ static class BbObjMemberAccess
                                 Debugger.Break();
                             }
                         }
+                        else
+                        {
+                            var derefFieldInstruction = section.Instructions[i + 3];
+                            if (derefFieldInstruction.Name == "mov"
+                                && derefFieldInstruction.LeftArg == register
+                                && derefFieldInstruction.RightArg == $"[{register}]")
+                            {
+                                // Read the value of the field and store in the same register
+                                instruction.RightArg = $"[{variable.Name}\\{field.Name}]";
+                                section.Instructions[i + 3] = new Function.Instruction(name: "nop");
+                                Console.WriteLine($"{function.Name}: dereferences {variable}\\{field} into {register}");
+                            }
+                            else if (derefFieldInstruction.Name == "mov"
+                                     && derefFieldInstruction.RightArg == register)
+                            {
+                                // Take the pointer to the field and store it somewhere else
+                                Console.WriteLine($"{function.Name}: stores pointer to {variable}\\{field} into {register}");
+                                // There's no action to be taken here, a LocationTracker should be able to handle this
+                            }
+                            else if (derefFieldInstruction.Name == "mov"
+                                     && derefFieldInstruction.LeftArg == $"[{register}]")
+                            {
+                                // Write a value into the field
+                                instruction.LeftArg = $"[{variable.Name}\\{field.Name}]";
+                                instruction.RightArg = derefFieldInstruction.RightArg;
+                                section.Instructions[i + 3] = new Function.Instruction(name: "nop");
+                                Console.WriteLine($"{function.Name}: writes {derefFieldInstruction.RightArg} into {variable}\\{field}");
+                            }
+                            else
+                            {
+                                //Debugger.Break();
+                            }
+                        }
+
+                        section.CleanupNop();
                     }
                 }
 

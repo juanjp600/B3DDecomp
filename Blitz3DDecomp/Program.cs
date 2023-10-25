@@ -172,7 +172,7 @@ internal static class Program
                 writeLineToFile("  compiler-generated temps:");
                 foreach (var temp in function.CompilerGeneratedTempVars)
                 {
-                    writeLineToFile($"    {temp} {temp.ToInstructionArg()}");
+                    writeLineToFile($"    {temp.Name} {temp.ToInstructionArg()}");
                 }
             }
 

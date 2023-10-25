@@ -723,6 +723,7 @@ sealed class Function
     public DeclType ReturnType = DeclType.Unknown;
     public readonly List<Parameter> Parameters = new List<Parameter>();
     public readonly List<LocalVariable> LocalVariables = new List<LocalVariable>();
+    public readonly List<LocalVariable> CompilerGeneratedTempVars = new List<LocalVariable>();
 
     public Variable? InstructionArgumentToVariable(string arg)
     {

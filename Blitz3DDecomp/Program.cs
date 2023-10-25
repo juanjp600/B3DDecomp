@@ -158,6 +158,11 @@ internal static class Program
             {
                 writeLineToFile($"    {local} {local.ToInstructionArg()}");
             }
+            writeLineToFile("  compiler-generated temps:");
+            foreach (var temp in function.CompilerGeneratedTempVars)
+            {
+                writeLineToFile($"    {temp} {temp.ToInstructionArg()}");
+            }
             writeLineToFile("");
             writeLineToFile("code:");
             foreach (var section in function.AssemblySections.Values)

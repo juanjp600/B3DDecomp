@@ -18,14 +18,15 @@ static partial class FunctionDecompiler
                     : function.AssemblySections[function.CoreSymbolName].Instructions.Skip(5).ToArray();
 
             var ebpOffsetLocalRegex = new Regex("\\[ebp-0x([0-9a-f]+)\\]");
-            var ebpOffsetArgRegex = new Regex("\\[ebp\\+0x([0-9a-f]+)\\]");
             var ebpOffsets = new HashSet<int>();
             foreach (var instruction in coreSectionInstructions)
             {
-                if (ebpOffsetArgRegex.Match(instruction.LeftArg) is { Success: true })
+                if (instruction.IsJumpOrCall &&
+                    !instruction.LeftArg.Contains("_builtIn", StringComparison.OrdinalIgnoreCase))
                 {
                     break;
                 }
+                
                 if (instruction.Name == "mov" && ebpOffsetLocalRegex.Match(instruction.LeftArg) is { Success: true } ebpOffsetMatch)
                 {
                     if (!ebpOffsets.Add(int.Parse(ebpOffsetMatch.Groups[1].Value, NumberStyles.HexNumber)))
@@ -48,7 +49,20 @@ static partial class FunctionDecompiler
                     Debugger.Break();
                 }
             }
-            function.LocalVariables.AddRange(Enumerable.Range(0, ebpOffsets.Count).Select(i => new Function.LocalVariable($"local{i}", i) { DeclType = DeclType.Unknown }));
+            function.LocalVariables.AddRange(Enumerable.Range(0, ebpOffsets.Count)
+                .Select(i => new Function.LocalVariable($"local{i}", i) { DeclType = DeclType.Unknown }));
+            
+            var lastLocalIndex = function.AssemblySections.Values
+                .SelectMany(s => s.Instructions)
+                .SelectMany(i => new[] { i.LeftArg, i.RightArg })
+                .Select(a => a.StripDeref())
+                .Where(a => a.StartsWith("ebp-0x", StringComparison.Ordinal))
+                .Distinct()
+                .Select(a => int.Parse(a[6..], NumberStyles.HexNumber) >> 2)
+                .Append(0)
+                .Max();
+            function.CompilerGeneratedTempVars.AddRange(Enumerable.Range(ebpOffsets.Count, lastLocalIndex - ebpOffsets.Count)
+                .Select(i => new Function.LocalVariable($"temp{i}", i) { DeclType = DeclType.Unknown }));
         }
     }
 }

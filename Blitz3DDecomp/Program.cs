@@ -148,21 +148,34 @@ internal static class Program
             }
 
             writeLineToFile(function.Name + function.ReturnType.Suffix);
-            writeLineToFile("  parameters:");
-            foreach (var parameter in function.Parameters)
+
+            if (function.Parameters.Count > 0)
             {
-                writeLineToFile($"    {parameter} {parameter.ToInstructionArg()}");
+                writeLineToFile("  parameters:");
+                foreach (var parameter in function.Parameters)
+                {
+                    writeLineToFile($"    {parameter} {parameter.ToInstructionArg()}");
+                }
             }
-            writeLineToFile("  locals:");
-            foreach (var local in function.LocalVariables)
+
+            if (function.LocalVariables.Count > 0)
             {
-                writeLineToFile($"    {local} {local.ToInstructionArg()}");
+                writeLineToFile("  locals:");
+                foreach (var local in function.LocalVariables)
+                {
+                    writeLineToFile($"    {local} {local.ToInstructionArg()}");
+                }
             }
-            writeLineToFile("  compiler-generated temps:");
-            foreach (var temp in function.CompilerGeneratedTempVars)
+
+            if (function.CompilerGeneratedTempVars.Count > 0)
             {
-                writeLineToFile($"    {temp} {temp.ToInstructionArg()}");
+                writeLineToFile("  compiler-generated temps:");
+                foreach (var temp in function.CompilerGeneratedTempVars)
+                {
+                    writeLineToFile($"    {temp} {temp.ToInstructionArg()}");
+                }
             }
+
             writeLineToFile("");
             writeLineToFile("code:");
             foreach (var section in function.AssemblySections.Values)

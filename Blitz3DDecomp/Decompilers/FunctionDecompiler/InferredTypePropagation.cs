@@ -83,6 +83,7 @@ static class InferredTypePropagation
 
                 if (variable.DeclType == DeclType.Unknown)
                 {
+                    if (variable.Name.Contains("Field")) { Debugger.Break(); }
                     Logger.WriteLine($"{function.Name}'s {variable.Name} is {callee.Parameters[argIndex].DeclType} because {callee.Name}'s arg {argIndex}. {section.Name}:{i}");
 
                     variable.DeclType = callee.Parameters[argIndex].DeclType;
@@ -162,7 +163,7 @@ static class InferredTypePropagation
                 if (variable != null && variable.DeclType != DeclType.Unknown)
                 {
                     declaration.DeclType = variable.DeclType;
-                    Logger.WriteLine($"{function.Name}: {variable.Name} is {variable.DeclType} because {variable.Name}");
+                    Logger.WriteLine($"{function.Name}: {declaration.Name} is {variable.DeclType} because {variable.Name}");
                     changedSomething = true;
                     break;
                 }
@@ -177,7 +178,7 @@ static class InferredTypePropagation
 
         foreach (var variable in section.ReferencedVariables)
         {
-            smearBothWays(variable, variable.ToInstructionArg().StripDeref());
+            smearBothWays(variable, variable.ToInstructionArg());
         }
 
         return changedSomething;

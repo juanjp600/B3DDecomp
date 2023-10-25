@@ -6,13 +6,15 @@ namespace Blitz3DDecomp;
 
 static class BbObjMemberAccess
 {
-    private static void ProcessSectionMavless(Function function, Function.AssemblySection section)
+    private static bool ProcessSectionMavless(Function function, Function.AssemblySection section)
     {
-        
+        return false;
     }
 
-    private static void ProcessSectionVanilla(Function function, Function.AssemblySection section)
+    private static bool ProcessSectionVanilla(Function function, Function.AssemblySection section)
     {
+        bool changedSomething = false;
+
         bool isVarOfCustomType(Variable variable)
             => variable.DeclType.IsCustomType
                 && !variable.DeclType.IsArrayType;
@@ -23,7 +25,7 @@ static class BbObjMemberAccess
 
         foreach (var variable in variablesOfCustomType)
         {
-            var initialLocation = variable.ToInstructionArg();
+            var initialLocation = variable.ToInstructionArg().StripDeref();
             var tracker = new LocationTracker(trackDirection: 1, initialLocation: initialLocation);
 
             for (int i = 0; i < section.Instructions.Count - 4; i++)
@@ -50,21 +52,7 @@ static class BbObjMemberAccess
                         instruction.RightArg = $"{variable.Name}\\{field.Name}";
                         section.Instructions[i + 1] = new Function.Instruction(name: "nop");
                         section.Instructions[i + 2] = new Function.Instruction(name: "nop");
-                        if (field.DeclType.IsArrayType)
-                        {
-                            var derefFieldInstruction = section.Instructions[i + 3];
-                            if (derefFieldInstruction.Name == "mov"
-                                && derefFieldInstruction.LeftArg == register
-                                && derefFieldInstruction.RightArg == $"[{register}]")
-                            {
-                                
-                            }
-                            else
-                            {
-                                Debugger.Break();
-                            }
-                        }
-                        else
+                        if (!field.DeclType.IsArrayType)
                         {
                             var derefFieldInstruction = section.Instructions[i + 3];
                             if (derefFieldInstruction.Name == "mov"
@@ -80,7 +68,7 @@ static class BbObjMemberAccess
                                      && derefFieldInstruction.RightArg == register)
                             {
                                 // Take the pointer to the field and store it somewhere else
-                                Logger.WriteLine($"{function.Name}: stores pointer to {variable}\\{field} into {register}");
+                                Logger.WriteLine($"{function.Name}: stores pointer to {variable}\\{field} into {register} because {derefFieldInstruction}");
                                 // There's no action to be taken here, a LocationTracker should be able to handle this
                             }
                             else if (derefFieldInstruction.Name == "mov"
@@ -94,11 +82,16 @@ static class BbObjMemberAccess
                             }
                             else
                             {
+                                Logger.WriteLine($"{function.Name}: stores pointer to {variable}\\{field} into {register} because {derefFieldInstruction}");
                                 //Debugger.Break();
                             }
                         }
+                        else
+                        {
+                            Logger.WriteLine($"{function.Name}: stores pointer to {variable}\\{field} into {register} because array field");
+                        }
 
-                        section.CleanupNop();
+                        section.CleanupNop(); changedSomething = true;
                     }
                 }
                 else
@@ -109,26 +102,30 @@ static class BbObjMemberAccess
                 tracker.Location = initialLocation;
             }
         }
+
+        return changedSomething;
     }
 
-    private static void ProcessSection(Function function, Function.AssemblySection section)
+    private static bool ProcessSection(Function function, Function.AssemblySection section)
     {
         if (section.Instructions.Any(i => i.LeftArg.Contains("bbObjLoad")))
         {
-            ProcessSectionMavless(function, section);
+            return ProcessSectionMavless(function, section);
         }
         else
         {
-            ProcessSectionVanilla(function, section);
+            return ProcessSectionVanilla(function, section);
         }
     }
 
-    public static void Process(Function function)
+    public static bool Process(Function function)
     {
+        bool changedSomething = false;
         foreach (var kvp in function.AssemblySections)
         {
             var section = kvp.Value;
-            ProcessSection(function, section);
+            changedSomething |= ProcessSection(function, section);
         }
+        return changedSomething;
     }
 }

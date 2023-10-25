@@ -1,3 +1,5 @@
+using System.Diagnostics;
+
 namespace Blitz3DDecomp;
 
 ref struct LocationTracker
@@ -5,14 +7,18 @@ ref struct LocationTracker
     public readonly int TrackDirection;
     public readonly bool PreserveDeref;
 
-    public string Location;
+    private string location;
+    public string Location
+    {
+        get => location;
+        set => location = PreserveDeref ? value : value.StripDeref();
+    }
 
     public LocationTracker(int trackDirection, string initialLocation, bool preserveDeref = false)
     {
         TrackDirection = trackDirection;
-        Location = initialLocation;
+        location = preserveDeref ? initialLocation : initialLocation.StripDeref();
         PreserveDeref = preserveDeref;
-        if (!PreserveDeref) { Location = Location.StripDeref(); }
     }
 
     public bool ProcessInstruction(Function.Instruction instruction)
@@ -31,6 +37,13 @@ ref struct LocationTracker
             return true;
         }
 
+        if (instruction.Name == "lea" && PreserveDeref)
+        {
+            var srcStripped = src.StripDeref();
+            if (srcStripped == src) { return false; }
+            src = srcStripped;
+        }
+
         if (TrackDirection < 0)
         {
             (dest, src) = (src, dest);
@@ -43,7 +56,7 @@ ref struct LocationTracker
             Location = dest;
             return true;
         }
-        if (instruction.Name == "lea" && !PreserveDeref)
+        if (instruction.Name == "lea")
         {
             Location = dest;
             return true;

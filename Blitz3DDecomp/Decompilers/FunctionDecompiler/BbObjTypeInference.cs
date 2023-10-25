@@ -90,7 +90,8 @@ static partial class FunctionDecompiler
                             var secondParamAssignmentLocation = instruction.CallParameterAssignmentIndices[1];
                             var secondParamTracker = new LocationTracker(
                                 trackDirection: -1,
-                                initialLocation: section.Instructions[secondParamAssignmentLocation].LeftArg.StripDeref());
+                                initialLocation: section.Instructions[secondParamAssignmentLocation].LeftArg,
+                                preserveDeref: true);
                             for (int k = secondParamAssignmentLocation; k >= 0; k--)
                             {
                                 var instruction2 = section.Instructions[k];
@@ -102,16 +103,43 @@ static partial class FunctionDecompiler
                                         if (secondParamTracker.Location == "eax")
                                         {
                                             bbObjType = instruction2.BbObjType;
-                                            break;
                                         }
                                     }
                                     else
                                     {
+                                        if (instruction2.Name == "call" && secondParamTracker.Location == "eax")
+                                        {
+                                            var calledFunction = Function.GetFunctionWithName(instruction2.LeftArg);
+                                            if (calledFunction is { ReturnType.IsCustomType: true })
+                                            {
+                                                bbObjType = "_t"+calledFunction.ReturnType.Suffix[1..];
+                                            }
+                                        }
+                                    }
+                                    break;
+                                }
+
+                                if (secondParamTracker.ProcessInstruction(instruction2)
+                                    && instruction.LeftArg.Contains("bbObjStore"))
+                                {
+                                    var variableForSecondParam = function.InstructionArgumentToVariable(secondParamTracker.Location);
+                                    if (variableForSecondParam is { DeclType.IsCustomType: true })
+                                    {
+                                        if (variableForSecondParam.DeclType.IsArrayType) { Debugger.Break(); }
+                                        if (function.Name.Contains("findpath") &&
+                                            instruction.CallParameterAssignmentIndices[0] == 6)
+                                        {
+                                            Debugger.Break();
+                                        }
+                                        bbObjType = "_t" + variableForSecondParam.DeclType.Suffix[1..];
                                         break;
                                     }
                                 }
 
-                                secondParamTracker.ProcessInstruction(instruction2);
+                                if (instruction.Name == "mov" && instruction.LeftArg == secondParamTracker.Location)
+                                {
+                                    break;
+                                }
                             }
                         }
 
@@ -120,7 +148,8 @@ static partial class FunctionDecompiler
                             var firstParamAssignmentLocation = instruction.CallParameterAssignmentIndices[0];
                             var firstParamTracker = new LocationTracker(
                                 trackDirection: -1,
-                                initialLocation: section.Instructions[firstParamAssignmentLocation].LeftArg.StripDeref());
+                                initialLocation: section.Instructions[firstParamAssignmentLocation].LeftArg,
+                                preserveDeref: true);
                             for (int k = firstParamAssignmentLocation; k >= 0; k--)
                             {
                                 var instruction2 = section.Instructions[k];
@@ -135,6 +164,12 @@ static partial class FunctionDecompiler
                                 var trackedVariable =
                                     function.InstructionArgumentToVariable(firstParamTracker.Location);
                                 if (trackedVariable == null) { continue; }
+
+                                if (function.Name.Contains("findpath") &&
+                                    trackedVariable is Function.Parameter { Index: 0 })
+                                {
+                                    Debugger.Break();
+                                }
 
                                 if (trackedVariable == variable)
                                 {

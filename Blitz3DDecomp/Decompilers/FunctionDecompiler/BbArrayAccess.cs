@@ -6,8 +6,10 @@ namespace Blitz3DDecomp;
 
 static class BbArrayAccess
 {
-    private static void ProcessSection(Function function, Function.AssemblySection section)
+    private static bool ProcessSection(Function function, Function.AssemblySection section)
     {
+        bool changedSomething = false;
+
         bool isVarOfArrayType(Variable variable)
             => variable.DeclType.IsArrayType;
 
@@ -43,7 +45,7 @@ static class BbArrayAccess
                             instruction.RightArg += $"[{arrayIndex}]";
                             section.Instructions[i + 1] = new Function.Instruction(name: "nop");
                             section.Instructions[i + 2] = new Function.Instruction(name: "nop");
-                            section.CleanupNop();
+                            section.CleanupNop(); changedSomething = true;
 
                             var potentialImmediateDeref = section.Instructions[i + 1];
                             if (potentialImmediateDeref.Name == "mov"
@@ -53,7 +55,7 @@ static class BbArrayAccess
                                 Logger.WriteLine($"{function.Name}: accesses {instruction.RightArg}");
                                 instruction.RightArg = $"[{instruction.RightArg}]";
                                 section.Instructions[i + 1] = new Function.Instruction(name: "nop");
-                                section.CleanupNop();
+                                section.CleanupNop(); changedSomething = true;
                             }
                             else if (potentialImmediateDeref.Name == "mov"
                                      && potentialImmediateDeref.LeftArg == $"[{register}]")
@@ -62,7 +64,7 @@ static class BbArrayAccess
                                 instruction.LeftArg = $"[{instruction.RightArg}]";
                                 instruction.RightArg = potentialImmediateDeref.RightArg;
                                 section.Instructions[i + 1] = new Function.Instruction(name: "nop");
-                                section.CleanupNop();
+                                section.CleanupNop(); changedSomething = true;
                             }
                             else
                             {
@@ -76,7 +78,7 @@ static class BbArrayAccess
                             objDerefInstruction.LeftArg = memberAccessInstruction.LeftArg;
                             objDerefInstruction.RightArg = $"{instruction.RightArg}[{arrayIndex}]";
                             section.Instructions[i + 2] = new Function.Instruction(name: "nop");
-                            section.CleanupNop();
+                            section.CleanupNop(); changedSomething = true;
 
                             var potentialImmediateDeref = section.Instructions[i + 2];
                             if (potentialImmediateDeref.Name == "mov"
@@ -86,7 +88,7 @@ static class BbArrayAccess
                                 Logger.WriteLine($"{function.Name}: accesses {objDerefInstruction.RightArg}");
                                 objDerefInstruction.RightArg = $"[{objDerefInstruction.RightArg}]";
                                 section.Instructions[i + 2] = new Function.Instruction(name: "nop");
-                                section.CleanupNop();
+                                section.CleanupNop(); changedSomething = true;
                             }
                             else if (potentialImmediateDeref.Name == "mov"
                                      && potentialImmediateDeref.LeftArg == $"[{objDerefInstruction.LeftArg}]")
@@ -95,21 +97,18 @@ static class BbArrayAccess
                                 objDerefInstruction.LeftArg = $"[{objDerefInstruction.RightArg}]";
                                 objDerefInstruction.RightArg = potentialImmediateDeref.RightArg;
                                 section.Instructions[i + 2] = new Function.Instruction(name: "nop");
-                                section.CleanupNop();
+                                section.CleanupNop(); changedSomething = true;
                             }
                             else
                             {
                                 Logger.WriteLine($"{function.Name}: copies pointer to {objDerefInstruction.RightArg} into {objDerefInstruction.LeftArg}");
-                                if (!potentialImmediateDeref.LeftArg.Contains("esp")) { Debugger.Break(); }
+                                //if (!potentialImmediateDeref.LeftArg.Contains("esp")) { Debugger.Break(); }
                             }
-
                         }
                         else
                         {
                             Debugger.Break();
                         }
-
-                        section.CleanupNop();
                     }
                     else
                     {
@@ -124,15 +123,19 @@ static class BbArrayAccess
                 tracker.Location = initialLocation;
             }
         }
+
+        return changedSomething;
     }
 
-    public static void Process(Function function)
+    public static bool Process(Function function)
     {
+        bool changedSomething = false;
         foreach (var kvp in function.AssemblySections)
         {
             if (kvp.Key.Contains("_leave")) { continue; }
             var section = kvp.Value;
-            ProcessSection(function, section);
+            changedSomething |= ProcessSection(function, section);
         }
+        return changedSomething;
     }
 }

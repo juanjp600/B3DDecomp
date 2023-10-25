@@ -15,6 +15,7 @@ readonly record struct DeclType(string Suffix)
         {
             return MakeVector(descStr);
         }
+
         if (descStr == "_builtIn__bbStrType") { return String; }
         if (descStr == "_builtIn__bbIntType") { return Int; }
         if (descStr == "_builtIn__bbFltType") { return Float; }

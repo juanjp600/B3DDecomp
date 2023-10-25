@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics;
+using System.Text;
 using B3DDecompUtils;
 using Blitz3DDecomp;
 
@@ -8,9 +9,7 @@ internal static class Program
     {
         Function.InitBuiltIn();
 
-        string disasmPath = "C:/Users/juanj/Desktop/Blitz3D/ReverseEng/game_disasm/";
-        disasmPath = "C:/Users/juanj/Repos/Blitz3DDecomp/SamplePrograms/Sample1/Sample1_disasm/";
-        disasmPath = "/Users/juanjp/Desktop/b3d_reveng/SCP - Containment Breach v0.9_disasm/";
+        string disasmPath = "C:/Users/juanj/Desktop/Blitz3D/ReverseEng/SCP - Containment Breach v0.2_disasm/";
         string decompPath = disasmPath.Replace("_disasm", "_decomp");
         if (Directory.Exists(decompPath)) { Directory.Delete(decompPath, true); }
         Directory.CreateDirectory(decompPath);
@@ -74,8 +73,8 @@ internal static class Program
                 handleNeedForLooping(FunctionDecompiler.BbObjTypeInference.Process(function), "BbObjTypeInference.Process returned true");
                 handleNeedForLooping(FunctionDecompiler.BasicFloatPropagation.Process(function), "BasicFloatPropagation.Process returned true");
                 handleNeedForLooping(InferredTypePropagation.Process(function), "InferredTypePropagation.Process returned true");
-                BbArrayAccess.Process(function);
-                BbObjMemberAccess.Process(function);
+                handleNeedForLooping(BbArrayAccess.Process(function), "BbArrayAccess.Process returned true");
+                handleNeedForLooping(BbObjMemberAccess.Process(function), "BbObjMemberAccess.Process returned true");
             }
         }
 
@@ -134,6 +133,47 @@ internal static class Program
                         i.LeftArg.Contains('\\')
                         || i.RightArg.Contains('\\'))))
             .ToArray();
+
+        var debugDir = $"{decompPath}/DebugDir/";
+        if (Directory.Exists(debugDir)) { Directory.Delete(debugDir); }
+        Directory.CreateDirectory(debugDir);
+
+        foreach (var function in functionsWithAssemblySections)
+        {
+            using var file = File.Create($"{debugDir}{function.Name}.txt");
+
+            void writeLineToFile(string line)
+            {
+                file.Write(Encoding.UTF8.GetBytes($"{line}\n"));
+            }
+
+            writeLineToFile(function.Name + function.ReturnType.Suffix);
+            writeLineToFile("  parameters:");
+            foreach (var parameter in function.Parameters)
+            {
+                writeLineToFile($"    {parameter} {parameter.ToInstructionArg()}");
+            }
+            writeLineToFile("  locals:");
+            foreach (var local in function.LocalVariables)
+            {
+                writeLineToFile($"    {local} {local.ToInstructionArg()}");
+            }
+            writeLineToFile("");
+            writeLineToFile("code:");
+            foreach (var section in function.AssemblySections.Values)
+            {
+                writeLineToFile($"  {section.Name}:");
+                for (var instrIndex = 0; instrIndex < section.Instructions.Count; instrIndex++)
+                {
+                    var instruction = section.Instructions[instrIndex];
+                    var prefix = instrIndex.ToString();
+                    var maxPrefix = section.Instructions.Count.ToString();
+                    while (prefix.Length < maxPrefix.Length) { prefix = " " + prefix; }
+                    writeLineToFile($"    {prefix}: {instruction}");
+                }
+                writeLineToFile("");
+            }
+        }
 
         Logger.End();
         Debugger.Break();

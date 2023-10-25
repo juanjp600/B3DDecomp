@@ -131,16 +131,9 @@ internal static class Program
 
     private static void Main(string[] args)
     {
-        var exePath = "C:/Program Files (x86)/Steam/steamapps/common/SCP Containment Breach Multiplayer/game.exe";
-        //exePath = "/Users/juanjp/Desktop/Repos/BlitzBasicGames/game.exe";
-        exePath = "C:/Users/juanj/Repos/Blitz3DDecomp/SamplePrograms/Sample1/Sample1.exe";
-        exePath = "/Users/juanjp/Desktop/b3d_reveng/SCP - Containment Breach v0.9.exe";
-        //exePath = "C:/Program Files (x86)/Steam/steamapps/common/SCP Nine-Tailed Fox/SCP Nine-Tailed Fox.exe";
-        //exePath = "C:/Users/juanj/Desktop/Blitz3D/ReverseEng/StackAllocTest6.exe";
-        //exePath = "C:/Users/juanj/Downloads/SCP - Containment Breach v0.2/SCP - Containment Breach v0.2.exe";
-        var outputPath = "/Users/juanjp/Desktop/b3d_reveng/";
-        //outputPath = "/Users/juanjp/Desktop/Repos/BlitzBasicGames/";
-        //outputPath = "C:/Users/juanj/Repos/Blitz3DDecomp/SamplePrograms/Sample1/";
+        var exePath = "C:/Users/juanj/Desktop/Blitz3D/ReverseEng/SCP - Containment Breach v0.2.exe";
+        var outputPath = $"{Path.GetDirectoryName(exePath).Replace('\\', '/')}/";
+
         var exeName = Path.GetFileName(exePath);
         var fileToInspect = PEImage.FromFile(exePath);
         var resources = fileToInspect.Resources;

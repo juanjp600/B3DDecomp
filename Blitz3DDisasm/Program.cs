@@ -10,18 +10,6 @@ using B3DDecompUtils;
 
 internal static class Program
 {
-    public static string ReadCStr(this BinaryReader reader)
-    {
-        var bytes = new List<byte>();
-        while (true)
-        {
-            byte b = reader.ReadByte();
-            if (b == '\0') { break; }
-            bytes.Add(b);
-        }
-        return Encoding.ASCII.GetString(bytes.ToArray());
-    }
-
     public enum SymbolType
     {
         Other = 0,
@@ -131,7 +119,7 @@ internal static class Program
 
     private static void Main(string[] args)
     {
-        var exePath = "C:/Users/juanj/Desktop/Blitz3D/ReverseEng/SCP - Containment Breach v0.2.exe";
+        var exePath = "C:/Users/juanj/Desktop/Blitz3D/ReverseEng/game.exe";
         var outputPath = $"{Path.GetDirectoryName(exePath).Replace('\\', '/')}/";
 
         var exeName = Path.GetFileName(exePath);
@@ -141,23 +129,17 @@ internal static class Program
 
         static IEnumerable<IResourceEntry> flattener(IResourceEntry entry)
         {
-            if (entry is IResourceDirectory dir)
-            {
-                if (dir.Type == ResourceType.RcData || dir.Type == (ResourceType)1111)
-                {
-                    return dir.Entries;
-                }
-                else
-                {
-                    return Enumerable.Empty<IResourceEntry>();
-                }
-            }
-            return new[] { entry };
+            if (entry is not IResourceDirectory dir) { return new[] { entry }; }
+
+            return dir.Type is ResourceType.RcData or (ResourceType)1111
+                ? dir.Entries
+                : Enumerable.Empty<IResourceEntry>();
         }
 
-        var flatten = entries.SelectMany(flattener);
-        flatten = flatten.SelectMany(flattener);
-        flatten = flatten.SelectMany(flattener);
+        var flatten = entries
+            .SelectMany(flattener)
+            .SelectMany(flattener)
+            .SelectMany(flattener);
         var data = flatten.SelectMany(flattener).OfType<IResourceData>().Select(d => (d.Contents as DataSegment).Data).First();
 
         var symbols = new List<Symbol>();
@@ -196,18 +178,22 @@ internal static class Program
                 | (codeBytesForDecomp[relocAddress + 2] << 16)
                 | (codeBytesForDecomp[relocAddress + 3] << 24);
 
-            int newValueForDecomp = (symbolAddress ^ magicXorNumber) + offsetFromSymbol + (originalValue + originalAdder);
-            int newValueForReading = symbolAddress + offsetFromSymbol + (originalValue + originalAdder);
+            int newValueForDecomp =
+                (symbolAddress ^ magicXorNumber)
+                + offsetFromSymbol + (originalValue + originalAdder);
+            int newValueForHumanReading =
+                symbolAddress
+                + offsetFromSymbol + (originalValue + originalAdder);
 
             codeBytesForDecomp[relocAddress + 0] = (byte)((newValueForDecomp >> 0) & 0xff);
             codeBytesForDecomp[relocAddress + 1] = (byte)((newValueForDecomp >> 8) & 0xff);
             codeBytesForDecomp[relocAddress + 2] = (byte)((newValueForDecomp >> 16) & 0xff);
             codeBytesForDecomp[relocAddress + 3] = (byte)((newValueForDecomp >> 24) & 0xff);
 
-            codeBytesForReading[relocAddress + 0] = (byte)((newValueForReading >> 0) & 0xff);
-            codeBytesForReading[relocAddress + 1] = (byte)((newValueForReading >> 8) & 0xff);
-            codeBytesForReading[relocAddress + 2] = (byte)((newValueForReading >> 16) & 0xff);
-            codeBytesForReading[relocAddress + 3] = (byte)((newValueForReading >> 24) & 0xff);
+            codeBytesForReading[relocAddress + 0] = (byte)((newValueForHumanReading >> 0) & 0xff);
+            codeBytesForReading[relocAddress + 1] = (byte)((newValueForHumanReading >> 8) & 0xff);
+            codeBytesForReading[relocAddress + 2] = (byte)((newValueForHumanReading >> 16) & 0xff);
+            codeBytesForReading[relocAddress + 3] = (byte)((newValueForHumanReading >> 24) & 0xff);
 
             relocs.Add(new Reloc { SymbolName = symbolName, RelocAddress = relocAddress, OffsetFromSymbol = offsetFromSymbol, OriginalValue = originalValue + originalAdder });
         }
@@ -480,7 +466,7 @@ internal static class Program
             string textFilePath = disasmPath + $"/{symbol.Type}/{symbol.OwnerName ?? "NoOwner"}.txt";
             var symbolEnd = i < symbols.Count - 1 ? symbols[i + 1].Address : codeLen;
             if (symbolEnd > codeLen) { symbolEnd = codeLen; }
-            if (symbol.Name == "__LIBS") { continue; }
+            if (symbol.Name == "__LIBS" || symbol.Type == SymbolType.Libs) { continue; }
             File.AppendAllText(textFilePath, $"@{symbol.Address:X8}: {symbol.NameToPrint}\n");
             if (symbol.Address >= codeLen) { continue; }
 
@@ -614,6 +600,23 @@ internal static class Program
                     File.AppendAllText(textFilePath, line + "\n");
                 }
                 File.AppendAllText(textFilePath, "\n");
+            }
+        }
+
+        if (libFunctions.Any())
+        {
+            Directory.CreateDirectory(disasmPath+"/Libs");
+            foreach (var grouping in libFunctions.GroupBy(f => f.LibName.ToLowerInvariant()))
+            {
+                var libName = grouping.Key;
+                var functions = grouping.ToArray();
+                var filePath = disasmPath + "/Libs/" + Path.GetFileNameWithoutExtension(grouping.Key) + ".txt";
+                File.AppendAllText(filePath, $"{libName}\n");
+                foreach (var function in functions)
+                {
+                    var symbol = symbolByAddress[function.LookupAddress];
+                    File.AppendAllText(filePath, $"    {symbol.Name}: {function.FunctionName}\n");
+                }
             }
         }
 

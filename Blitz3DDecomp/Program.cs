@@ -134,7 +134,7 @@ internal static class Program
                         || i.RightArg.Contains('\\'))))
             .ToArray();
 
-        var debugDir = $"{decompPath}/DebugDir/";
+        var debugDir = $"{decompPath}DebugDir/";
         if (Directory.Exists(debugDir)) { Directory.Delete(debugDir); }
         Directory.CreateDirectory(debugDir);
 

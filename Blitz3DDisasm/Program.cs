@@ -34,6 +34,10 @@ internal static class Program
             .SelectMany(flattener)
             .SelectMany(flattener);
         var data = flatten.SelectMany(flattener).OfType<IResourceData>().Select(d => (d.Contents as DataSegment).Data).First();
+        data = File.ReadAllBytes("C:/Users/juanj/Desktop/Blitz3D/ReverseEng/3dwsmemdump.dat");
+        outputPath =
+            $"{Path.GetDirectoryName("C:/Users/juanj/Desktop/Blitz3D/ReverseEng/3dwsmemdump.dat").Replace('\\', '/')}/";
+        exeName = "3dwsmemdump.exe";
 
         var symbols = new List<Symbol>();
         var symbolByName = new Dictionary<string, Symbol>();
@@ -58,7 +62,9 @@ internal static class Program
             addSymbol(symbolName, symbolAddress);
         }
 
-        
+        var compiler = symbolByName.ContainsKey("__CSTRS")
+            ? Compiler.BlitzPlus
+            : Compiler.Blitz3d;
 
         const int magicXorNumber = 0x004a_7000;
 
@@ -331,37 +337,56 @@ internal static class Program
                 symbol.ForceSetInferredType(SymbolType.DimArray, newName);
                 symbol.NewName = newName;
             }
-            else if (symbol.Type == SymbolType.Other && symbol.Address < codeLen)
-            {
-                var symbolData = codeBytesForReading[symbol.Address..symbolEnd];
-                int indexOfNul = -1;
-                for (int j = 0; j < symbolData.Length; j++)
-                {
-                    if (symbolData[j] == '\0')
-                    {
-                        indexOfNul = j;
-                        break;
-                    }
-                }
-                string strValue = Encoding.ASCII.GetString(symbolData[..indexOfNul]);
-                strValue = string.Join("", strValue.Where(c => char.IsLetterOrDigit(c) || c is '_'));
-                string newName = $"StringConstant{symbol.Name}_{strValue}";
-                symbol.NewName = newName;
-            }
         }
 
         var disasmPath = outputPath + exeName.Replace(".exe", "_disasm");
-
+        
         if (Directory.Exists(disasmPath)) { Directory.Delete(disasmPath, true); }
         Directory.CreateDirectory(disasmPath);
+
+        for (int i = 0; i < symbols.Count; i++)
+        {
+            var symbol = symbols[i];
+            if (symbol.Type != SymbolType.Other || symbol.Address >= codeLen) { continue; }
+
+            var symbolEnd = i < symbols.Count - 1 ? symbols[i + 1].Address : codeLen;
+            if (symbolEnd > codeLen) { symbolEnd = codeLen; }
+
+            var symbolData = codeBytesForReading[symbol.Address..symbolEnd];
+            if (compiler == Compiler.BlitzPlus) { symbolData = symbolData[4..]; }
+            if (symbol.Name == "__CSTRS") { continue; }
+
+            int indexOfNul = -1;
+            for (int j = 0; j < symbolData.Length; j++)
+            {
+                if (symbolData[j] == '\0')
+                {
+                    indexOfNul = j;
+                    break;
+                }
+            }
+
+            string strValue = Encoding.ASCII.GetString(symbolData[..indexOfNul]);
+            string leftoverBytes = string.Join(" ", symbolData[indexOfNul..].Select(b => $"{b:X2}"));
+            string newName = $"StringConstant{symbol.Name}_{string.Join("", strValue.Where(c => char.IsLetterOrDigit(c) || c is '_'))}";
+            symbol.NewName = newName;
+
+            string textFilePath = disasmPath + $"/Strings.txt";
+            File.AppendAllText(textFilePath, $"@{symbol.Address:X8}: {symbol.NameToPrint}\n");
+            File.AppendAllText(textFilePath, $"    \"{strValue}\" {leftoverBytes}\n");
+        }
+
         for (int i=0;i<symbols.Count;i++)
         {
             var symbol = symbols[i];
+            if (symbol.Name == "__LIBS"
+                || symbol.Type == SymbolType.Libs
+                || symbol.Type == SymbolType.Other) { continue; }
+
             Directory.CreateDirectory(disasmPath+$"/{symbol.Type}");
             string textFilePath = disasmPath + $"/{symbol.Type}/{symbol.OwnerName ?? "NoOwner"}.txt";
             var symbolEnd = i < symbols.Count - 1 ? symbols[i + 1].Address : codeLen;
             if (symbolEnd > codeLen) { symbolEnd = codeLen; }
-            if (symbol.Name == "__LIBS" || symbol.Type == SymbolType.Libs) { continue; }
             File.AppendAllText(textFilePath, $"@{symbol.Address:X8}: {symbol.NameToPrint}\n");
             if (symbol.Address >= codeLen) { continue; }
 
@@ -446,23 +471,6 @@ internal static class Program
                     File.AppendAllText(textFilePath, $"    Field {j}: {fieldTypeSymbol.NameToPrint}\n");
                 }
                 File.AppendAllText(textFilePath, "\n");
-            }
-            else if (symbol.Type == SymbolType.Other && symbol.Address < codeLen)
-            {
-                var symbolData = codeBytesForReading[symbol.Address..symbolEnd];
-                int indexOfNul = -1;
-                for (int j = 0; j < symbolData.Length; j++)
-                {
-                    if (symbolData[j] == '\0')
-                    {
-                        indexOfNul = j;
-                        break;
-                    }
-                }
-                string line = $"    \"{Encoding.ASCII.GetString(symbolData[..indexOfNul])}\" ";
-                line += string.Join(" ", symbolData[indexOfNul..].Select(b => Convert.ToHexString(new[] { b })));
-                line += "\n\n";
-                File.AppendAllText(textFilePath, line);
             }
             else if (symbolType == SymbolType.Data)
             {

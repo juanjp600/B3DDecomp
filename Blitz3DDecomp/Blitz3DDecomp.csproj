@@ -11,4 +11,8 @@
       <ProjectReference Include="..\B3DDecompUtils\B3DDecompUtils.csproj" />
     </ItemGroup>
 
+    <ItemGroup>
+      <Folder Include="Compiler\" />
+    </ItemGroup>
+
 </Project>

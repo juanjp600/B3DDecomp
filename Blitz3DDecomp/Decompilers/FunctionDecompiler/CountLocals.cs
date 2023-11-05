@@ -19,27 +19,57 @@ static partial class FunctionDecompiler
 
             var ebpOffsetLocalRegex = new Regex("\\[ebp-0x([0-9a-f]+)\\]");
             var ebpOffsets = new HashSet<int>();
-            foreach (var instruction in coreSectionInstructions)
+            for (var i = 0; i < coreSectionInstructions.Length; i++)
             {
+                var instruction = coreSectionInstructions[i];
                 if (instruction.IsJumpOrCall &&
                     !instruction.LeftArg.Contains("_builtIn", StringComparison.OrdinalIgnoreCase))
                 {
                     break;
                 }
-                
-                if (instruction.Name == "mov" && ebpOffsetLocalRegex.Match(instruction.LeftArg) is { Success: true } ebpOffsetMatch)
+
+                if (instruction.Name == "mov" && ebpOffsetLocalRegex.Match(instruction.LeftArg) is
+                        { Success: true } ebpOffsetMatch)
                 {
                     if (!ebpOffsets.Add(int.Parse(ebpOffsetMatch.Groups[1].Value, NumberStyles.HexNumber)))
                     {
                         break;
                     }
+
                     continue;
                 }
 
-                if (instruction.LeftArg.ContainsRegister() && instruction.LeftArg.Contains("ebp")) { break; }
-                if (instruction.RightArg.ContainsRegister() && instruction.RightArg.Contains("ebp")) { break; }
-                if (instruction.LeftArg.Contains("@_v") || instruction.RightArg.Contains("@_v")) { break; }
-                if (instruction.LeftArg.Contains("@_f") || instruction.RightArg.Contains("@_f")) { break; }
+                if (instruction.LeftArg.ContainsRegister() && instruction.LeftArg.Contains("ebp"))
+                {
+                    break;
+                }
+
+                if (instruction.RightArg.ContainsRegister() && instruction.RightArg.Contains("ebp"))
+                {
+                    bool isParamForLocalInitializer = false;
+                    if (instruction.RightArg.Contains("[ebp+"))
+                    {
+                        for (int j = i + 1; j < coreSectionInstructions.Length; j++)
+                        {
+                            var instruction2 = coreSectionInstructions[j];
+                            if (instruction2.Name != "call") { continue; }
+
+                            isParamForLocalInitializer = instruction2.LeftArg.Contains("_builtIn");
+                            break;
+                        }
+                    }
+                    if (!isParamForLocalInitializer) { break; }
+                }
+
+                if (instruction.LeftArg.Contains("@_v") || instruction.RightArg.Contains("@_v"))
+                {
+                    break;
+                }
+
+                if (instruction.LeftArg.Contains("@_f") || instruction.RightArg.Contains("@_f"))
+                {
+                    break;
+                }
             }
 
             for (int i = 4; i <= ebpOffsets.Count * 4; i += 4)

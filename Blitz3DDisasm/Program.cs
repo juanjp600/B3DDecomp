@@ -34,10 +34,6 @@ internal static class Program
             .SelectMany(flattener)
             .SelectMany(flattener);
         var data = flatten.SelectMany(flattener).OfType<IResourceData>().Select(d => (d.Contents as DataSegment).Data).First();
-        data = File.ReadAllBytes("C:/Users/juanj/Desktop/Blitz3D/ReverseEng/3dwsmemdump.dat");
-        outputPath =
-            $"{Path.GetDirectoryName("C:/Users/juanj/Desktop/Blitz3D/ReverseEng/3dwsmemdump.dat").Replace('\\', '/')}/";
-        exeName = "3dwsmemdump.exe";
 
         var symbols = new List<Symbol>();
         var symbolByName = new Dictionary<string, Symbol>();
@@ -321,28 +317,29 @@ internal static class Program
             if (symbolEnd > codeLen) { symbolEnd = codeLen; }
             if (symbol.Address >= codeLen) { break; }
 
-            if (symbol.Type == SymbolType.DimArray)
+            if (symbol.Type != SymbolType.DimArray) { continue; }
+
+            var newName = symbol.Name;
+            int elementType = BitConverter.ToInt32(codeBytesForReading.AsSpan()[(symbol.Address + 4)..][..4]);
+            int dimensionCount = BitConverter.ToInt32(codeBytesForReading.AsSpan()[(symbol.Address + 8)..][..4]);
+            newName += elementType switch
             {
-                var newName = symbol.Name;
-                int elementType = BitConverter.ToInt32(codeBytesForReading.AsSpan()[(symbol.Address + 4)..][..4]);
-                int dimensionCount = BitConverter.ToInt32(codeBytesForReading.AsSpan()[(symbol.Address + 8)..][..4]);
-                newName += elementType switch
-                {
-                    1 => "_int",
-                    2 => "_float",
-                    3 => "_string",
-                    5 => "_obj"
-                };
-                newName += $"_{dimensionCount}dim";
-                symbol.ForceSetInferredType(SymbolType.DimArray, newName);
-                symbol.NewName = newName;
-            }
+                1 => "_int",
+                2 => "_float",
+                3 => "_string",
+                5 => "_obj"
+            };
+            newName += $"_{dimensionCount}dim";
+            symbol.ForceSetInferredType(SymbolType.DimArray, newName);
+            symbol.NewName = newName;
         }
 
         var disasmPath = outputPath + exeName.Replace(".exe", "_disasm");
         
         if (Directory.Exists(disasmPath)) { Directory.Delete(disasmPath, true); }
         Directory.CreateDirectory(disasmPath);
+        
+        File.WriteAllText(disasmPath + "/Compiler.txt", compiler.ToString());
 
         for (int i = 0; i < symbols.Count; i++)
         {
@@ -371,7 +368,7 @@ internal static class Program
             string newName = $"StringConstant{symbol.Name}_{string.Join("", strValue.Where(c => char.IsLetterOrDigit(c) || c is '_'))}";
             symbol.NewName = newName;
 
-            string textFilePath = disasmPath + $"/Strings.txt";
+            string textFilePath = disasmPath + "/Strings.txt";
             File.AppendAllText(textFilePath, $"@{symbol.Address:X8}: {symbol.NameToPrint}\n");
             File.AppendAllText(textFilePath, $"    \"{strValue}\" {leftoverBytes}\n");
         }

@@ -7,12 +7,15 @@ internal static class Program
 {
     public static void Main(string[] args)
     {
-        Function.InitBuiltIn();
-
         string disasmPath = "C:/Users/juanj/Desktop/Blitz3D/ReverseEng/game_disasm/";
         string decompPath = disasmPath.Replace("_disasm", "_decomp");
         if (Directory.Exists(decompPath)) { Directory.Delete(decompPath, true); }
         Directory.CreateDirectory(decompPath);
+
+        Function.InitBuiltIn(
+            Enum.Parse<Compiler>(
+                File.ReadAllText(disasmPath + "Compiler.txt").Trim(),
+                ignoreCase: true));
 
         StringConstantDecompiler.FromDir(disasmPath, decompPath);
         TypeDecompiler.FromDir(disasmPath, decompPath);

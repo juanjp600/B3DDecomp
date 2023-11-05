@@ -8,7 +8,84 @@ static class BbObjMemberAccess
 {
     private static bool ProcessSectionMavless(Function function, Function.AssemblySection section)
     {
-        return false;
+        bool changedSomething = false;
+
+        bool isVarOfCustomType(Variable variable)
+            => variable.DeclType.IsCustomType
+               && !variable.DeclType.IsArrayType;
+
+        var variablesOfCustomType
+            = section.ReferencedVariables.Where(isVarOfCustomType)
+                .ToArray();
+
+        foreach (var variable in variablesOfCustomType)
+        {
+            var initialLocation = variable.ToInstructionArg().StripDeref();
+            var tracker = new LocationTracker(trackDirection: 1, initialLocation: initialLocation);
+
+            var trackedLocations = new List<int>();
+
+            for (int i = 0; i < section.Instructions.Count; i++)
+            {
+                var instruction = section.Instructions[i];
+
+                if (tracker.ProcessInstruction(instruction))
+                {
+                    trackedLocations.Add(i);
+                }
+                else if (!tracker.Location.ContainsRegister("esp"))
+                {
+                    continue;
+                }
+
+                if (instruction.Name == "sub" && instruction.LeftArg.Contains("esp"))
+                {
+                    trackedLocations.Clear();
+                    tracker.Location = initialLocation;
+                    continue;
+                }
+
+                if (!instruction.IsJumpOrCall) { continue; }
+
+                if (instruction.Name != "call" || !instruction.LeftArg.Contains("bbObjLoad"))
+                {
+                    trackedLocations.Clear();
+                    tracker.Location = initialLocation;
+                    continue;
+                }
+
+                var fieldAccessInstructionDistance = section.Instructions
+                    .Skip(i).ToList()
+                    .FindIndex(instr => instr.Name == "call" && instr.LeftArg.Contains("bbFieldPtrAdd"));
+                var fieldAccessInstructionIndex = i + fieldAccessInstructionDistance;
+                var instructionsToCleanUp = section.Instructions.Skip(i + 1).Take(fieldAccessInstructionDistance).ToArray();
+
+                var offsetInstruction = instructionsToCleanUp.First(instr => instr.Name == "mov" && instr.RightArg.StartsWith("0x"));
+                var fieldIndex = int.Parse(offsetInstruction.RightArg[2..], NumberStyles.HexNumber) >> 2;
+                var customType = CustomType.GetTypeMatchingDeclType(variable.DeclType);
+                var field = customType.Fields[fieldIndex];
+
+                instruction.Name = "mov";
+                instruction.LeftArg = "eax";
+                instruction.RightArg = $"{variable.Name}\\{field.Name}";
+
+                foreach (var instr in instructionsToCleanUp)
+                {
+                    instr.Name = "nop";
+                }
+                foreach (var index in trackedLocations)
+                {
+                    section.Instructions[index].Name = "nop";
+                }
+
+                section.CleanupNop();
+
+                trackedLocations.Clear();
+                tracker.Location = initialLocation;
+            }
+        }
+
+        return changedSomething;
     }
 
     private static bool ProcessSectionVanilla(Function function, Function.AssemblySection section)
@@ -34,7 +111,6 @@ static class BbObjMemberAccess
 
                 if (!tracker.ProcessInstruction(instruction)) { continue; }
 
-                //if (instruction.Name != "mov") { Debugger.Break(); }
                 if (tracker.Location.IsRegister())
                 {
                     var register = tracker.Location;

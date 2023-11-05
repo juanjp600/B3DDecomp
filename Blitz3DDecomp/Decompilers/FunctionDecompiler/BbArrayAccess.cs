@@ -69,7 +69,7 @@ static class BbArrayAccess
                             else
                             {
                                 Logger.WriteLine($"{function.Name}: copies pointer to {instruction.RightArg} into {instruction.LeftArg}");
-                                if (!potentialImmediateDeref.LeftArg.Contains("esp")) { Debugger.Break(); }
+                                //if (!potentialImmediateDeref.LeftArg.Contains("esp")) { Debugger.Break(); }
                             }
                         }
                         else if (memberAccessInstruction.RightArg == register)

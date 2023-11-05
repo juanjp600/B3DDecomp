@@ -152,12 +152,23 @@ internal static class Program
 
             writeLineToFile(function.Name + function.ReturnType.Suffix);
 
+            string varToStr(Variable variable)
+            {
+                var instructionArg = variable.ToInstructionArg();
+                var retVal = $"    {variable} {instructionArg}";
+                if (variable.DeclType == DeclType.Unknown)
+                {
+                    retVal +=
+                        $" ({function.AssemblySections.Values.Sum(s => s.Instructions.Count(i => i.LeftArg.Contains(instructionArg) || i.RightArg.Contains(instructionArg)))} references)";
+                }
+                return retVal;
+            }
             if (function.Parameters.Count > 0)
             {
                 writeLineToFile("  parameters:");
                 foreach (var parameter in function.Parameters)
                 {
-                    writeLineToFile($"    {parameter} {parameter.ToInstructionArg()}");
+                    writeLineToFile(varToStr(parameter));
                 }
             }
 
@@ -166,7 +177,7 @@ internal static class Program
                 writeLineToFile("  locals:");
                 foreach (var local in function.LocalVariables)
                 {
-                    writeLineToFile($"    {local} {local.ToInstructionArg()}");
+                    writeLineToFile(varToStr(local));
                 }
             }
 

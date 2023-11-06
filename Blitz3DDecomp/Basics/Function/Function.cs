@@ -28,8 +28,8 @@ sealed class Function
                 .SelectMany(i => new[] { i.LeftArg, i.RightArg })
                 .Select(s => s.StripDeref())
                 .Select(Owner.InstructionArgumentToVariable)
-                .OfType<Variable>()
-                .Distinct(); // Removes null entries
+                .OfType<Variable>() // Removes null entries
+                .Distinct();
 
         public void CleanupNop()
         {
@@ -163,16 +163,12 @@ sealed class Function
             return GlobalVariable.AllGlobals.FirstOrDefault(
                 v => v.Name.Equals(arg[3..], StringComparison.OrdinalIgnoreCase));
         }
-        else if (arg.Contains('\\', StringComparison.Ordinal))
+        else
         {
             var split = arg.Split('\\');
 
-            var matchingRootVar = LocalVariables.Cast<Variable>().Concat(Parameters).Concat(GlobalVariable.AllGlobals)
-                .FirstOrDefault(v => v.Name.Equals(split[0], StringComparison.OrdinalIgnoreCase));
-            if (matchingRootVar is null) { return null; }
-
-            var currVar = matchingRootVar;
-            for (int i = 1; i < split.Length; i++)
+            Variable? currVar = null;
+            for (int i = 0; i < split.Length; i++)
             {
                 var part = split[i];
                 var arrayIndex = "";
@@ -182,8 +178,17 @@ sealed class Function
                     arrayIndex = part[(indexerStart + 1)..indexerEnd];
                     part = part[..indexerStart];
                 }
-                var index = int.Parse(string.Join("", part.Where(char.IsDigit)));
-                currVar = currVar.Fields[index];
+
+                if (currVar == null)
+                {
+                    currVar = LocalVariables.Cast<Variable>().Concat(Parameters).Concat(GlobalVariable.AllGlobals)
+                        .FirstOrDefault(v => v.Name.Equals(part, StringComparison.OrdinalIgnoreCase));
+                    if (currVar is null) { return null; }
+                }
+                else
+                {
+                    currVar = currVar.Fields.First(f => f.Name.EndsWith(part, StringComparison.OrdinalIgnoreCase));
+                }
                 if (arrayIndex != "" && currVar.GetArrayElement(arrayIndex) is { } arrayElement)
                 {
                     currVar = arrayElement;

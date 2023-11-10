@@ -17,20 +17,40 @@ static partial class FunctionDecompiler
                     ? function.AssemblySections.First(kvp => kvp.Key.EndsWith("_begin__MAIN")).Value.Instructions.ToArray()
                     : function.AssemblySections[function.CoreSymbolName].Instructions.Skip(5).ToArray();
 
+            var initializedRegisters = new HashSet<string>();
             var ebpOffsetLocalRegex = new Regex("\\[ebp-0x([0-9a-f]+)\\]");
             var ebpOffsets = new HashSet<int>();
             for (var i = 0; i < coreSectionInstructions.Length; i++)
             {
                 var instruction = coreSectionInstructions[i];
-                if (instruction.IsJumpOrCall &&
-                    !instruction.LeftArg.Contains("_builtIn", StringComparison.OrdinalIgnoreCase))
+                if (instruction.IsJumpOrCall)
                 {
-                    break;
+                    if (instruction.Name == "call")
+                    {
+                        initializedRegisters.Add("eax");
+                    }
+
+                    if (!instruction.LeftArg.Contains("_builtIn", StringComparison.OrdinalIgnoreCase))
+                    {
+                        break;
+                    }
                 }
 
-                if (instruction.Name == "mov" && ebpOffsetLocalRegex.Match(instruction.LeftArg) is
-                        { Success: true } ebpOffsetMatch)
+                if (instruction.Name == "mov" && instruction.LeftArg.IsRegister() && instruction.RightArg == "0x0")
                 {
+                    initializedRegisters.Add(instruction.LeftArg);
+                    continue;
+                }
+
+                if (instruction.Name == "mov"
+                    && ebpOffsetLocalRegex.Match(instruction.LeftArg) is { Success: true } ebpOffsetMatch)
+                {
+                    if (instruction.RightArg.IsRegister()
+                        && !initializedRegisters.Contains(instruction.RightArg))
+                    {
+                        break;
+                    }
+
                     if (!ebpOffsets.Add(int.Parse(ebpOffsetMatch.Groups[1].Value, NumberStyles.HexNumber)))
                     {
                         break;

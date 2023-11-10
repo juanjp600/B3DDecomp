@@ -36,7 +36,6 @@ sealed class Function
             var nopIndices = Instructions
                 .Select((instr, index) => instr.Name == "nop" ? index : -1)
                 .Where(index => index >= 0)
-                .Reverse()
                 .ToArray();
 
             foreach (var instruction in Instructions)

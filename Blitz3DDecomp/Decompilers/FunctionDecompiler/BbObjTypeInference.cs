@@ -126,11 +126,6 @@ static partial class FunctionDecompiler
                                     if (variableForSecondParam is { DeclType.IsCustomType: true })
                                     {
                                         if (variableForSecondParam.DeclType.IsArrayType) { Debugger.Break(); }
-                                        if (function.Name.Contains("findpath") &&
-                                            instruction.CallParameterAssignmentIndices[0] == 6)
-                                        {
-                                            Debugger.Break();
-                                        }
                                         bbObjType = "_t" + variableForSecondParam.DeclType.Suffix[1..];
                                         break;
                                     }

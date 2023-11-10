@@ -13,13 +13,14 @@ sealed class CustomType
 
     public static readonly List<CustomType> AllTypes = new List<CustomType>();
 
-    public static CustomType? GetTypeWithName(string name)
+    public static CustomType GetTypeWithName(string name)
     {
         if (name[0] =='.') { name = name[1..]; }
-        return AllTypes.FirstOrDefault(t => t.Name == name);
+        return AllTypes.FirstOrDefault(t => t.Name == name)
+            ?? throw new Exception($"Custom type of name {name} was not loaded from symbols");
     }
 
-    public static CustomType? GetTypeMatchingDeclType(DeclType declType)
+    public static CustomType GetTypeMatchingDeclType(DeclType declType)
         => GetTypeWithName(declType.Suffix);
 
     public readonly string Name;

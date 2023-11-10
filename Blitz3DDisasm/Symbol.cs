@@ -24,13 +24,19 @@ sealed class Symbol
     public string? OwnerName { get; private set; }
 
     private SymbolType inferredType;
-    public void TrySetInferredType(SymbolType type, string ownerName)
+
+    public Symbol(string name)
+    {
+        Name = name;
+    }
+
+    public void TrySetInferredType(SymbolType type, string? ownerName)
     {
         if (Type != SymbolType.Other) { return; }
         ForceSetInferredType(type, ownerName);
     }
 
-    public void ForceSetInferredType(SymbolType type, string ownerName)
+    public void ForceSetInferredType(SymbolType type, string? ownerName)
     {
         inferredType = type;
         OwnerName = ownerName;

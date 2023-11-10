@@ -13,7 +13,7 @@ static partial class FunctionDecompiler
             if (!string.IsNullOrEmpty(callInstruction.BbObjType)) { return; }
             if (callInstruction.CallParameterAssignmentIndices is not { Length: >0 } callParameterAssignmentIndices) { return; }
             var calleeName = callInstruction.LeftArg[1..];
-            var callee = Function.AllFunctions.FirstOrDefault(f => f.Name == calleeName || f.Name == calleeName[2..]);
+            var callee = Function.GetFunctionByName(calleeName);
             for (int i = 0; i < callee.Parameters.Count; i++)
             {
                 var assignmentLocation = callParameterAssignmentIndices[i];
@@ -77,6 +77,11 @@ static partial class FunctionDecompiler
                 {
                     bool instrIsConstructor = false;
                     string? bbObjType = instruction.BbObjType;
+                    if (instruction.CallParameterAssignmentIndices is null)
+                    {
+                        throw new Exception(
+                            $"{section.Name}:{j}: expected parameter assignment indices, but they were not defined");
+                    }
 
                     if (locationTracker.Location == "eax"
                         && (instruction.LeftArg.Contains("bbObjNew") || instruction.LeftArg.Contains("bbObjFirst") || instruction.LeftArg.Contains("bbObjLast")))

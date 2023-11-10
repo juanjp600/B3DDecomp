@@ -13,12 +13,15 @@ internal static class Program
     private static void Main(string[] args)
     {
         var exePath = "C:/Users/juanj/Desktop/Blitz3D/ReverseEng/game.exe";
-        var outputPath = $"{Path.GetDirectoryName(exePath).Replace('\\', '/')}/";
+        var outputPath = $"{Path.GetDirectoryName(exePath)!.Replace('\\', '/')}/";
 
         var exeName = Path.GetFileName(exePath);
         var fileToInspect = PEImage.FromFile(exePath);
         var resources = fileToInspect.Resources;
-        var entries = (IEnumerable<IResourceEntry>)resources.Entries;
+        if (resources?.Entries is not IEnumerable<IResourceEntry> entries)
+        {
+            throw new Exception($"");
+        }
 
         static IEnumerable<IResourceEntry> flattener(IResourceEntry entry)
         {
@@ -32,15 +35,21 @@ internal static class Program
         var flatten = entries
             .SelectMany(flattener)
             .SelectMany(flattener)
+            .SelectMany(flattener)
             .SelectMany(flattener);
-        var data = flatten.SelectMany(flattener).OfType<IResourceData>().Select(d => (d.Contents as DataSegment).Data).First();
+        var data = flatten
+            .OfType<IResourceData>()
+            .Select(d => d.Contents)
+            .OfType<DataSegment>()
+            .First()
+            .Data;
 
         var symbols = new List<Symbol>();
         var symbolByName = new Dictionary<string, Symbol>();
         var symbolByAddress = new Dictionary<int, Symbol>();
         void addSymbol(string symbolName, int symbolAddress)
         {
-            symbols.Add(new Symbol { Address = symbolAddress, Name = symbolName });
+            symbols.Add(new Symbol(name: symbolName) { Address = symbolAddress });
             symbolByName.Add(symbolName, symbols.Last());
             symbolByAddress.TryAdd(symbolAddress, symbols.Last());
         }
@@ -131,15 +140,11 @@ internal static class Program
         symbols = symbols.OrderBy(s => s.Address).ToList();
         relocs = relocs.OrderBy(r => r.RelocAddress).ToList();
 
-        for (int i=0; i<relocs.Count; i++)
+        for (int i=0; i<relocs.Count - 1; i++)
         {
-            for (int j = i+1; j < relocs.Count;j++)
+            if (relocs[i].RelocAddress == relocs[i+1].RelocAddress)
             {
-                if (relocs[i].RelocAddress == relocs[j].RelocAddress)
-                {
-                    Debugger.Break();
-                }
-                break;
+                Debugger.Break();
             }
         }
 
@@ -327,7 +332,8 @@ internal static class Program
                 1 => "_int",
                 2 => "_float",
                 3 => "_string",
-                5 => "_obj"
+                5 => "_obj",
+                _ => throw new Exception($"Unexpected dim element type {elementType}")
             };
             newName += $"_{dimensionCount}dim";
             symbol.ForceSetInferredType(SymbolType.DimArray, newName);

@@ -124,6 +124,11 @@ static class BbObjMemberAccess
                     {
                         var fieldIndex = int.Parse(memberAccessInstruction.RightArg[2..], NumberStyles.HexNumber) >> 2;
                         var customType = CustomType.GetTypeMatchingDeclType(variable.DeclType);
+                        if (customType is null)
+                        {
+                            throw new Exception($"Custom type of name {variable.DeclType.Suffix} was not loaded from symbols");
+                        }
+
                         var field = customType.Fields[fieldIndex];
                         instruction.RightArg = $"{variable.Name}\\{field.Name}";
                         section.Instructions[i + 1] = new Function.Instruction(name: "nop");

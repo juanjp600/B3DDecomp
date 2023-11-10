@@ -48,6 +48,11 @@ static partial class FunctionDecompiler
         {
             bool changedSomething = false;
             var calleeFunction = Function.GetFunctionByName(instruction.LeftArg.StripDeref());
+            if (calleeFunction is null)
+            {
+                throw new Exception(
+                    $"Function {instruction.LeftArg} was not loaded from symbols nor defined as a builtin");
+            }
             if (calleeFunction.ReturnType == DeclType.Unknown)
             {
                 if (typeAtTop != null)

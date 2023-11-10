@@ -190,6 +190,16 @@ internal static class Program
                 }
             }
 
+            var referencedGlobals = function.AssemblySections.Values.SelectMany(s => s.ReferencedGlobals).Distinct().ToArray();
+            if (referencedGlobals.Length > 0)
+            {
+                writeLineToFile("  referenced globals:");
+                foreach (var global in referencedGlobals)
+                {
+                    writeLineToFile(varToStr(global));
+                }
+            }
+
             writeLineToFile("");
             writeLineToFile("code:");
             foreach (var section in function.AssemblySections.Values)

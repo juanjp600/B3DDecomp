@@ -109,7 +109,7 @@ static partial class FunctionDecompiler
                                     {
                                         if (instruction2.Name == "call" && secondParamTracker.Location == "eax")
                                         {
-                                            var calledFunction = Function.GetFunctionWithName(instruction2.LeftArg);
+                                            var calledFunction = Function.GetFunctionByName(instruction2.LeftArg);
                                             if (calledFunction is { ReturnType.IsCustomType: true })
                                             {
                                                 bbObjType = "_t"+calledFunction.ReturnType.Suffix[1..];

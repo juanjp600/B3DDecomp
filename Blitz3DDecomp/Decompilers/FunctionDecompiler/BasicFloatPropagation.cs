@@ -47,7 +47,7 @@ static partial class FunctionDecompiler
         private static bool HandlePropagationForReturnType(Function function, Variable declaration, string declarationDesc, Function.Instruction instruction, DeclType? typeAtTop)
         {
             bool changedSomething = false;
-            var calleeFunction = Function.GetFunctionWithName(instruction.LeftArg.StripDeref());
+            var calleeFunction = Function.GetFunctionByName(instruction.LeftArg.StripDeref());
             if (calleeFunction.ReturnType == DeclType.Unknown)
             {
                 if (typeAtTop != null)
@@ -74,7 +74,7 @@ static partial class FunctionDecompiler
 
             bool changedSomething = false;
 
-            var callee = Function.GetFunctionWithName(callInstruction.LeftArg);
+            var callee = Function.GetFunctionByName(callInstruction.LeftArg);
             if (callee.IsBuiltIn) { return false; }
 
             for (int i = 0; i < callee.Parameters.Count; i++)

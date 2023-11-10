@@ -114,7 +114,7 @@ static class InferredTypePropagation
 
             for (var argIndex = 0; argIndex < assignmentLocations.Length; argIndex++)
             {
-                var callee = Function.GetFunctionWithName(section.Instructions[i].LeftArg)
+                var callee = Function.GetFunctionByName(section.Instructions[i].LeftArg)
                     ?? throw new Exception($"Function {section.Instructions[i].LeftArg} not found");
                 var assignmentLocation = assignmentLocations[argIndex];
                 changesMade |= HandleSubCall(function, callee, argIndex, section, assignmentLocation);
@@ -144,7 +144,7 @@ static class InferredTypePropagation
                         && instruction.Name == "call"
                         && locationTracker.Location == "eax")
                     {
-                        var callee = Function.GetFunctionWithName(section.Instructions[i].LeftArg)
+                        var callee = Function.GetFunctionByName(section.Instructions[i].LeftArg)
                             ?? throw new Exception($"Function {section.Instructions[i].LeftArg} not found");
                         if (callee.AssemblySections.Any() && callee.ReturnType == DeclType.Unknown)
                         {

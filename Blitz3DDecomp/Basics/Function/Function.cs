@@ -84,7 +84,7 @@ sealed class Function
 
     public int TotalInstructionCount => AssemblySections.Values.Select(s => s.Instructions.Count).Sum();
 
-    public static readonly List<Function> AllFunctions = new List<Function>();
+    public static ICollection<Function> AllFunctions => lookupDictionary.Values;
 
     private static Dictionary<string, Function> lookupDictionary = new Dictionary<string, Function>();
 
@@ -101,7 +101,7 @@ sealed class Function
         }
     }
 
-    public static Function? GetFunctionWithName(string name)
+    public static Function? GetFunctionByName(string name)
     {
         name = name.ToLowerInvariant();
         if (name[0] == '@') { name = name[1..]; }
@@ -159,8 +159,7 @@ sealed class Function
         }
         else if (arg.StartsWith("@_v", StringComparison.Ordinal))
         {
-            return GlobalVariable.AllGlobals.FirstOrDefault(
-                v => v.Name.Equals(arg[3..], StringComparison.OrdinalIgnoreCase));
+            return GlobalVariable.FindByName(arg);
         }
         else
         {
@@ -180,8 +179,9 @@ sealed class Function
 
                 if (currVar == null)
                 {
-                    currVar = LocalVariables.Cast<Variable>().Concat(Parameters).Concat(GlobalVariable.AllGlobals)
+                    currVar = LocalVariables.Cast<Variable>().Concat(Parameters)
                         .FirstOrDefault(v => v.Name.Equals(part, StringComparison.OrdinalIgnoreCase));
+                    currVar ??= GlobalVariable.FindByName(part);
                     if (currVar is null) { return null; }
                 }
                 else
@@ -292,7 +292,6 @@ sealed class Function
     {
         Name = name;
         AssemblySections = assemblySections;
-        AllFunctions.Add(this);
         lookupDictionary.Add(name.ToLowerInvariant(), this);
     }
 

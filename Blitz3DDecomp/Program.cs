@@ -22,21 +22,22 @@ internal static class Program
         LoadGlobalList.FromDir(disasmPath);
         var allGlobals = GlobalVariable.AllGlobals;
         IngestCodeFiles.FromDir(disasmPath);
+
         foreach (var function in Function.AllFunctions)
         {
-            FunctionDecompiler.MarkAsFloat.Process(function);
+            MarkAsFloat.Process(function);
         }
         var usedInstructions = Function.AllFunctions.SelectMany(f => f.AssemblySections.Values)
             .SelectMany(section => section.Instructions).Select(instr => instr.Name).ToHashSet();
 
         foreach (var function in Function.AllFunctions)
         {
-            FunctionDecompiler.CountArguments.Process(function);
+            CountArguments.Process(function);
         }
 
         foreach (var function in Function.AllFunctions)
         {
-            FunctionDecompiler.CountLocals.Process(function);
+            CountLocals.Process(function);
             VectorTypeDeduction.Process(function);
         }
 
@@ -47,7 +48,7 @@ internal static class Program
 
         foreach (var function in Function.AllFunctions)
         {
-            FunctionDecompiler.LibCallCleanup.Process(function);
+            LibCallCleanup.Process(function);
         }
 
         foreach (var function in Function.AllFunctions
@@ -55,7 +56,7 @@ internal static class Program
                      .OrderBy(f => f.TotalInstructionCount)
                      .ToList())
         {
-            FunctionDecompiler.CollectCalls.Process(function);
+            CollectCalls.Process(function);
         }
 
         bool shouldLoop = true;
@@ -73,8 +74,8 @@ internal static class Program
                     }
                 }
 
-                handleNeedForLooping(FunctionDecompiler.BbObjTypeInference.Process(function), "BbObjTypeInference.Process returned true");
-                handleNeedForLooping(FunctionDecompiler.BasicFloatPropagation.Process(function), "BasicFloatPropagation.Process returned true");
+                handleNeedForLooping(BbObjTypeInference.Process(function), "BbObjTypeInference.Process returned true");
+                handleNeedForLooping(BasicFloatPropagation.Process(function), "BasicFloatPropagation.Process returned true");
                 handleNeedForLooping(InferredTypePropagation.Process(function), "InferredTypePropagation.Process returned true");
                 handleNeedForLooping(BbArrayAccess.Process(function), "BbArrayAccess.Process returned true");
                 handleNeedForLooping(BbObjMemberAccess.Process(function), "BbObjMemberAccess.Process returned true");
@@ -218,6 +219,5 @@ internal static class Program
         }
 
         Logger.End();
-        Debugger.Break();
     }
 }

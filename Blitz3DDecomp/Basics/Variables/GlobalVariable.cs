@@ -11,7 +11,7 @@ sealed class GlobalVariable : Variable
     {
         name = name.ToLowerInvariant();
         if (name.Length >= 1 && name[0] == '@') { name = name[1..]; }
-        if (name.Length >= 2 && name[1] == '_' && name[2] == 'v') { name = name[2..]; }
+        if (name.Length >= 2 && name[0] == '_' && name[1] == 'v') { name = name[2..]; }
 
         if (lookupDictionary.TryGetValue(name, out var global)) { return global; }
         return null;

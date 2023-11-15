@@ -102,6 +102,10 @@ sealed class Function
     }
 
     public static Function GetFunctionByName(string name)
+        => TryGetFunctionByName(name)
+           ?? throw new Exception($"Function {name} was not loaded from symbols nor defined as a builtin");
+
+    public static Function? TryGetFunctionByName(string name)
     {
         name = name.ToLowerInvariant();
         if (name[0] == '@') { name = name[1..]; }
@@ -120,7 +124,7 @@ sealed class Function
             }
         }
 
-        throw new Exception($"Function {name} was not loaded from symbols nor defined as a builtin");
+        return null;
     }
 
     public bool IsBuiltIn

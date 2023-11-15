@@ -8,14 +8,14 @@ static class LibCallCleanup
     {
         var startInstruction = section.Instructions[startIndex];
 
-        var register = startInstruction.LeftArg;
+        var register = startInstruction.DestArg;
         for (int i = startIndex - 1; i >= 0; i--)
         {
             var instruction = section.Instructions[i];
-            if ((instruction.Name == "mov" && instruction.LeftArg == register)
-                || (instruction.Name == "xchg" && (instruction.LeftArg == register || instruction.RightArg == register)))
+            if ((instruction.Name == "mov" && instruction.DestArg == register)
+                || (instruction.Name == "xchg" && (instruction.DestArg == register || instruction.SrcArg1 == register)))
             {
-                var source = instruction.RightArg;
+                var source = instruction.SrcArg1;
                 if (source.ContainsRegister())
                 {
                     register = source;
@@ -23,7 +23,7 @@ static class LibCallCleanup
                 else
                 {
                     source = source[1..^1];
-                    startInstruction.LeftArg = source;
+                    startInstruction.DestArg = source;
                     section.Instructions[startIndex] = startInstruction;
                     break;
                 }
@@ -40,7 +40,7 @@ static class LibCallCleanup
             {
                 var instruction = section.Instructions[i];
                 if (instruction.Name != "call") { continue; }
-                if (!instruction.LeftArg.ContainsRegister()) { continue; }
+                if (!instruction.DestArg.ContainsRegister()) { continue; }
                 CrawlUp(section, i);
             }
         }

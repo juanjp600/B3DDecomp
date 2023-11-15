@@ -28,23 +28,23 @@ static class CountLocals
                     initializedRegisters.Add("eax");
                 }
 
-                if (!instruction.LeftArg.Contains("_builtIn", StringComparison.OrdinalIgnoreCase))
+                if (!instruction.DestArg.Contains("_builtIn", StringComparison.OrdinalIgnoreCase))
                 {
                     break;
                 }
             }
 
-            if (instruction.Name == "mov" && instruction.LeftArg.IsRegister() && instruction.RightArg == "0x0")
+            if (instruction.Name == "mov" && instruction.DestArg.IsRegister() && instruction.SrcArg1 == "0x0")
             {
-                initializedRegisters.Add(instruction.LeftArg);
+                initializedRegisters.Add(instruction.DestArg);
                 continue;
             }
 
             if (instruction.Name == "mov"
-                && ebpOffsetLocalRegex.Match(instruction.LeftArg) is { Success: true } ebpOffsetMatch)
+                && ebpOffsetLocalRegex.Match(instruction.DestArg) is { Success: true } ebpOffsetMatch)
             {
-                if (instruction.RightArg.IsRegister()
-                    && !initializedRegisters.Contains(instruction.RightArg))
+                if (instruction.SrcArg1.IsRegister()
+                    && !initializedRegisters.Contains(instruction.SrcArg1))
                 {
                     break;
                 }
@@ -57,34 +57,34 @@ static class CountLocals
                 continue;
             }
 
-            if (instruction.LeftArg.ContainsRegister() && instruction.LeftArg.Contains("ebp"))
+            if (instruction.DestArg.ContainsRegister() && instruction.DestArg.Contains("ebp"))
             {
                 break;
             }
 
-            if (instruction.RightArg.ContainsRegister() && instruction.RightArg.Contains("ebp"))
+            if (instruction.SrcArg1.ContainsRegister() && instruction.SrcArg1.Contains("ebp"))
             {
                 bool isParamForLocalInitializer = false;
-                if (instruction.RightArg.Contains("[ebp+"))
+                if (instruction.SrcArg1.Contains("[ebp+"))
                 {
                     for (int j = i + 1; j < coreSectionInstructions.Length; j++)
                     {
                         var instruction2 = coreSectionInstructions[j];
                         if (instruction2.Name != "call") { continue; }
 
-                        isParamForLocalInitializer = instruction2.LeftArg.Contains("_builtIn");
+                        isParamForLocalInitializer = instruction2.DestArg.Contains("_builtIn");
                         break;
                     }
                 }
                 if (!isParamForLocalInitializer) { break; }
             }
 
-            if (instruction.LeftArg.Contains("@_v") || instruction.RightArg.Contains("@_v"))
+            if (instruction.DestArg.Contains("@_v") || instruction.SrcArg1.Contains("@_v"))
             {
                 break;
             }
 
-            if (instruction.LeftArg.Contains("@_f") || instruction.RightArg.Contains("@_f"))
+            if (instruction.DestArg.Contains("@_f") || instruction.SrcArg1.Contains("@_f"))
             {
                 break;
             }
@@ -102,7 +102,7 @@ static class CountLocals
         
         var lastLocalIndex = function.AssemblySections.Values
             .SelectMany(s => s.Instructions)
-            .SelectMany(i => new[] { i.LeftArg, i.RightArg })
+            .SelectMany(i => new[] { i.DestArg, i.SrcArg1 })
             .Select(a => a.StripDeref())
             .Where(a => a.StartsWith("ebp-0x", StringComparison.Ordinal))
             .Distinct()

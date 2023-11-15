@@ -10,7 +10,8 @@ public static class IngestCodeFiles
         var symbolDescRegex = new Regex("@([0-9A-F]+): (.+)");
         var instructionTrimRegex = new Regex("    @[0-9A-F]+:( [0-9A-F][0-9A-F])+ +(.+)");
         var instructionNameParseRegex = new Regex("(.+?) (.+)");
-        var instructionArgsParseRegex = new Regex("(.+),(.+)");
+        var instructionOneSrcArgsParseRegex = new Regex("(.+),(.+)");
+        var instructionTwoSrcArgsParseRegex = new Regex("(.+),(.+),(.+)");
 
         inputDir = inputDir.AppendToPath("Code");
         foreach (var filePath in Directory.GetFiles(inputDir))
@@ -50,13 +51,29 @@ public static class IngestCodeFiles
                     }
                     var instructionName = parseNameMatch.Groups[1].Value;
                     var instructionArgsStr = parseNameMatch.Groups[2].Value;
-                    var parseArgsMatch = instructionArgsParseRegex.Match(instructionArgsStr);
-                    if (!parseArgsMatch.Success)
+
+                    var parseTwoSrcArgsMatch = instructionTwoSrcArgsParseRegex.Match(instructionArgsStr);
+                    if (parseTwoSrcArgsMatch.Success)
                     {
-                        currentSection.Instructions.Add(new Function.Instruction(name: instructionName, leftArg: instructionArgsStr));
+                        currentSection.Instructions.Add(new Function.Instruction(
+                            name: instructionName,
+                            destArg: parseTwoSrcArgsMatch.Groups[1].Value.Trim(),
+                            srcArg1: parseTwoSrcArgsMatch.Groups[2].Value.Trim(),
+                            srcArg2: parseTwoSrcArgsMatch.Groups[3].Value.Trim()));
                         continue;
                     }
-                    currentSection.Instructions.Add(new Function.Instruction(name: instructionName, leftArg: parseArgsMatch.Groups[1].Value.Trim(), rightArg: parseArgsMatch.Groups[2].Value.Trim()));
+
+                    var parseOneSrcArgsMatch = instructionOneSrcArgsParseRegex.Match(instructionArgsStr);
+                    if (parseOneSrcArgsMatch.Success)
+                    {
+                        currentSection.Instructions.Add(new Function.Instruction(
+                            name: instructionName,
+                            destArg: parseOneSrcArgsMatch.Groups[1].Value.Trim(),
+                            srcArg1: parseOneSrcArgsMatch.Groups[2].Value.Trim()));
+                        continue;
+                    }
+
+                    currentSection.Instructions.Add(new Function.Instruction(name: instructionName, destArg: instructionArgsStr));
                 }
                 else if (symbolDescRegex.Match(line) is { Success: true } symbolDescMatch)
                 {

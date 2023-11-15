@@ -10,23 +10,23 @@ static class VectorTypeDeduction
         {
             var instruction = section.Instructions[i];
             if (instruction.Name != "call"
-                || !instruction.LeftArg.Contains("_builtIn__bbVecAlloc", StringComparison.Ordinal))
+                || !instruction.DestArg.Contains("_builtIn__bbVecAlloc", StringComparison.Ordinal))
             {
                 continue;
             }
 
             var vecTypeToRegister = section.Instructions[i - 2];
-            var vecType = DeclType.FromDesc(vecTypeToRegister.RightArg[1..]);
+            var vecType = DeclType.FromDesc(vecTypeToRegister.SrcArg1[1..]);
 
             var registerToArg = section.Instructions[i - 1];
 
             var resultToVariable = section.Instructions[i + 1];
-            var variable = function.InstructionArgumentToVariable(resultToVariable.LeftArg);
+            var variable = function.InstructionArgumentToVariable(resultToVariable.DestArg);
 
             if (vecTypeToRegister.Name == "mov"
                 && vecType.IsArrayType
-                && vecTypeToRegister.LeftArg == registerToArg.RightArg
-                && resultToVariable is { Name: "mov", RightArg: "eax" } 
+                && vecTypeToRegister.DestArg == registerToArg.SrcArg1
+                && resultToVariable is { Name: "mov", SrcArg1: "eax" } 
                 && variable != null 
                 && variable.DeclType == DeclType.Unknown)
             {

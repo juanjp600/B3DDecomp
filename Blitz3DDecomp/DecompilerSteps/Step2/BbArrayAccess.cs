@@ -23,22 +23,22 @@ static class BbArrayAccess
             Function.Instruction instruction)
         {
             if (potentialImmediateDeref.Name == "mov"
-                && potentialImmediateDeref.LeftArg == register
-                && potentialImmediateDeref.RightArg == $"[{register}]")
+                && potentialImmediateDeref.DestArg == register
+                && potentialImmediateDeref.SrcArg1 == $"[{register}]")
             {
-                Logger.WriteLine($"{function.Name}: accesses {instruction.RightArg}");
-                instruction.RightArg = $"[{instruction.RightArg}]";
+                Logger.WriteLine($"{function.Name}: accesses {instruction.SrcArg1}");
+                instruction.SrcArg1 = $"[{instruction.SrcArg1}]";
                 potentialImmediateDeref.Name = "nop";
                 section.CleanupNop();
                 changedSomething = true;
             }
             else if (potentialImmediateDeref.Name == "mov"
-                     && potentialImmediateDeref.LeftArg == $"[{register}]")
+                     && potentialImmediateDeref.DestArg == $"[{register}]")
             {
                 Logger.WriteLine(
-                    $"{function.Name}: writes {potentialImmediateDeref.RightArg} into {instruction.RightArg}");
-                instruction.LeftArg = $"[{instruction.RightArg}]";
-                instruction.RightArg = potentialImmediateDeref.RightArg;
+                    $"{function.Name}: writes {potentialImmediateDeref.SrcArg1} into {instruction.SrcArg1}");
+                instruction.DestArg = $"[{instruction.SrcArg1}]";
+                instruction.SrcArg1 = potentialImmediateDeref.SrcArg1;
                 potentialImmediateDeref.Name = "nop";
                 section.CleanupNop();
                 changedSomething = true;
@@ -46,7 +46,7 @@ static class BbArrayAccess
             else
             {
                 Logger.WriteLine(
-                    $"{function.Name}: copies pointer to {instruction.RightArg} into {instruction.LeftArg}");
+                    $"{function.Name}: copies pointer to {instruction.SrcArg1} into {instruction.DestArg}");
                 //if (!potentialImmediateDeref.LeftArg.Contains("esp")) { Debugger.Break(); }
             }
         }
@@ -60,29 +60,29 @@ static class BbArrayAccess
             {
                 var instruction = section.Instructions[i];
 
-                if (i >= 2 && instruction.Name == "add" && instruction.RightArg == variable.ToInstructionArg())
+                if (i >= 2 && instruction.Name == "add" && instruction.SrcArg1 == variable.ToInstructionArg())
                 {
-                    var register = instruction.LeftArg;
+                    var register = instruction.DestArg;
                     var prevInstruction = section.Instructions[i - 1];
-                    if (prevInstruction is { Name: "shl", RightArg: "0x2" } && prevInstruction.LeftArg == register)
+                    if (prevInstruction is { Name: "shl", SrcArg1: "0x2" } && prevInstruction.DestArg == register)
                     {
                         prevInstruction.Name = "nop";
                         instruction.Name = "mov";
-                        instruction.LeftArg = register;
-                        instruction.RightArg = $"{variable.Name}[{register}]";
+                        instruction.DestArg = register;
+                        instruction.SrcArg1 = $"{variable.Name}[{register}]";
 
                         section.CleanupNop();
                         i--;
                     }
                     else if (prevInstruction.Name == "mov"
-                             && prevInstruction.LeftArg == register
-                             && prevInstruction.RightArg.StartsWith("0x"))
+                             && prevInstruction.DestArg == register
+                             && prevInstruction.SrcArg1.StartsWith("0x"))
                     {
-                        var index = prevInstruction.RightArg.HexToUint32() >> 2;
+                        var index = prevInstruction.SrcArg1.HexToUint32() >> 2;
                         prevInstruction.Name = "nop";
                         instruction.Name = "mov";
-                        instruction.LeftArg = register;
-                        instruction.RightArg = $"{variable.Name}[{index}]";
+                        instruction.DestArg = register;
+                        instruction.SrcArg1 = $"{variable.Name}[{index}]";
 
                         section.CleanupNop();
                         i--;
@@ -114,14 +114,14 @@ static class BbArrayAccess
                     var arrayDerefInstruction = section.Instructions[i + 1];
                     var elementOffsetInstruction = section.Instructions[i + 2];
                     if (arrayDerefInstruction.Name == "mov"
-                        && arrayDerefInstruction.LeftArg == register
-                        && arrayDerefInstruction.RightArg == $"[{register}]"
+                        && arrayDerefInstruction.DestArg == register
+                        && arrayDerefInstruction.SrcArg1 == $"[{register}]"
                         && elementOffsetInstruction.Name == "add")
                     {
-                        if (elementOffsetInstruction.LeftArg == register)
+                        if (elementOffsetInstruction.DestArg == register)
                         {
-                            var arrayIndex = elementOffsetInstruction.RightArg.HexToUint32() >> 2;
-                            instruction.RightArg += $"[{arrayIndex}]";
+                            var arrayIndex = elementOffsetInstruction.SrcArg1.HexToUint32() >> 2;
+                            instruction.SrcArg1 += $"[{arrayIndex}]";
                             section.Instructions[i + 1] = new Function.Instruction(name: "nop");
                             section.Instructions[i + 2] = new Function.Instruction(name: "nop");
                             section.CleanupNop();
@@ -133,11 +133,11 @@ static class BbArrayAccess
                                 register,
                                 instruction);
                         }
-                        else if (elementOffsetInstruction.RightArg == register)
+                        else if (elementOffsetInstruction.SrcArg1 == register)
                         {
-                            var arrayIndex = $"{elementOffsetInstruction.LeftArg}>>2";
-                            arrayDerefInstruction.LeftArg = elementOffsetInstruction.LeftArg;
-                            arrayDerefInstruction.RightArg = $"{instruction.RightArg}[{arrayIndex}]";
+                            var arrayIndex = $"{elementOffsetInstruction.DestArg}>>2";
+                            arrayDerefInstruction.DestArg = elementOffsetInstruction.DestArg;
+                            arrayDerefInstruction.SrcArg1 = $"{instruction.SrcArg1}[{arrayIndex}]";
                             section.Instructions[i + 2] = new Function.Instruction(name: "nop");
                             section.CleanupNop();
                             changedSomething = true;
@@ -145,7 +145,7 @@ static class BbArrayAccess
                             var potentialImmediateDeref = section.Instructions[i + 2];
                             handlePotentialImmediateDeref(
                                 potentialImmediateDeref,
-                                arrayDerefInstruction.LeftArg,
+                                arrayDerefInstruction.DestArg,
                                 arrayDerefInstruction);
                         }
                         else

@@ -25,7 +25,7 @@ sealed class Function
 
         public IEnumerable<Variable> ReferencedVariables
             => Instructions
-                .SelectMany(i => new[] { i.LeftArg, i.RightArg })
+                .SelectMany(i => new[] { i.DestArg, i.SrcArg1 })
                 .Select(s => s.StripDeref())
                 .Select(Owner.InstructionArgumentToVariable)
                 .OfType<Variable>() // Removes null entries
@@ -206,17 +206,19 @@ sealed class Function
     public sealed class Instruction
     {
         public string Name;
-        public string LeftArg;
-        public string RightArg;
+        public string DestArg;
+        public string SrcArg1;
+        public string SrcArg2;
 
         public int[]? CallParameterAssignmentIndices;
         public string? BbObjType;
 
-        public Instruction(string name, string leftArg = "", string rightArg = "")
+        public Instruction(string name, string destArg = "", string srcArg1 = "", string srcArg2 = "")
         {
             Name = name;
-            LeftArg = leftArg;
-            RightArg = rightArg;
+            DestArg = destArg;
+            SrcArg1 = srcArg1;
+            SrcArg2 = srcArg2;
         }
 
         public bool IsJumpOrCall
@@ -226,11 +228,20 @@ sealed class Function
                 or "jl" or "jle";
 
         public override string ToString()
-            => string.IsNullOrWhiteSpace(LeftArg)
-                ? Name
-                : string.IsNullOrWhiteSpace(RightArg)
-                    ? $"{Name} {LeftArg}"
-                    : $"{Name} {LeftArg}, {RightArg}";
+        {
+            var retVal = Name;
+
+            if (string.IsNullOrWhiteSpace(DestArg)) { return retVal; }
+            retVal += " " + DestArg;
+
+            if (string.IsNullOrWhiteSpace(SrcArg1)) { return retVal; }
+            retVal += ", " + SrcArg1;
+
+            if (string.IsNullOrWhiteSpace(SrcArg2)) { return retVal; }
+            retVal += ", " + SrcArg2;
+
+            return retVal;
+        }
     }
 
     public static Function FromBlitzSymbol(string str)

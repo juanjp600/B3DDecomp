@@ -23,7 +23,7 @@ ref struct LocationTracker
 
     public bool ProcessInstruction(Function.Instruction instruction)
     {
-        var (dest, src) = (instruction.LeftArg, instruction.RightArg);
+        var (dest, src) = (instruction.DestArg, instruction.SrcArg1);
         if (!PreserveDeref)
         {
             (dest, src) = (dest.StripDeref(), src.StripDeref());

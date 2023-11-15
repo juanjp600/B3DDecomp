@@ -15,7 +15,7 @@ static class MarkAsFloat
                 var nextInstruction = section.Instructions[i + 1];
                 var instructionAfterNext = section.Instructions[i + 2];
                 if (instruction.Name == "push" && instructionAfterNext.Name == "pop"
-                    && instruction.LeftArg == instructionAfterNext.LeftArg)
+                    && instruction.DestArg == instructionAfterNext.DestArg)
                 {
                     if (nextInstruction.Name is not ("fistp" or "fild" or "fstp" or "fld")) { Debugger.Break(); }
 

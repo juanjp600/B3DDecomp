@@ -38,7 +38,7 @@ static class BbObjMemberAccess
                     continue;
                 }
 
-                if (instruction.Name == "sub" && instruction.LeftArg.Contains("esp"))
+                if (instruction.Name == "sub" && instruction.DestArg.Contains("esp"))
                 {
                     trackedLocations.Clear();
                     tracker.Location = initialLocation;
@@ -47,7 +47,7 @@ static class BbObjMemberAccess
 
                 if (!instruction.IsJumpOrCall) { continue; }
 
-                if (instruction.Name != "call" || !instruction.LeftArg.Contains("bbObjLoad"))
+                if (instruction.Name != "call" || !instruction.DestArg.Contains("bbObjLoad"))
                 {
                     trackedLocations.Clear();
                     tracker.Location = initialLocation;
@@ -56,18 +56,18 @@ static class BbObjMemberAccess
 
                 var fieldAccessInstructionDistance = section.Instructions
                     .Skip(i).ToList()
-                    .FindIndex(instr => instr.Name == "call" && instr.LeftArg.Contains("bbFieldPtrAdd"));
+                    .FindIndex(instr => instr.Name == "call" && instr.DestArg.Contains("bbFieldPtrAdd"));
                 var fieldAccessInstructionIndex = i + fieldAccessInstructionDistance;
                 var instructionsToCleanUp = section.Instructions.Skip(i + 1).Take(fieldAccessInstructionDistance).ToArray();
 
-                var offsetInstruction = instructionsToCleanUp.First(instr => instr.Name == "mov" && instr.RightArg.StartsWith("0x"));
-                var fieldIndex = int.Parse(offsetInstruction.RightArg[2..], NumberStyles.HexNumber) >> 2;
+                var offsetInstruction = instructionsToCleanUp.First(instr => instr.Name == "mov" && instr.SrcArg1.StartsWith("0x"));
+                var fieldIndex = int.Parse(offsetInstruction.SrcArg1[2..], NumberStyles.HexNumber) >> 2;
                 var customType = CustomType.GetTypeMatchingDeclType(variable.DeclType);
                 var field = customType.Fields[fieldIndex];
 
                 instruction.Name = "mov";
-                instruction.LeftArg = "eax";
-                instruction.RightArg = $"{variable.Name}\\{field.Name}";
+                instruction.DestArg = "eax";
+                instruction.SrcArg1 = $"{variable.Name}\\{field.Name}";
 
                 foreach (var instr in instructionsToCleanUp)
                 {
@@ -117,12 +117,12 @@ static class BbObjMemberAccess
                     var objDerefInstruction = section.Instructions[i + 1];
                     var memberAccessInstruction = section.Instructions[i + 2];
                     if (objDerefInstruction.Name == "mov"
-                        && objDerefInstruction.LeftArg == register
-                        && objDerefInstruction.RightArg == $"[{register}]"
+                        && objDerefInstruction.DestArg == register
+                        && objDerefInstruction.SrcArg1 == $"[{register}]"
                         && memberAccessInstruction.Name == "add"
-                        && memberAccessInstruction.LeftArg == register)
+                        && memberAccessInstruction.DestArg == register)
                     {
-                        var fieldIndex = int.Parse(memberAccessInstruction.RightArg[2..], NumberStyles.HexNumber) >> 2;
+                        var fieldIndex = int.Parse(memberAccessInstruction.SrcArg1[2..], NumberStyles.HexNumber) >> 2;
                         var customType = CustomType.GetTypeMatchingDeclType(variable.DeclType);
                         if (customType is null)
                         {
@@ -130,36 +130,36 @@ static class BbObjMemberAccess
                         }
 
                         var field = customType.Fields[fieldIndex];
-                        instruction.RightArg = $"{variable.Name}\\{field.Name}";
+                        instruction.SrcArg1 = $"{variable.Name}\\{field.Name}";
                         section.Instructions[i + 1] = new Function.Instruction(name: "nop");
                         section.Instructions[i + 2] = new Function.Instruction(name: "nop");
                         if (!field.DeclType.IsArrayType)
                         {
                             var derefFieldInstruction = section.Instructions[i + 3];
                             if (derefFieldInstruction.Name == "mov"
-                                && derefFieldInstruction.LeftArg == register
-                                && derefFieldInstruction.RightArg == $"[{register}]")
+                                && derefFieldInstruction.DestArg == register
+                                && derefFieldInstruction.SrcArg1 == $"[{register}]")
                             {
                                 // Read the value of the field and store in the same register
-                                instruction.RightArg = $"[{variable.Name}\\{field.Name}]";
+                                instruction.SrcArg1 = $"[{variable.Name}\\{field.Name}]";
                                 section.Instructions[i + 3] = new Function.Instruction(name: "nop");
                                 Logger.WriteLine($"{function.Name}: dereferences {variable}\\{field} into {register}");
                             }
                             else if (derefFieldInstruction.Name == "mov"
-                                     && derefFieldInstruction.RightArg == register)
+                                     && derefFieldInstruction.SrcArg1 == register)
                             {
                                 // Take the pointer to the field and store it somewhere else
                                 Logger.WriteLine($"{function.Name}: stores pointer to {variable}\\{field} into {register} because {derefFieldInstruction}");
                                 // There's no action to be taken here, a LocationTracker should be able to handle this
                             }
                             else if (derefFieldInstruction.Name == "mov"
-                                     && derefFieldInstruction.LeftArg == $"[{register}]")
+                                     && derefFieldInstruction.DestArg == $"[{register}]")
                             {
                                 // Write a value into the field
-                                instruction.LeftArg = $"[{variable.Name}\\{field.Name}]";
-                                instruction.RightArg = derefFieldInstruction.RightArg;
+                                instruction.DestArg = $"[{variable.Name}\\{field.Name}]";
+                                instruction.SrcArg1 = derefFieldInstruction.SrcArg1;
                                 section.Instructions[i + 3] = new Function.Instruction(name: "nop");
-                                Logger.WriteLine($"{function.Name}: writes {derefFieldInstruction.RightArg} into {variable}\\{field}");
+                                Logger.WriteLine($"{function.Name}: writes {derefFieldInstruction.SrcArg1} into {variable}\\{field}");
                             }
                             else
                             {
@@ -189,7 +189,7 @@ static class BbObjMemberAccess
 
     private static bool ProcessSection(Function function, Function.AssemblySection section)
     {
-        if (section.Instructions.Any(i => i.LeftArg.Contains("bbObjLoad")))
+        if (section.Instructions.Any(i => i.DestArg.Contains("bbObjLoad")))
         {
             return ProcessSectionMavless(function, section);
         }

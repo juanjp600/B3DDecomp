@@ -13,12 +13,12 @@ static class CollectCalls
         finalI = 0;
         var startInstruction = section.Instructions[startIndex];
 
-        if (startInstruction.LeftArg.ContainsRegister())
+        if (startInstruction.DestArg.ContainsRegister())
         {
             Debugger.Break();
         }
 
-        var functionName = startInstruction.LeftArg[1..];
+        var functionName = startInstruction.DestArg[1..];
         var function = Function.TryGetFunctionByName(functionName);
         espDiff = 0;
         if (function is { Parameters.Count: 0 })
@@ -30,7 +30,7 @@ static class CollectCalls
         for (int i = startIndex - 1; i >= 0; i--)
         {
             var instruction = section.Instructions[i];
-            if (instruction is { Name: "sub", LeftArg: "esp", RightArg: var newEspOffsetStr })
+            if (instruction is { Name: "sub", DestArg: "esp", SrcArg1: var newEspOffsetStr })
             {
                 var newEspOffset = int.Parse(newEspOffsetStr[2..], NumberStyles.HexNumber);
                 espDiff -= newEspOffset;
@@ -47,11 +47,11 @@ static class CollectCalls
                 function = Function.TryGetFunctionByName(functionName);
                 espDiff += newEspDiff;
             }
-            else if (instruction.Name == "mov" && instruction.LeftArg.Contains("[esp"))
+            else if (instruction.Name == "mov" && instruction.DestArg.Contains("[esp"))
             {
                 var relativeRegex = new Regex("\\[esp\\+0x([0-9a-f]+)\\]");
                 var thisOffset = 0;
-                if (relativeRegex.Match(instruction.LeftArg) is { Success: true } relativeMatch)
+                if (relativeRegex.Match(instruction.DestArg) is { Success: true } relativeMatch)
                 {
                     thisOffset = int.Parse(relativeMatch.Groups[1].Value, NumberStyles.HexNumber);
                 }

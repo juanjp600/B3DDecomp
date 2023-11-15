@@ -10,26 +10,26 @@ static class BbObjTypeInference
         var callInstruction = section.Instructions[callLocation];
         if (!string.IsNullOrEmpty(callInstruction.BbObjType)) { return; }
         if (callInstruction.CallParameterAssignmentIndices is not { Length: >0 } callParameterAssignmentIndices) { return; }
-        var calleeName = callInstruction.LeftArg[1..];
+        var calleeName = callInstruction.DestArg[1..];
         var callee = Function.GetFunctionByName(calleeName);
         for (int i = 0; i < callee.Parameters.Count; i++)
         {
             var assignmentLocation = callParameterAssignmentIndices[i];
             var assignmentInstruction = section.Instructions[assignmentLocation];
-            if (assignmentInstruction.RightArg.StartsWith("@_t"))
+            if (assignmentInstruction.SrcArg1.StartsWith("@_t"))
             {
-                callInstruction.BbObjType = assignmentInstruction.RightArg[1..];
+                callInstruction.BbObjType = assignmentInstruction.SrcArg1[1..];
                 break;
             }
-            var locationTracker = new LocationTracker(trackDirection: -1, initialLocation: assignmentInstruction.RightArg.StripDeref());
+            var locationTracker = new LocationTracker(trackDirection: -1, initialLocation: assignmentInstruction.SrcArg1.StripDeref());
             for (int j = assignmentLocation - 1; j >= 0; j--)
             {
                 var instruction = section.Instructions[j];
                 if (locationTracker.ProcessInstruction(instruction))
                 {
-                    if (instruction.RightArg.StartsWith("@_t"))
+                    if (instruction.SrcArg1.StartsWith("@_t"))
                     {
-                        callInstruction.BbObjType = instruction.RightArg[1..];
+                        callInstruction.BbObjType = instruction.SrcArg1[1..];
                         break;
                     }
                 }
@@ -77,11 +77,11 @@ static class BbObjTypeInference
                 string? bbObjType = instruction.BbObjType;
 
                 if (locationTracker.Location == "eax"
-                    && (instruction.LeftArg.Contains("bbObjNew") || instruction.LeftArg.Contains("bbObjFirst") || instruction.LeftArg.Contains("bbObjLast")))
+                    && (instruction.DestArg.Contains("bbObjNew") || instruction.DestArg.Contains("bbObjFirst") || instruction.DestArg.Contains("bbObjLast")))
                 {
                     instrIsConstructor = true;
                 }
-                else if (instruction.LeftArg.Contains("bbObjEachFirst") || instruction.LeftArg.Contains("bbObjStore"))
+                else if (instruction.DestArg.Contains("bbObjEachFirst") || instruction.DestArg.Contains("bbObjStore"))
                 {
                     if (instruction.CallParameterAssignmentIndices is null)
                     {
@@ -94,7 +94,7 @@ static class BbObjTypeInference
                         var secondParamAssignmentLocation = instruction.CallParameterAssignmentIndices[1];
                         var secondParamTracker = new LocationTracker(
                             trackDirection: -1,
-                            initialLocation: section.Instructions[secondParamAssignmentLocation].LeftArg,
+                            initialLocation: section.Instructions[secondParamAssignmentLocation].DestArg,
                             preserveDeref: true);
                         for (int k = secondParamAssignmentLocation; k >= 0; k--)
                         {
@@ -113,7 +113,7 @@ static class BbObjTypeInference
                                 {
                                     if (instruction2.Name == "call" && secondParamTracker.Location == "eax")
                                     {
-                                        var calledFunction = Function.GetFunctionByName(instruction2.LeftArg);
+                                        var calledFunction = Function.GetFunctionByName(instruction2.DestArg);
                                         if (calledFunction is { ReturnType.IsCustomType: true })
                                         {
                                             bbObjType = "_t"+calledFunction.ReturnType.Suffix[1..];
@@ -124,7 +124,7 @@ static class BbObjTypeInference
                             }
 
                             if (secondParamTracker.ProcessInstruction(instruction2)
-                                && instruction.LeftArg.Contains("bbObjStore"))
+                                && instruction.DestArg.Contains("bbObjStore"))
                             {
                                 var variableForSecondParam = function.InstructionArgumentToVariable(secondParamTracker.Location);
                                 if (variableForSecondParam is { DeclType.IsCustomType: true })
@@ -135,7 +135,7 @@ static class BbObjTypeInference
                                 }
                             }
 
-                            if (instruction.Name == "mov" && instruction.LeftArg == secondParamTracker.Location)
+                            if (instruction.Name == "mov" && instruction.DestArg == secondParamTracker.Location)
                             {
                                 break;
                             }
@@ -147,7 +147,7 @@ static class BbObjTypeInference
                         var firstParamAssignmentLocation = instruction.CallParameterAssignmentIndices[0];
                         var firstParamTracker = new LocationTracker(
                             trackDirection: -1,
-                            initialLocation: section.Instructions[firstParamAssignmentLocation].LeftArg,
+                            initialLocation: section.Instructions[firstParamAssignmentLocation].DestArg,
                             preserveDeref: true);
                         for (int k = firstParamAssignmentLocation; k >= 0; k--)
                         {
@@ -182,7 +182,7 @@ static class BbObjTypeInference
                 if (!string.IsNullOrEmpty(bbObjType) && instrIsConstructor)
                 {
                     variable.DeclType = new DeclType("."+bbObjType[2..]);
-                    Logger.WriteLine($"{function.Name}: {variable.Name} is {variable.DeclType} because {instruction.LeftArg}");
+                    Logger.WriteLine($"{function.Name}: {variable.Name} is {variable.DeclType} because {instruction.DestArg}");
                     return true;
                 }
             }

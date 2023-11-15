@@ -11,7 +11,7 @@ static class UnambiguousIntegerInstructions
         {
             if (instruction.Name != "cmp") { continue; }
 
-            var (arg0, arg1) = (instruction.LeftArg.StripDeref(), instruction.RightArg.StripDeref());
+            var (arg0, arg1) = (instruction.DestArg.StripDeref(), instruction.SrcArg1.StripDeref());
 
             var variable = function.InstructionArgumentToVariable(arg0) ?? function.InstructionArgumentToVariable(arg1);
 

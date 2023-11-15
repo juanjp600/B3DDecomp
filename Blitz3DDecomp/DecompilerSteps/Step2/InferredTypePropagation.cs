@@ -14,7 +14,7 @@ static class InferredTypePropagation
         for (int i = section.Instructions.Count - 1; i >= 0; i--)
         {
             var instruction = section.Instructions[i];
-            if (instruction.Name is "jmp" && instruction.LeftArg.Contains("_leave"))
+            if (instruction.Name is "jmp" && instruction.DestArg.Contains("_leave"))
             {
                 locationTracker.Location = "eax";
             }
@@ -22,7 +22,7 @@ static class InferredTypePropagation
             {
                 if (instruction.Name is "call" && locationTracker.Location == "eax")
                 {
-                    var calleeName = instruction.LeftArg[1..];
+                    var calleeName = instruction.DestArg[1..];
                     var calleeFunction = Function.AllFunctions.FirstOrDefault(f => f.Name == calleeName || f.Name == calleeName[2..]);
                     if (calleeFunction != null && calleeFunction.ReturnType != DeclType.Unknown)
                     {
@@ -53,7 +53,7 @@ static class InferredTypePropagation
     {
         var argType = callee.Parameters[argIndex].DeclType;
 
-        var locationTracker = new LocationTracker(trackDirection: -1, section.Instructions[assignmentLocation].LeftArg, preserveDeref: true);
+        var locationTracker = new LocationTracker(trackDirection: -1, section.Instructions[assignmentLocation].DestArg, preserveDeref: true);
         for (int i = assignmentLocation; i >= 0; i--)
         {
             var instruction = section.Instructions[i];
@@ -114,8 +114,8 @@ static class InferredTypePropagation
 
             for (var argIndex = 0; argIndex < assignmentLocations.Length; argIndex++)
             {
-                var callee = Function.GetFunctionByName(section.Instructions[i].LeftArg)
-                    ?? throw new Exception($"Function {section.Instructions[i].LeftArg} not found");
+                var callee = Function.GetFunctionByName(section.Instructions[i].DestArg)
+                    ?? throw new Exception($"Function {section.Instructions[i].DestArg} not found");
                 var assignmentLocation = assignmentLocations[argIndex];
                 changesMade |= HandleSubCall(function, callee, argIndex, section, assignmentLocation);
             }
@@ -144,8 +144,8 @@ static class InferredTypePropagation
                         && instruction.Name == "call"
                         && locationTracker.Location == "eax")
                     {
-                        var callee = Function.GetFunctionByName(section.Instructions[i].LeftArg)
-                            ?? throw new Exception($"Function {section.Instructions[i].LeftArg} not found");
+                        var callee = Function.GetFunctionByName(section.Instructions[i].DestArg)
+                            ?? throw new Exception($"Function {section.Instructions[i].DestArg} not found");
                         if (callee.AssemblySections.Any() && callee.ReturnType == DeclType.Unknown)
                         {
                             Logger.WriteLine($"{function.Name}: {callee.Name}'s return type is {declaration.DeclType} because {declaration.Name}");

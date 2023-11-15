@@ -134,8 +134,8 @@ internal static class Program
             .OrderByDescending(f => f.AssemblySections.Values
                 .Count(s => s.Instructions
                     .Any(i =>
-                        i.LeftArg.Contains('\\')
-                        || i.RightArg.Contains('\\'))))
+                        i.DestArg.Contains('\\')
+                        || i.SrcArg1.Contains('\\'))))
             .ToArray();
 
         var debugDir = $"{decompPath}DebugDir/";
@@ -160,7 +160,7 @@ internal static class Program
                 if (variable.DeclType == DeclType.Unknown)
                 {
                     retVal +=
-                        $" ({function.AssemblySections.Values.Sum(s => s.Instructions.Count(i => i.LeftArg.Contains(instructionArg) || i.RightArg.Contains(instructionArg)))} references)";
+                        $" ({function.AssemblySections.Values.Sum(s => s.Instructions.Count(i => i.DestArg.Contains(instructionArg) || i.SrcArg1.Contains(instructionArg)))} references)";
                 }
                 return retVal;
             }

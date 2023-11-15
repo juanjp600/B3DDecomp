@@ -45,11 +45,11 @@ static class BasicFloatPropagation
     private static bool HandlePropagationForReturnType(Function function, Variable declaration, string declarationDesc, Function.Instruction instruction, DeclType? typeAtTop)
     {
         bool changedSomething = false;
-        var calleeFunction = Function.GetFunctionByName(instruction.LeftArg.StripDeref());
+        var calleeFunction = Function.GetFunctionByName(instruction.DestArg.StripDeref());
         if (calleeFunction is null)
         {
             throw new Exception(
-                $"Function {instruction.LeftArg} was not loaded from symbols nor defined as a builtin");
+                $"Function {instruction.DestArg} was not loaded from symbols nor defined as a builtin");
         }
         if (calleeFunction.ReturnType == DeclType.Unknown)
         {
@@ -77,7 +77,7 @@ static class BasicFloatPropagation
 
         bool changedSomething = false;
 
-        var callee = Function.GetFunctionByName(callInstruction.LeftArg);
+        var callee = Function.GetFunctionByName(callInstruction.DestArg);
         if (callee.IsBuiltIn) { return false; }
 
         for (int i = 0; i < callee.Parameters.Count; i++)
@@ -85,13 +85,13 @@ static class BasicFloatPropagation
             if (callee.Parameters[i].DeclType != DeclType.Unknown) { continue; }
             var assignmentLocation = callParameterAssignmentIndices[i];
             var assignmentInstruction = section.Instructions[assignmentLocation];
-            var locationTracker = new LocationTracker(trackDirection: -1, initialLocation: assignmentInstruction.RightArg, preserveDeref: true);
+            var locationTracker = new LocationTracker(trackDirection: -1, initialLocation: assignmentInstruction.SrcArg1, preserveDeref: true);
             DeclType? typeAtTop = null;
             for (int j = assignmentLocation - 1; j >= 0; j--)
             {
                 var instruction = section.Instructions[j];
 
-                if (instruction.LeftArg == locationTracker.Location)
+                if (instruction.DestArg == locationTracker.Location)
                 {
                     changedSomething |= CheckInstructionForMarkAsFloat(function, callee.Parameters[i], $"{callee.Name} arg {i}", instruction, smearDir: -1, ref typeAtTop);
 
@@ -138,7 +138,7 @@ static class BasicFloatPropagation
             {
                 var instruction = section.Instructions[j];
 
-                if (instruction.LeftArg == locationTracker.Location)
+                if (instruction.DestArg == locationTracker.Location)
                 {
                     changedSomething |= CheckInstructionForMarkAsFloat(function, declaration, declaration.Name, instruction, smearDir: smearDir, ref typeBeyondInstruction);
 
@@ -152,7 +152,7 @@ static class BasicFloatPropagation
                 }
 
                 if (instruction.Name == "mov"
-                    && instruction.RightArg.StartsWith($"[{locationTracker.Location}"))
+                    && instruction.SrcArg1.StartsWith($"[{locationTracker.Location}"))
                 {
                     locationTracker.Location = initialLocation;
                 }

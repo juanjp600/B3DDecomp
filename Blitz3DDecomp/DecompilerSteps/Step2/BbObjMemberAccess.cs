@@ -6,6 +6,56 @@ namespace Blitz3DDecomp;
 
 static class BbObjMemberAccess
 {
+    private static void HandleNextUsage(
+        Variable fieldOwner,
+        CustomType.Field field,
+        Function function,
+        Function.AssemblySection section,
+        Function.Instruction instruction,
+        Function.Instruction derefFieldInstruction,
+        string register)
+    {
+        if (!field.DeclType.IsArrayType)
+        {
+            if (derefFieldInstruction.Name == "mov"
+                && derefFieldInstruction.DestArg == register
+                && derefFieldInstruction.SrcArg1 == $"[{register}]")
+            {
+                // Read the value of the field and store in the same register
+                instruction.SrcArg1 = $"[{fieldOwner.Name}\\{field.Name}]";
+                derefFieldInstruction.Name = "nop";
+                section.CleanupNop();
+                Logger.WriteLine($"{function.Name}: dereferences {fieldOwner}\\{field} into {register}");
+            }
+            else if (derefFieldInstruction.Name == "mov"
+                     && derefFieldInstruction.SrcArg1 == register)
+            {
+                // Take the pointer to the field and store it somewhere else
+                Logger.WriteLine($"{function.Name}: stores pointer to {fieldOwner}\\{field} into {register} because {derefFieldInstruction}");
+                // There's no action to be taken here, a LocationTracker should be able to handle this
+            }
+            else if (derefFieldInstruction.Name == "mov"
+                     && derefFieldInstruction.DestArg == $"[{register}]")
+            {
+                // Write a value into the field
+                instruction.DestArg = $"[{fieldOwner.Name}\\{field.Name}]";
+                instruction.SrcArg1 = derefFieldInstruction.SrcArg1;
+                derefFieldInstruction.Name = "nop";
+                section.CleanupNop();
+                Logger.WriteLine($"{function.Name}: writes {derefFieldInstruction.SrcArg1} into {fieldOwner}\\{field}");
+            }
+            else
+            {
+                Logger.WriteLine($"{function.Name}: stores pointer to {fieldOwner}\\{field} into {register} because {derefFieldInstruction}");
+                //Debugger.Break();
+            }
+        }
+        else
+        {
+            Logger.WriteLine($"{function.Name}: stores pointer to {fieldOwner}\\{field} into {register} because array field");
+        }
+    }
+
     private static bool ProcessSectionMavless(Function function, Function.AssemblySection section)
     {
         bool changedSomething = false;
@@ -57,7 +107,6 @@ static class BbObjMemberAccess
                 var fieldAccessInstructionDistance = section.Instructions
                     .Skip(i).ToList()
                     .FindIndex(instr => instr.Name == "call" && instr.DestArg.Contains("bbFieldPtrAdd"));
-                var fieldAccessInstructionIndex = i + fieldAccessInstructionDistance;
                 var instructionsToCleanUp = section.Instructions.Skip(i + 1).Take(fieldAccessInstructionDistance).ToArray();
 
                 var offsetInstruction = instructionsToCleanUp.First(instr => instr.Name == "mov" && instr.SrcArg1.StartsWith("0x"));
@@ -68,6 +117,7 @@ static class BbObjMemberAccess
                 instruction.Name = "mov";
                 instruction.DestArg = "eax";
                 instruction.SrcArg1 = $"{variable.Name}\\{field.Name}";
+                instruction.SrcArg2 = "";
 
                 foreach (var instr in instructionsToCleanUp)
                 {
@@ -78,10 +128,22 @@ static class BbObjMemberAccess
                     section.Instructions[index].Name = "nop";
                 }
 
-                section.CleanupNop();
+                section.CleanupNop(); changedSomething = true;
+
+                var newIndex = section.Instructions.IndexOf(instruction);
+
+                HandleNextUsage(
+                    fieldOwner: variable,
+                    field: field,
+                    function: function,
+                    section: section,
+                    instruction: instruction,
+                    derefFieldInstruction: section.Instructions[newIndex + 1],
+                    register: "eax");
 
                 trackedLocations.Clear();
                 tracker.Location = initialLocation;
+                i = newIndex;
             }
         }
 
@@ -131,48 +193,18 @@ static class BbObjMemberAccess
 
                         var field = customType.Fields[fieldIndex];
                         instruction.SrcArg1 = $"{variable.Name}\\{field.Name}";
-                        section.Instructions[i + 1] = new Function.Instruction(name: "nop");
-                        section.Instructions[i + 2] = new Function.Instruction(name: "nop");
-                        if (!field.DeclType.IsArrayType)
-                        {
-                            var derefFieldInstruction = section.Instructions[i + 3];
-                            if (derefFieldInstruction.Name == "mov"
-                                && derefFieldInstruction.DestArg == register
-                                && derefFieldInstruction.SrcArg1 == $"[{register}]")
-                            {
-                                // Read the value of the field and store in the same register
-                                instruction.SrcArg1 = $"[{variable.Name}\\{field.Name}]";
-                                section.Instructions[i + 3] = new Function.Instruction(name: "nop");
-                                Logger.WriteLine($"{function.Name}: dereferences {variable}\\{field} into {register}");
-                            }
-                            else if (derefFieldInstruction.Name == "mov"
-                                     && derefFieldInstruction.SrcArg1 == register)
-                            {
-                                // Take the pointer to the field and store it somewhere else
-                                Logger.WriteLine($"{function.Name}: stores pointer to {variable}\\{field} into {register} because {derefFieldInstruction}");
-                                // There's no action to be taken here, a LocationTracker should be able to handle this
-                            }
-                            else if (derefFieldInstruction.Name == "mov"
-                                     && derefFieldInstruction.DestArg == $"[{register}]")
-                            {
-                                // Write a value into the field
-                                instruction.DestArg = $"[{variable.Name}\\{field.Name}]";
-                                instruction.SrcArg1 = derefFieldInstruction.SrcArg1;
-                                section.Instructions[i + 3] = new Function.Instruction(name: "nop");
-                                Logger.WriteLine($"{function.Name}: writes {derefFieldInstruction.SrcArg1} into {variable}\\{field}");
-                            }
-                            else
-                            {
-                                Logger.WriteLine($"{function.Name}: stores pointer to {variable}\\{field} into {register} because {derefFieldInstruction}");
-                                //Debugger.Break();
-                            }
-                        }
-                        else
-                        {
-                            Logger.WriteLine($"{function.Name}: stores pointer to {variable}\\{field} into {register} because array field");
-                        }
-
+                        objDerefInstruction.Name = "nop";
+                        memberAccessInstruction.Name = "nop";
                         section.CleanupNop(); changedSomething = true;
+
+                        HandleNextUsage(
+                            fieldOwner: variable,
+                            field: field,
+                            function: function,
+                            section: section,
+                            instruction: instruction,
+                            derefFieldInstruction: section.Instructions[i + 1],
+                            register: register);
                     }
                 }
                 else

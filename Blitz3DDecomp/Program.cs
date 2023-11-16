@@ -159,14 +159,18 @@ internal static class Program
                 var retVal = $"    {variable} {instructionArg}";
                 if (variable.DeclType == DeclType.Unknown)
                 {
-                    retVal +=
-                        $" ({function.AssemblySections.Values.Sum(s => s.Instructions.Count(i => i.DestArg.Contains(instructionArg) || i.SrcArg1.Contains(instructionArg)))} references)";
+                    var numReferences = function.AssemblySections.Values.Sum(
+                        s => s.Instructions.Count(i =>
+                            i.DestArg.Contains(instructionArg)
+                            || i.SrcArg1.Contains(instructionArg)
+                            || i.SrcArg2.Contains(instructionArg)));
+                    retVal += $" ({numReferences} references)";
                 }
                 return retVal;
             }
             if (function.Parameters.Count > 0)
             {
-                writeLineToFile("  parameters:");
+                writeLineToFile($"  {function.Parameters.Count} parameters:");
                 foreach (var parameter in function.Parameters)
                 {
                     writeLineToFile(varToStr(parameter));
@@ -175,7 +179,7 @@ internal static class Program
 
             if (function.LocalVariables.Count > 0)
             {
-                writeLineToFile("  locals:");
+                writeLineToFile($"  {function.LocalVariables.Count} locals:");
                 foreach (var local in function.LocalVariables)
                 {
                     writeLineToFile(varToStr(local));
@@ -184,7 +188,7 @@ internal static class Program
 
             if (function.CompilerGeneratedTempVars.Count > 0)
             {
-                writeLineToFile("  compiler-generated temps:");
+                writeLineToFile($"  {function.CompilerGeneratedTempVars.Count} compiler-generated temps:");
                 foreach (var temp in function.CompilerGeneratedTempVars)
                 {
                     writeLineToFile($"    {temp.Name} {temp.ToInstructionArg()}");
@@ -194,7 +198,7 @@ internal static class Program
             var referencedGlobals = function.AssemblySections.Values.SelectMany(s => s.ReferencedGlobals).Distinct().ToArray();
             if (referencedGlobals.Length > 0)
             {
-                writeLineToFile("  referenced globals:");
+                writeLineToFile($"  {referencedGlobals.Length} referenced globals:");
                 foreach (var global in referencedGlobals)
                 {
                     writeLineToFile(varToStr(global));

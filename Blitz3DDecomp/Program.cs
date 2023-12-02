@@ -21,6 +21,7 @@ internal static class Program
         TypeDecompiler.FromDir(disasmPath, decompPath);
         LoadGlobalList.FromDir(disasmPath);
         var allGlobals = GlobalVariable.AllGlobals;
+        LoadDimArrays.FromDir(disasmPath);
         IngestCodeFiles.FromDir(disasmPath);
 
         foreach (var function in Function.AllFunctions)

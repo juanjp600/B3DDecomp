@@ -11,10 +11,14 @@ static class BbObjMemberAccess
         CustomType.Field field,
         Function function,
         Function.AssemblySection section,
-        Function.Instruction instruction,
-        Function.Instruction derefFieldInstruction,
+        int instructionIndex,
         string register)
     {
+        if (instructionIndex >= section.Instructions.Count - 1) { return; }
+
+        var instruction = section.Instructions[instructionIndex];
+        var derefFieldInstruction = section.Instructions[instructionIndex + 1];
+
         if (!field.DeclType.IsArrayType)
         {
             if (derefFieldInstruction.Name == "mov"
@@ -34,20 +38,38 @@ static class BbObjMemberAccess
                 Logger.WriteLine($"{function.Name}: stores pointer to {fieldOwner}\\{field} into {register} because {derefFieldInstruction}");
                 // There's no action to be taken here, a LocationTracker should be able to handle this
             }
-            else if (derefFieldInstruction.Name == "mov"
-                     && derefFieldInstruction.DestArg == $"[{register}]")
-            {
-                // Write a value into the field
-                instruction.DestArg = $"[{fieldOwner.Name}\\{field.Name}]";
-                instruction.SrcArg1 = derefFieldInstruction.SrcArg1;
-                derefFieldInstruction.Name = "nop";
-                section.CleanupNop();
-                Logger.WriteLine($"{function.Name}: writes {derefFieldInstruction.SrcArg1} into {fieldOwner}\\{field}");
-            }
             else
             {
-                Logger.WriteLine($"{function.Name}: stores pointer to {fieldOwner}\\{field} into {register} because {derefFieldInstruction}");
-                //Debugger.Break();
+                bool foundWriteInstruction = false;
+                for (int i = instructionIndex + 1; i < section.Instructions.Count; i++)
+                {
+                    var writeInstruction = section.Instructions[i];
+                    if (writeInstruction.IsJumpOrCall) { break; }
+
+                    if (writeInstruction.Name == "mov"
+                        && writeInstruction.DestArg == $"[{register}]")
+                    {
+                        // Write a value into the field
+                        foundWriteInstruction = true;
+                        writeInstruction.DestArg = $"[{fieldOwner.Name}\\{field.Name}]";
+                        instruction.Name = "nop";
+                        section.CleanupNop();
+                        Logger.WriteLine($"{function.Name}: writes {writeInstruction.SrcArg1} into {fieldOwner}\\{field}");
+                        break;
+                    }
+                    else if (writeInstruction.DestArg.Contains(register)
+                             || writeInstruction.SrcArg1.Contains(register)
+                             || writeInstruction.SrcArg2.Contains(register))
+                    {
+                        break;
+                    }
+                }
+                
+                if (!foundWriteInstruction)
+                {
+                    Logger.WriteLine($"{function.Name}: stores pointer to {fieldOwner}\\{field} into {register} because {derefFieldInstruction}");
+                    //Debugger.Break();
+                }
             }
         }
         else
@@ -137,8 +159,7 @@ static class BbObjMemberAccess
                     field: field,
                     function: function,
                     section: section,
-                    instruction: instruction,
-                    derefFieldInstruction: section.Instructions[newIndex + 1],
+                    instructionIndex: newIndex,
                     register: "eax");
 
                 trackedLocations.Clear();
@@ -202,8 +223,7 @@ static class BbObjMemberAccess
                             field: field,
                             function: function,
                             section: section,
-                            instruction: instruction,
-                            derefFieldInstruction: section.Instructions[i + 1],
+                            instructionIndex: i,
                             register: register);
                     }
                 }

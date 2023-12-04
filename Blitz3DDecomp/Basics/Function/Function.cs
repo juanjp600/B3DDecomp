@@ -183,8 +183,11 @@ sealed class Function
 
                 if (currVar == null)
                 {
-                    currVar = LocalVariables.Cast<Variable>().Concat(Parameters)
-                        .FirstOrDefault(v => v.Name.Equals(part, StringComparison.OrdinalIgnoreCase));
+                    bool doesVarMatchPart(Variable v)
+                        => v.Name.Equals(part, StringComparison.OrdinalIgnoreCase);
+
+                    currVar = LocalVariables.Find(doesVarMatchPart);
+                    currVar ??= Parameters.Find(doesVarMatchPart);
                     currVar ??= GlobalVariable.FindByName(part);
                     if (currVar is null) { return null; }
                 }

@@ -56,7 +56,7 @@ static class BbArrayAccess
             var initialLocation = variable.ToInstructionArg();
             var tracker = new LocationTracker(trackDirection: 1, initialLocation: initialLocation);
 
-            for (int i = 0; i < section.Instructions.Count - 4; i++)
+            for (int i = 0; i < section.Instructions.Count; i++)
             {
                 var instruction = section.Instructions[i];
 
@@ -73,6 +73,7 @@ static class BbArrayAccess
 
                         section.CleanupNop();
                         i--;
+                        changedSomething = true;
                     }
                     else if (prevInstruction.Name == "mov"
                              && prevInstruction.DestArg == register
@@ -86,12 +87,14 @@ static class BbArrayAccess
 
                         section.CleanupNop();
                         i--;
+                        changedSomething = true;
                     }
                     else
                     {
                         Debugger.Break();
                     }
 
+                    if (i+1 >= section.Instructions.Count) { continue; }
                     var potentialImmediateDeref = section.Instructions[i + 1];
                     handlePotentialImmediateDeref(
                         potentialImmediateDeref,
@@ -110,52 +113,53 @@ static class BbArrayAccess
                         Debugger.Break();
                     }
 
+                    if (i+2 >= section.Instructions.Count) { continue; }
+
                     var register = tracker.Location;
                     var arrayDerefInstruction = section.Instructions[i + 1];
-                    var elementOffsetInstruction = section.Instructions[i + 2];
                     if (arrayDerefInstruction.Name == "mov"
                         && arrayDerefInstruction.DestArg == register
-                        && arrayDerefInstruction.SrcArg1 == $"[{register}]"
-                        && elementOffsetInstruction.Name == "add")
+                        && arrayDerefInstruction.SrcArg1 == $"[{register}]")
                     {
-                        if (elementOffsetInstruction.DestArg == register)
+                        for (int j = i + 2; j < section.Instructions.Count && j < i + 40; j++)
                         {
-                            var arrayIndex = elementOffsetInstruction.SrcArg1.HexToUint32() >> 2;
-                            instruction.SrcArg1 += $"[{arrayIndex}]";
-                            section.Instructions[i + 1] = new Function.Instruction(name: "nop");
-                            section.Instructions[i + 2] = new Function.Instruction(name: "nop");
-                            section.CleanupNop();
-                            changedSomething = true;
+                            var elementOffsetInstruction = section.Instructions[j];
+                            if (elementOffsetInstruction.Name != "add") { continue; }
+    
+                            if (elementOffsetInstruction.DestArg == register)
+                            {
+                                var arrayIndex = elementOffsetInstruction.SrcArg1.HexToUint32() >> 2;
+                                instruction.SrcArg1 += $"[{arrayIndex}]";
+                                arrayDerefInstruction.Name = "nop";
+                                elementOffsetInstruction.Name = "nop";
+                                section.CleanupNop();
+                                changedSomething = true;
 
-                            var potentialImmediateDeref = section.Instructions[i + 1];
-                            handlePotentialImmediateDeref(
-                                potentialImmediateDeref,
-                                register,
-                                instruction);
-                        }
-                        else if (elementOffsetInstruction.SrcArg1 == register)
-                        {
-                            var arrayIndex = $"{elementOffsetInstruction.DestArg}>>2";
-                            arrayDerefInstruction.DestArg = elementOffsetInstruction.DestArg;
-                            arrayDerefInstruction.SrcArg1 = $"{instruction.SrcArg1}[{arrayIndex}]";
-                            section.Instructions[i + 2] = new Function.Instruction(name: "nop");
-                            section.CleanupNop();
-                            changedSomething = true;
+                                var potentialImmediateDeref = section.Instructions[j - 1];
+                                handlePotentialImmediateDeref(
+                                    potentialImmediateDeref,
+                                    register,
+                                    instruction);
+                                break;
+                            }
+                            else if (elementOffsetInstruction.SrcArg1 == register)
+                            {
+                                var arrayIndex = $"{elementOffsetInstruction.DestArg}>>2";
+                                arrayDerefInstruction.DestArg = elementOffsetInstruction.DestArg;
+                                arrayDerefInstruction.SrcArg1 = $"{instruction.SrcArg1}[{arrayIndex}]";
+                                elementOffsetInstruction.Name = "nop";
+                                section.CleanupNop();
+                                changedSomething = true;
 
-                            var potentialImmediateDeref = section.Instructions[i + 2];
-                            handlePotentialImmediateDeref(
-                                potentialImmediateDeref,
-                                arrayDerefInstruction.DestArg,
-                                arrayDerefInstruction);
+                                var potentialImmediateDeref = section.Instructions[j - 1];
+                                handlePotentialImmediateDeref(
+                                    potentialImmediateDeref,
+                                    arrayDerefInstruction.DestArg,
+                                    arrayDerefInstruction);
+
+                                break;
+                            }
                         }
-                        else
-                        {
-                            Debugger.Break();
-                        }
-                    }
-                    else
-                    {
-                        //Debugger.Break();
                     }
                 }
             }

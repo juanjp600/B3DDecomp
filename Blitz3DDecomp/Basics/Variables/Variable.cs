@@ -6,35 +6,22 @@ abstract class Variable
 {
     public readonly string Name;
 
-    private DeclType declType = DeclType.Unknown;
-
-    public DeclType DeclType
-    {
-        get => declType;
-        set
-        {
-            declType = value;
-            fields.Clear();
-        }
-    }
+    public abstract DeclType DeclType { get; set; }
 
     public ArrayElementVariable? GetArrayElement(string index)
-        => declType.GetElementType() is { } elementType
-            ? new ArrayElementVariable(this, elementType, index)
+        => DeclType.GetElementType() is not null
+            ? new ArrayElementVariable(this, index)
             : null;
 
-    private readonly List<FieldVariable> fields = new List<FieldVariable>();
+    protected readonly List<FieldVariable> fields = new List<FieldVariable>();
     public IReadOnlyList<FieldVariable> Fields
     {
         get
         {
-            if (fields.Count == 0 && declType is { IsArrayType: false, IsCustomType: true })
+            if (fields.Count == 0 && DeclType is { IsArrayType: false, IsCustomType: true })
             {
-                var customType = CustomType.GetTypeMatchingDeclType(declType);
-                if (customType != null)
-                {
-                    fields.AddRange(customType.Fields.Select(f => new FieldVariable(this, f)));
-                }
+                var customType = CustomType.GetTypeMatchingDeclType(DeclType);
+                fields.AddRange(customType.Fields.Select(f => new FieldVariable(this, f)));
             }
             return fields;
         }
@@ -49,4 +36,26 @@ abstract class Variable
 
     public override string ToString()
         => $"{Name}{DeclType.Suffix}";
+
+    public override bool Equals(object? obj)
+    {
+        return obj is Variable otherVariable && otherVariable == this;
+    }
+
+    public override int GetHashCode()
+    {
+        return HashCode.Combine(Name, DeclType);
+    }
+
+    public static bool operator ==(Variable? a, Variable? b)
+    {
+        if (a is null) { return b is null; }
+        if (b is null) { return false; }
+        return a.Name == b.Name && a.DeclType == b.DeclType;
+    }
+
+    public static bool operator !=(Variable? a, Variable? b)
+    {
+        return !(a == b);
+    }
 }

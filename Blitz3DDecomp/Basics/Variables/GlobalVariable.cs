@@ -2,7 +2,7 @@
 
 namespace Blitz3DDecomp;
 
-sealed class GlobalVariable : Variable
+sealed class GlobalVariable : VariableWithOwnType
 {
     public static ICollection<GlobalVariable> AllGlobals => lookupDictionary.Values;
     private static Dictionary<string, GlobalVariable> lookupDictionary = new();

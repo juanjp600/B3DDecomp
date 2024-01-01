@@ -7,7 +7,7 @@ internal static class Program
 {
     public static void Main(string[] args)
     {
-        string disasmPath = "C:/Users/juanj/Desktop/Blitz3D/ReverseEng/game_disasm/";
+        string disasmPath = "/Users/juanjp/Desktop/b3d_reveng/game_disasm/";
         string decompPath = disasmPath.Replace("_disasm", "_decomp");
         if (Directory.Exists(decompPath)) { Directory.Delete(decompPath, true); }
         Directory.CreateDirectory(decompPath);
@@ -20,7 +20,6 @@ internal static class Program
         StringConstantDecompiler.FromDir(disasmPath, decompPath);
         TypeDecompiler.FromDir(disasmPath, decompPath);
         LoadGlobalList.FromDir(disasmPath);
-        var allGlobals = GlobalVariable.AllGlobals;
         LoadDimArrays.FromDir(disasmPath);
         IngestCodeFiles.FromDir(disasmPath);
 
@@ -33,6 +32,7 @@ internal static class Program
 
         foreach (var function in Function.AllFunctions)
         {
+            DimArrayAccessRewrite.Process(function);
             CountArguments.Process(function);
         }
 

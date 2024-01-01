@@ -25,7 +25,7 @@ sealed class Function
 
         public IEnumerable<Variable> ReferencedVariables
             => Instructions
-                .SelectMany(i => new[] { i.DestArg, i.SrcArg1 })
+                .SelectMany(i => new[] { i.DestArg, i.SrcArg1, i.SrcArg2 })
                 .Select(s => s.StripDeref())
                 .Select(Owner.InstructionArgumentToVariable)
                 .OfType<Variable>() // Removes null entries
@@ -53,7 +53,7 @@ sealed class Function
         }
     }
 
-    public sealed class Parameter : Variable
+    public sealed class Parameter : VariableWithOwnType
     {
         public readonly int Index;
 
@@ -66,7 +66,7 @@ sealed class Function
             => $"[ebp+0x{((Index << 2) + 0x14):x1}]";
     }
 
-    public sealed class LocalVariable : Variable
+    public sealed class LocalVariable : VariableWithOwnType
     {
         public readonly int Index;
 
@@ -181,7 +181,7 @@ sealed class Function
                     part = part[..indexerStart];
                 }
 
-                if (currVar == null)
+                if (currVar is null)
                 {
                     bool doesVarMatchPart(Variable v)
                         => v.Name.Equals(part, StringComparison.OrdinalIgnoreCase);
@@ -189,6 +189,11 @@ sealed class Function
                     currVar = LocalVariables.Find(doesVarMatchPart);
                     currVar ??= Parameters.Find(doesVarMatchPart);
                     currVar ??= GlobalVariable.FindByName(part);
+                    if (currVar is null && arrayIndex != "" && DimArray.TryFindByName(part) is { } dimArray)
+                    {
+                        currVar = dimArray.GetAccessVariable(arrayIndex);
+                        arrayIndex = "";
+                    }
                     if (currVar is null) { return null; }
                 }
                 else

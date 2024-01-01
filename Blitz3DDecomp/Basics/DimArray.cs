@@ -2,6 +2,26 @@
 
 sealed class DimArray
 {
+    public sealed class AccessVariable : Variable
+    {
+        private readonly DimArray dimArray;
+        public AccessVariable(DimArray dimArray, string arrayIndex) : base($"{dimArray.Name}[{arrayIndex}]")
+        {
+            this.dimArray = dimArray;
+        }
+
+        public override DeclType DeclType
+        {
+            get => dimArray.ElementDeclType;
+            set => dimArray.ElementDeclType = value;
+        }
+
+        public override string ToInstructionArg()
+            => Name;
+    }
+
+    public AccessVariable GetAccessVariable(string arrayIndex) => new AccessVariable(this, arrayIndex);
+
     public static ICollection<DimArray> AllDimArrays => lookupDictionary.Values;
     private static Dictionary<string, DimArray> lookupDictionary = new();
 
@@ -91,6 +111,11 @@ sealed class DimArray
 
     public static DimArray? TryFindByName(string symbolName)
     {
+        if (lookupDictionary.TryGetValue(symbolName, out var retVal))
+        {
+            return retVal;
+        }
+        
         var (arrayName, _, _) = ParseSymbolName(symbolName);
 
         if (string.IsNullOrEmpty(arrayName))
@@ -98,7 +123,7 @@ sealed class DimArray
             return null;
         }
 
-        return lookupDictionary.TryGetValue(arrayName, out var retVal)
+        return lookupDictionary.TryGetValue(arrayName, out retVal)
             ? retVal
             : null;
     }

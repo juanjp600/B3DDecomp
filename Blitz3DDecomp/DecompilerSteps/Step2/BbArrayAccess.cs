@@ -54,6 +54,8 @@ static class BbArrayAccess
         foreach (var variable in variablesOfArrayType)
         {
             var initialLocation = variable.ToInstructionArg();
+            var restartTracker = new LocationTracker(trackDirection: 1, initialLocation: initialLocation);
+            var reverseTracker = new LocationTracker(trackDirection: -1, initialLocation: "????");
             var tracker = new LocationTracker(trackDirection: 1, initialLocation: initialLocation);
 
             for (int i = 0; i < section.Instructions.Count; i++)
@@ -103,64 +105,81 @@ static class BbArrayAccess
                 }
                 else
                 {
-                    tracker.Location = initialLocation;
-                    if (!tracker.ProcessInstruction(instruction)) { continue; }
-
-                    if (instruction.Name != "mov") { continue; }
-
-                    if (!tracker.Location.IsRegister())
+                    reverseTracker.Location = tracker.Location;
+                    restartTracker.Location = initialLocation;
+                    if (restartTracker.ProcessInstruction(instruction))
                     {
-                        Debugger.Break();
+                        tracker.Location = restartTracker.Location;
                     }
-
-                    if (i+2 >= section.Instructions.Count) { continue; }
-
-                    var register = tracker.Location;
-                    var arrayDerefInstruction = section.Instructions[i + 1];
-                    if (arrayDerefInstruction.Name == "mov"
-                        && arrayDerefInstruction.DestArg == register
-                        && arrayDerefInstruction.SrcArg1 == $"[{register}]")
+                    else if (!tracker.ProcessInstruction(instruction))
                     {
-                        for (int j = i + 2; j < section.Instructions.Count && j < i + 40; j++)
+                        if (reverseTracker.ProcessInstruction(instruction))
                         {
-                            var elementOffsetInstruction = section.Instructions[j];
-                            if (elementOffsetInstruction.Name != "add") { continue; }
-    
-                            if (elementOffsetInstruction.DestArg == register)
-                            {
-                                var arrayIndex = elementOffsetInstruction.SrcArg1.HexToUint32() >> 2;
-                                instruction.SrcArg1 += $"[{arrayIndex}]";
-                                arrayDerefInstruction.Name = "nop";
-                                elementOffsetInstruction.Name = "nop";
-                                section.CleanupNop();
-                                changedSomething = true;
-
-                                var potentialImmediateDeref = section.Instructions[j - 1];
-                                handlePotentialImmediateDeref(
-                                    potentialImmediateDeref,
-                                    register,
-                                    instruction);
-                                break;
-                            }
-                            else if (elementOffsetInstruction.SrcArg1 == register)
-                            {
-                                var arrayIndex = $"{elementOffsetInstruction.DestArg}>>2";
-                                arrayDerefInstruction.DestArg = elementOffsetInstruction.DestArg;
-                                arrayDerefInstruction.SrcArg1 = $"{instruction.SrcArg1}[{arrayIndex}]";
-                                elementOffsetInstruction.Name = "nop";
-                                section.CleanupNop();
-                                changedSomething = true;
-
-                                var potentialImmediateDeref = section.Instructions[j - 1];
-                                handlePotentialImmediateDeref(
-                                    potentialImmediateDeref,
-                                    arrayDerefInstruction.DestArg,
-                                    arrayDerefInstruction);
-
-                                break;
-                            }
+                            tracker.Location = initialLocation;
+                            continue;
                         }
                     }
+
+                    if (!tracker.Location.IsRegister()) { continue; }
+                    if (instruction.Name != "mov") { continue; }
+
+                    for (int j = i + 1; j < section.Instructions.Count && j < i + 4; j++)
+                    {
+                        var register = tracker.Location;
+                        var arrayDerefInstruction = section.Instructions[j];
+                        if (arrayDerefInstruction.Name == "mov"
+                            && arrayDerefInstruction.DestArg == register
+                            && arrayDerefInstruction.SrcArg1 == $"[{register}]")
+                        {
+                            for (int k = j + 1; k < section.Instructions.Count && k < j + 4; k++)
+                            {
+                                var elementOffsetInstruction = section.Instructions[k];
+                                if (elementOffsetInstruction.Name != "add") { continue; }
+        
+                                if (elementOffsetInstruction.DestArg == register)
+                                {
+                                    var arrayIndex = elementOffsetInstruction.SrcArg1.HexToUint32() >> 2;
+                                    instruction.SrcArg1 = $"{variable.Name}[{arrayIndex}]";
+                                    arrayDerefInstruction.Name = "nop";
+                                    elementOffsetInstruction.Name = "nop";
+                                    var potentialImmediateDeref = section.Instructions[k + 1];
+                                    section.CleanupNop();
+                                    changedSomething = true;
+
+                                    handlePotentialImmediateDeref(
+                                        potentialImmediateDeref,
+                                        register,
+                                        instruction);
+                                    break;
+                                }
+                                else if (elementOffsetInstruction.SrcArg1 == register)
+                                {
+                                    if (section.Name == "_17335_ffillroom"
+                                        && variable.Name.Contains("arg0\\Field29[1]", StringComparison.Ordinal))
+                                    {
+                                        Debugger.Break();
+                                    }
+                                    
+                                    var arrayIndex = $"{elementOffsetInstruction.DestArg}>>2";
+                                    arrayDerefInstruction.DestArg = elementOffsetInstruction.DestArg;
+                                    arrayDerefInstruction.SrcArg1 = $"{variable.Name}[{arrayIndex}]";
+                                    elementOffsetInstruction.Name = "nop";
+                                    var potentialImmediateDeref = section.Instructions[k + 1];
+                                    section.CleanupNop();
+                                    changedSomething = true;
+
+                                    handlePotentialImmediateDeref(
+                                        potentialImmediateDeref,
+                                        arrayDerefInstruction.DestArg,
+                                        arrayDerefInstruction);
+
+                                    break;
+                                }
+                            }
+                            break;
+                        }
+                    }
+                    
                 }
             }
         }

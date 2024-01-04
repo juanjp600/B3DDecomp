@@ -1,6 +1,6 @@
 ﻿using System.Diagnostics;
 
-namespace Blitz3DDecomp;
+namespace Blitz3DDecomp.DecompilerSteps.Step2_Obsolete;
 
 static class MarkAsFloat
 {

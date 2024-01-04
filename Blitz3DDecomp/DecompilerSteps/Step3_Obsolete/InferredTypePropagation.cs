@@ -1,8 +1,7 @@
 using System.Diagnostics;
-using System.Globalization;
 using B3DDecompUtils;
 
-namespace Blitz3DDecomp;
+namespace Blitz3DDecomp.DecompilerSteps.Step3_Obsolete;
 
 static class InferredTypePropagation
 {

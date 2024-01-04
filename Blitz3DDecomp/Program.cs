@@ -2,147 +2,78 @@
 using System.Text;
 using B3DDecompUtils;
 using Blitz3DDecomp;
+using Blitz3DDecomp.DecompilerSteps.Step1;
 
 internal static class Program
 {
     public static void Main(string[] args)
     {
-        string disasmPath = "/Users/juanjp/Desktop/b3d_reveng/game_disasm/";
+        string disasmPath = "C:/Users/juanj/Desktop/Blitz3d/ReverseEng/game_disasm/";
         string decompPath = disasmPath.Replace("_disasm", "_decomp");
         if (Directory.Exists(decompPath)) { Directory.Delete(decompPath, true); }
         Directory.CreateDirectory(decompPath);
+        
+        Step0(disasmPath, decompPath);
+        Step1();
 
+        HashSet<string> instructions = new HashSet<string>();
+        var functionsWithAssemblySections = Function.AllFunctions.Where(f => f.AssemblySections.Any());
+        foreach (var function in functionsWithAssemblySections)
+        {
+            instructions.UnionWith(function.AssemblySections.Values.SelectMany(s => s.Instructions.Select(i => i.Name)));
+        }
+        File.WriteAllLines($"{decompPath}poo.txt", instructions);
+
+        WriteDebugDir(decompPath);
+
+        Logger.End();
+    }
+
+    /// <summary>
+    /// Disassembly ingest, trivial analysis and codegen
+    /// </summary>
+    private static void Step0(string disasmPath, string decompPath)
+    {
         Function.InitBuiltIn(
             Enum.Parse<Compiler>(
                 File.ReadAllText(disasmPath + "Compiler.txt").Trim(),
                 ignoreCase: true));
 
-        StringConstantDecompiler.FromDir(disasmPath, decompPath);
-        TypeDecompiler.FromDir(disasmPath, decompPath);
         LoadGlobalList.FromDir(disasmPath);
         LoadDimArrays.FromDir(disasmPath);
         IngestCodeFiles.FromDir(disasmPath);
 
-        foreach (var function in Function.AllFunctions)
-        {
-            MarkAsFloat.Process(function);
-        }
-        var usedInstructions = Function.AllFunctions.SelectMany(f => f.AssemblySections.Values)
-            .SelectMany(section => section.Instructions).Select(instr => instr.Name).ToHashSet();
+        StringConstantDecompiler.FromDir(disasmPath, decompPath);
+        TypeDecompiler.FromDir(disasmPath, decompPath);
 
-        foreach (var function in Function.AllFunctions)
+        foreach (var function in Function.AllFunctions.Where(f => f.AssemblySections.Any()))
         {
-            DimArrayAccessRewrite.Process(function);
             CountArguments.Process(function);
-        }
-
-        foreach (var function in Function.AllFunctions)
-        {
             CountLocals.Process(function);
-            VectorTypeDeduction.Process(function);
         }
+    }
 
-        foreach (var function in Function.AllFunctions)
-        {
-            UnambiguousIntegerInstructions.Process(function);
-        }
-
-        foreach (var function in Function.AllFunctions)
+    /// <summary>
+    /// Basic rewrites to facilitate type deduction
+    /// </summary>
+    private static void Step1()
+    {
+        var functionsWithAssemblySections = Function.AllFunctions.Where(f => f.AssemblySections.Any()).ToArray();
+        foreach (var function in functionsWithAssemblySections)
         {
             LibCallCleanup.Process(function);
-        }
-
-        foreach (var function in Function.AllFunctions
-                     // Order by total instruction count to minimize lib function signature guess errors
-                     .OrderBy(f => f.TotalInstructionCount)
-                     .ToList())
-        {
             CollectCalls.Process(function);
+            LocationToVarRewrite.Process(function);
         }
+    }
 
-        bool shouldLoop = true;
-        while (shouldLoop)
-        {
-            shouldLoop = false;
-            foreach (var function in Function.AllFunctions)
-            {
-                void handleNeedForLooping(bool result, string msg)
-                {
-                    if (result)
-                    {
-                        if (!shouldLoop) { Logger.WriteLine(msg); }
-                        shouldLoop = true;
-                    }
-                }
-
-                handleNeedForLooping(BbObjTypeInference.Process(function), "BbObjTypeInference.Process returned true");
-                handleNeedForLooping(BasicFloatPropagation.Process(function), "BasicFloatPropagation.Process returned true");
-                handleNeedForLooping(InferredTypePropagation.Process(function), "InferredTypePropagation.Process returned true");
-                handleNeedForLooping(BbArrayAccess.Process(function), "BbArrayAccess.Process returned true");
-                handleNeedForLooping(BbObjMemberAccess.Process(function), "BbObjMemberAccess.Process returned true");
-            }
-        }
-
-        var functionsWithAssemblySections = Function.AllFunctions
-            .Where(f => f.AssemblySections.Any())
-            .ToArray();
-        var functionsWithSomeGoodBits = functionsWithAssemblySections
-            .Where(f =>
-                f.ReturnType != DeclType.Unknown
-                || f.Parameters.Any(a => a.DeclType != DeclType.Unknown)
-                || f.LocalVariables.Any(v => v.DeclType != DeclType.Unknown))
-            .ToArray();
-        var megaGoodFunctions = functionsWithAssemblySections
-            .Where(f => f.ReturnType != DeclType.Unknown)
-            .Where(f => f.Parameters.All(a => a.DeclType != DeclType.Unknown))
-            .Where(f => f.LocalVariables.All(v => v.DeclType != DeclType.Unknown))
-            .OrderByDescending(f => f.LocalVariables.Count + f.Parameters.Count)
-            .ToArray();
-        var goodFunctionsWithStringInSignature = functionsWithSomeGoodBits
-            .Where(f =>
-                f.ReturnType == DeclType.String
-                || f.Parameters.Any(a => a.DeclType == DeclType.String)
-                || f.LocalVariables.Any(v => v.DeclType == DeclType.String))
-            .ToArray();
-
-        var badFunctions = functionsWithAssemblySections
-            .Where(f =>
-                f.ReturnType == DeclType.Unknown
-                || f.Parameters.Any(a => a.DeclType == DeclType.Unknown)
-                || f.LocalVariables.Any(v => v.DeclType == DeclType.Unknown))
-            .OrderByDescending(f => f.LocalVariables.Count(v => v.DeclType == DeclType.Unknown)
-                                    + f.Parameters.Count(p => p.DeclType == DeclType.Unknown))
-            .ToArray();
-
-        var megaBadFunctions = functionsWithAssemblySections
-            .Where(f => f.ReturnType == DeclType.Unknown)
-            .Where(f => f.Parameters.All(a => a.DeclType == DeclType.Unknown))
-            .Where(f => f.LocalVariables.All(v => v.DeclType == DeclType.Unknown))
-            .OrderByDescending(f => f.LocalVariables.Count + f.Parameters.Count)
-            .ToArray();
-
-        var goodGlobals = GlobalVariable
-            .AllGlobals
-            .Where(v => v.DeclType != DeclType.Unknown)
-            .OrderBy(v => v.Name)
-            .ToArray();
-        var badGlobals = GlobalVariable
-            .AllGlobals
-            .Where(v => v.DeclType == DeclType.Unknown)
-            .ToArray();
-
-        var customTypeAccessors = functionsWithAssemblySections
-            .OrderByDescending(f => f.AssemblySections.Values
-                .Count(s => s.Instructions
-                    .Any(i =>
-                        i.DestArg.Contains('\\')
-                        || i.SrcArg1.Contains('\\'))))
-            .ToArray();
-
+    private static void WriteDebugDir(string decompPath)
+    {
         var debugDir = $"{decompPath}DebugDir/";
         if (Directory.Exists(debugDir)) { Directory.Delete(debugDir); }
         Directory.CreateDirectory(debugDir);
-
+        
+        var functionsWithAssemblySections = Function.AllFunctions.Where(f => f.AssemblySections.Any()).ToArray();
         foreach (var function in functionsWithAssemblySections)
         {
             using var file = File.Create($"{debugDir}{function.Name}.txt");
@@ -222,7 +153,5 @@ internal static class Program
                 writeLineToFile("");
             }
         }
-
-        Logger.End();
     }
 }

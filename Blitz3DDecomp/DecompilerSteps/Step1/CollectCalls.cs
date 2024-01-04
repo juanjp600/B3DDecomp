@@ -13,14 +13,15 @@ static class CollectCalls
         finalI = 0;
         var startInstruction = section.Instructions[startIndex];
 
+        espDiff = 0;
         if (startInstruction.DestArg.ContainsRegister())
         {
-            Debugger.Break();
+            //Debugger.Break();
+            return;
         }
 
         var functionName = startInstruction.DestArg[1..];
         var function = Function.TryGetFunctionByName(functionName);
-        espDiff = 0;
         if (function is { Parameters.Count: 0 })
         {
             finalI = startIndex;

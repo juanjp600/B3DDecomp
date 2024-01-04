@@ -42,3 +42,6 @@ desktop.ini
 
 #Rider
 *.DotSettings.user
+
+# Misc other crap
+ignore/

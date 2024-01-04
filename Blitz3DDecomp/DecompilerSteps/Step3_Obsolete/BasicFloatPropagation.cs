@@ -1,11 +1,10 @@
-﻿using System.Diagnostics;
-using B3DDecompUtils;
+﻿using B3DDecompUtils;
 
-namespace Blitz3DDecomp;
+namespace Blitz3DDecomp.DecompilerSteps.Step3_Obsolete;
 
 static class BasicFloatPropagation
 {
-    private static bool CheckInstructionForMarkAsFloat(Function function, Variable declaration, string declarationDesc, Function.Instruction instruction, int smearDir, ref DeclType? typeBeyondInstruction)
+    private static bool CheckInstructionForMarkAsFloat(Function function, Variable declaration, string declarationDesc, Instruction instruction, int smearDir, ref DeclType? typeBeyondInstruction)
     {
         if (!instruction.Name.Contains("_markAsFloat")) { return false; }
         
@@ -42,7 +41,7 @@ static class BasicFloatPropagation
         return changedSomething;
     }
 
-    private static bool HandlePropagationForReturnType(Function function, Variable declaration, string declarationDesc, Function.Instruction instruction, DeclType? typeAtTop)
+    private static bool HandlePropagationForReturnType(Function function, Variable declaration, string declarationDesc, Instruction instruction, DeclType? typeAtTop)
     {
         bool changedSomething = false;
         var calleeFunction = Function.GetFunctionByName(instruction.DestArg.StripDeref());

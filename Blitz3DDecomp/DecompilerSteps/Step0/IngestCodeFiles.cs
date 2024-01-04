@@ -46,7 +46,7 @@ public static class IngestCodeFiles
                     var parseNameMatch = instructionNameParseRegex.Match(instructionStr);
                     if (!parseNameMatch.Success)
                     {
-                        currentSection.Instructions.Add(new Function.Instruction(name: instructionStr));
+                        currentSection.Instructions.Add(new Instruction(name: instructionStr));
                         continue;
                     }
                     var instructionName = parseNameMatch.Groups[1].Value;
@@ -55,7 +55,7 @@ public static class IngestCodeFiles
                     var parseTwoSrcArgsMatch = instructionTwoSrcArgsParseRegex.Match(instructionArgsStr);
                     if (parseTwoSrcArgsMatch.Success)
                     {
-                        currentSection.Instructions.Add(new Function.Instruction(
+                        currentSection.Instructions.Add(new Instruction(
                             name: instructionName,
                             destArg: parseTwoSrcArgsMatch.Groups[1].Value.Trim(),
                             srcArg1: parseTwoSrcArgsMatch.Groups[2].Value.Trim(),
@@ -66,14 +66,14 @@ public static class IngestCodeFiles
                     var parseOneSrcArgsMatch = instructionOneSrcArgsParseRegex.Match(instructionArgsStr);
                     if (parseOneSrcArgsMatch.Success)
                     {
-                        currentSection.Instructions.Add(new Function.Instruction(
+                        currentSection.Instructions.Add(new Instruction(
                             name: instructionName,
                             destArg: parseOneSrcArgsMatch.Groups[1].Value.Trim(),
                             srcArg1: parseOneSrcArgsMatch.Groups[2].Value.Trim()));
                         continue;
                     }
 
-                    currentSection.Instructions.Add(new Function.Instruction(name: instructionName, destArg: instructionArgsStr));
+                    currentSection.Instructions.Add(new Instruction(name: instructionName, destArg: instructionArgsStr));
                 }
                 else if (symbolDescRegex.Match(line) is { Success: true } symbolDescMatch)
                 {

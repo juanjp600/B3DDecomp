@@ -1,8 +1,7 @@
 using System.Diagnostics;
-using System.Globalization;
 using B3DDecompUtils;
 
-namespace Blitz3DDecomp;
+namespace Blitz3DDecomp.DecompilerSteps.Step3_Obsolete;
 
 static class BbArrayAccess
 {
@@ -18,9 +17,9 @@ static class BbArrayAccess
                 .ToArray();
 
         void handlePotentialImmediateDeref(
-            Function.Instruction potentialImmediateDeref,
+            Instruction potentialImmediateDeref,
             string register,
-            Function.Instruction instruction)
+            Instruction instruction)
         {
             if (potentialImmediateDeref.Name == "mov"
                 && potentialImmediateDeref.DestArg == register

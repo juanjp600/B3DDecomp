@@ -21,7 +21,7 @@ ref struct LocationTracker
         PreserveDeref = preserveDeref;
     }
 
-    public bool ProcessInstruction(Function.Instruction instruction)
+    public bool ProcessInstruction(Instruction instruction)
     {
         var (dest, src) = (instruction.DestArg, instruction.SrcArg1);
         if (!PreserveDeref)

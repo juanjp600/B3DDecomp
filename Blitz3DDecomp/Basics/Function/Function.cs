@@ -141,6 +141,7 @@ sealed class Function
     public readonly List<Parameter> Parameters = new List<Parameter>();
     public readonly List<LocalVariable> LocalVariables = new List<LocalVariable>();
     public readonly List<LocalVariable> CompilerGeneratedTempVars = new List<LocalVariable>();
+    public readonly List<LocalVariable> DecompGeneratedTempVars = new List<LocalVariable>();
 
     public Variable? InstructionArgumentToVariable(string arg)
     {
@@ -209,47 +210,6 @@ sealed class Function
         }
 
         return null;
-    }
-
-    public sealed class Instruction
-    {
-        public string Name;
-        public string DestArg;
-        public string SrcArg1;
-        public string SrcArg2;
-
-        public int[]? CallParameterAssignmentIndices;
-        public string? BbObjType;
-
-        public Instruction(string name, string destArg = "", string srcArg1 = "", string srcArg2 = "")
-        {
-            Name = name;
-            DestArg = destArg;
-            SrcArg1 = srcArg1;
-            SrcArg2 = srcArg2;
-        }
-
-        public bool IsJumpOrCall
-            => Name is
-                "call" or "jmp" or "je" or "jz"
-                or "jne" or "jnz" or "jg" or "jge"
-                or "jl" or "jle";
-
-        public override string ToString()
-        {
-            var retVal = Name;
-
-            if (string.IsNullOrWhiteSpace(DestArg)) { return retVal; }
-            retVal += " " + DestArg;
-
-            if (string.IsNullOrWhiteSpace(SrcArg1)) { return retVal; }
-            retVal += ", " + SrcArg1;
-
-            if (string.IsNullOrWhiteSpace(SrcArg2)) { return retVal; }
-            retVal += ", " + SrcArg2;
-
-            return retVal;
-        }
     }
 
     public static Function FromBlitzSymbol(string str)

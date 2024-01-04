@@ -16,14 +16,6 @@ internal static class Program
         Step0(disasmPath, decompPath);
         Step1();
 
-        HashSet<string> instructions = new HashSet<string>();
-        var functionsWithAssemblySections = Function.AllFunctions.Where(f => f.AssemblySections.Any());
-        foreach (var function in functionsWithAssemblySections)
-        {
-            instructions.UnionWith(function.AssemblySections.Values.SelectMany(s => s.Instructions.Select(i => i.Name)));
-        }
-        File.WriteAllLines($"{decompPath}poo.txt", instructions);
-
         WriteDebugDir(decompPath);
 
         Logger.End();

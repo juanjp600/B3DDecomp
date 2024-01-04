@@ -1,6 +1,6 @@
 using B3DDecompUtils;
 
-namespace Blitz3DDecomp.DecompilerSteps.Step2_Obsolete;
+namespace Blitz3DDecomp.DecompilerSteps.Step2;
 
 static class VectorTypeDeduction
 {
@@ -26,8 +26,9 @@ static class VectorTypeDeduction
             if (vecTypeToRegister.Name == "mov"
                 && vecType.IsArrayType
                 && vecTypeToRegister.DestArg == registerToArg.SrcArg1
-                && resultToVariable is { Name: "mov", SrcArg1: "eax" } 
-                && variable != null 
+                && resultToVariable is { Name: "mov" }
+                && resultToVariable.SrcArg1.StartsWith("eax", StringComparison.OrdinalIgnoreCase) 
+                && variable != null
                 && variable.DeclType == DeclType.Unknown)
             {
                 Logger.WriteLine($"{function}: {variable.Name} is {vecType} because {vecTypeToRegister}");

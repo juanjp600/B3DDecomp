@@ -3,6 +3,7 @@ using System.Text;
 using B3DDecompUtils;
 using Blitz3DDecomp;
 using Blitz3DDecomp.DecompilerSteps.Step1;
+using Blitz3DDecomp.DecompilerSteps.Step2;
 using Blitz3DDecomp.DecompilerSteps.Step3_Obsolete;
 
 internal static class Program
@@ -16,6 +17,7 @@ internal static class Program
         
         Step0(disasmPath, decompPath);
         Step1();
+        Step2();
 
         WriteDebugDir(decompPath);
 
@@ -61,6 +63,19 @@ internal static class Program
             CollectCalls.Process(function);
             DimArrayAccessRewrite.Process(function);
             LocationToVarRewrite.Process(function);
+        }
+    }
+
+    /// <summary>
+    /// Basic type deduction
+    /// </summary>
+    private static void Step2()
+    {
+        var functionsWithAssemblySections = Function.AllFunctions.Where(f => f.AssemblySections.Any()).ToArray();
+        foreach (var function in functionsWithAssemblySections)
+        {
+            HandleFloatInstructions.Process(function);
+            VectorTypeDeduction.Process(function);
         }
     }
 

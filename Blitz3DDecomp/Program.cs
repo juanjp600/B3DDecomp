@@ -3,6 +3,7 @@ using System.Text;
 using B3DDecompUtils;
 using Blitz3DDecomp;
 using Blitz3DDecomp.DecompilerSteps.Step1;
+using Blitz3DDecomp.DecompilerSteps.Step3_Obsolete;
 
 internal static class Program
 {
@@ -50,11 +51,15 @@ internal static class Program
     /// </summary>
     private static void Step1()
     {
-        var functionsWithAssemblySections = Function.AllFunctions.Where(f => f.AssemblySections.Any()).ToArray();
+        var functionsWithAssemblySections = Function.AllFunctions.Where(f => f.AssemblySections.Any())
+            // Order by total instruction count to minimize lib function signature guess errors
+            .OrderBy(f => f.TotalInstructionCount)
+            .ToArray();
         foreach (var function in functionsWithAssemblySections)
         {
             LibCallCleanup.Process(function);
             CollectCalls.Process(function);
+            DimArrayAccessRewrite.Process(function);
             LocationToVarRewrite.Process(function);
         }
     }

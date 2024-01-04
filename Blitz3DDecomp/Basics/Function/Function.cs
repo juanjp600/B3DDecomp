@@ -79,6 +79,14 @@ sealed class Function
             => $"[ebp-0x{((Index << 2) + 0x4):x1}]";
     }
 
+    public sealed class DecompGeneratedTempVariable : VariableWithOwnType
+    {
+        public DecompGeneratedTempVariable(string name) : base(name) { }
+
+        public override string ToInstructionArg()
+            => Name;
+    }
+
     public readonly string Name;
     public readonly Dictionary<string, AssemblySection> AssemblySections;
 
@@ -141,7 +149,7 @@ sealed class Function
     public readonly List<Parameter> Parameters = new List<Parameter>();
     public readonly List<LocalVariable> LocalVariables = new List<LocalVariable>();
     public readonly List<LocalVariable> CompilerGeneratedTempVars = new List<LocalVariable>();
-    public readonly List<LocalVariable> DecompGeneratedTempVars = new List<LocalVariable>();
+    public readonly Dictionary<string, DecompGeneratedTempVariable> DecompGeneratedTempVars = new();
 
     public Variable? InstructionArgumentToVariable(string arg)
     {
@@ -189,6 +197,10 @@ sealed class Function
 
                     currVar = LocalVariables.Find(doesVarMatchPart);
                     currVar ??= Parameters.Find(doesVarMatchPart);
+                    if (part.StartsWith("temp", StringComparison.OrdinalIgnoreCase) || (part.Length >= 3 && part[..3].IsRegister()))
+                    {
+                        currVar ??= DecompGeneratedTempVars.GetValueOrDefault(part);
+                    }
                     currVar ??= GlobalVariable.FindByName(part);
                     if (currVar is null && arrayIndex != "" && DimArray.TryFindByName(part) is { } dimArray)
                     {

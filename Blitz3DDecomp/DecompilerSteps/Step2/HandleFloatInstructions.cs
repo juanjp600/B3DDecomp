@@ -1,4 +1,6 @@
-﻿namespace Blitz3DDecomp.DecompilerSteps.Step2;
+﻿using B3DDecompUtils;
+
+namespace Blitz3DDecomp.DecompilerSteps.Step2;
 
 static class HandleFloatInstructions
 {
@@ -27,6 +29,10 @@ static class HandleFloatInstructions
             {
                 var prevVariable = section.Owner.InstructionArgumentToVariable(prevInstruction.DestArg);
                 var nextVariable = section.Owner.InstructionArgumentToVariable(nextInstruction.DestArg);
+
+                var oldPrevType = prevVariable?.DeclType;
+                var oldNextType = nextVariable?.DeclType;
+
                 switch (instruction.Name)
                 {
                     case "fld":
@@ -47,11 +53,22 @@ static class HandleFloatInstructions
                         }
                         break;
                     case "fstp":
+                        if (prevVariable?.DeclType == DeclType.Unknown) { prevVariable.DeclType = DeclType.Float; }
                         if (nextVariable?.DeclType == DeclType.Unknown) { nextVariable.DeclType = DeclType.Float; }
                         break;
                     case "fistp":
+                        if (prevVariable?.DeclType == DeclType.Unknown) { prevVariable.DeclType = DeclType.Float; }
                         if (nextVariable?.DeclType == DeclType.Unknown) { nextVariable.DeclType = DeclType.Int; }
                         break;
+                }
+
+                if (oldPrevType == DeclType.Unknown && prevVariable?.DeclType != DeclType.Unknown)
+                {
+                    Logger.WriteLine($"{section.Owner}: {prevVariable?.Name} is {prevVariable?.DeclType} because {instruction}");
+                }
+                if (oldNextType == DeclType.Unknown && nextVariable?.DeclType != DeclType.Unknown)
+                {
+                    Logger.WriteLine($"{section.Owner}: {nextVariable?.Name} is {nextVariable?.DeclType} because {instruction}");
                 }
             }
         }

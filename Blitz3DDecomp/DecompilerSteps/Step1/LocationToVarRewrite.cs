@@ -18,12 +18,17 @@ static class LocationToVarRewrite
             {
                 foreach (var kvp in Indices)
                 {
-                    s = s.Replace(kvp.Key, $"{kvp.Key}_{kvp.Value:X4}");
+                    var newName = $"{kvp.Key}_{kvp.Value:X4}";
+                    s = s == kvp.Key
+                        ? newName
+                        : s.Replace($"[{kvp.Key}", $"[{newName}");
                 }
 
                 if (function.InstructionArgumentToVariable(s) is { } variable)
                 {
-                    s = s.Replace(s.StripDeref(), variable.Name);
+                    s = s == s.StripDeref()
+                        ? variable.Name
+                        : s.Replace($"[{s.StripDeref()}", $"[{variable.Name}");
                 }
 
                 foreach (var tempVar in function.CompilerGeneratedTempVars)
@@ -31,6 +36,7 @@ static class LocationToVarRewrite
                     if (s == tempVar.ToInstructionArg())
                     {
                         s = $"[{tempVar.Name}_{Indices[tempVar.Name]:X4}]";
+                        break;
                     }
                 }
             }
@@ -54,11 +60,18 @@ static class LocationToVarRewrite
                     incrementIndex("eax");
                     break;
                 }
-                case "mov" or "lea" or "pop":
+                case "mov" or "movzx" or "lea" or "pop" or "add":
                 {
                     if (instruction.DestArg.IsRegister() && instruction.DestArg is not ("esp" or "ebp"))
                     {
                         incrementIndex(instruction.DestArg);
+                    }
+
+                    if (instruction.Name == "add")
+                    {
+                        instruction.SrcArg2 = instruction.SrcArg1;
+                        instruction.SrcArg1 = instruction.DestArg;
+                        replace(ref instruction.SrcArg1);
                     }
 
                     foreach (var tempVar in function.CompilerGeneratedTempVars)
@@ -66,6 +79,7 @@ static class LocationToVarRewrite
                         if (instruction.DestArg == tempVar.ToInstructionArg())
                         {
                             incrementIndex(tempVar.Name);
+                            break;
                         }
                     }
 
@@ -79,12 +93,23 @@ static class LocationToVarRewrite
 
     private static void ProcessSection(TempTracker tempTracker, Function.AssemblySection section)
     {
-        foreach (var instruction in section.Instructions)
+        IReadOnlyList<Instruction> instructions = section.Instructions;
+        if (instructions.Count >= 7
+            && instructions[3] is { Name: "push", DestArg: "ebp" }
+            && instructions[4] is { Name: "mov", DestArg: "ebp", SrcArg1: "esp" }
+            && instructions[5] is { Name: "sub", DestArg: "esp" }
+            && instructions[6] is { Name: "mov", SrcArg1: "0x0" }
+            && instructions[6].DestArg.IsRegister())
+        {
+            // Skip preamble and first register assignment because it can't have a concrete type
+            instructions = instructions.Skip(7).ToArray();
+        }
+        foreach (var instruction in instructions)
         {
             tempTracker.ProcessInstruction(instruction);
         }
     }
-    
+
     public static void Process(Function function)
     {
         var tempTracker = new TempTracker(function);

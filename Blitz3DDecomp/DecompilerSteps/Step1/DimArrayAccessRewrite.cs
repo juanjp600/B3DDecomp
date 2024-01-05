@@ -8,16 +8,17 @@ static class DimArrayAccessRewrite
         {
             var instruction = section.Instructions[i];
             if (instruction.Name != "add"
-                || !instruction.DestArg.IsRegister()
-                || !instruction.SrcArg1.StartsWith("[@_a", StringComparison.Ordinal))
+                || !instruction.SrcArg1[..3].IsRegister()
+                || !instruction.SrcArg2.StartsWith("[@_a", StringComparison.Ordinal))
             {
                 continue;
             }
 
-            var dimArray = DimArray.TryFindByName(instruction.SrcArg1.StripDeref())
-                ?? throw new Exception($"Could not find dim array matching instruction arg {instruction.SrcArg1}");
+            var dimArray = DimArray.TryFindByName(instruction.SrcArg2.StripDeref())
+                ?? throw new Exception($"Could not find dim array matching instruction arg {instruction.SrcArg2}");
             instruction.Name = "mov";
             instruction.SrcArg1 =  $"{dimArray.Name}[{instruction.DestArg}>>2]";
+            instruction.SrcArg2 = "";
         }
     }
     

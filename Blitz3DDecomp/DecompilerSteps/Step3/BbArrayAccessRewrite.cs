@@ -16,7 +16,7 @@ static class BbArrayAccessRewrite
                 continue;
             }
 
-            if (section.Owner.InstructionArgumentToVariable(instruction.SrcArg1) is not { } array
+            if (section.Owner.InstructionArgumentToVariable(instruction.SrcArg2) is not { } array
                 || !array.DeclType.IsArrayType)
             {
                 continue;
@@ -24,7 +24,8 @@ static class BbArrayAccessRewrite
 
             instruction.Name = "mov";
             instruction.SrcArg1 =  $"{array.Name}[{instruction.DestArg}>>2]";
-            Logger.WriteLine($"{section.Owner}: {array.Name} access at {i}");
+            instruction.SrcArg2 = "";
+            Logger.WriteLine($"{section.Owner}: {array.Name} access at {section.Name}:{i}");
             somethingChanged = true;
         }
         return somethingChanged;

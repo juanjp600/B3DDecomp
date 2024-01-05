@@ -62,16 +62,16 @@ static class LocationToVarRewrite
                 }
                 case "mov" or "movzx" or "lea" or "pop" or "add":
                 {
-                    if (instruction.DestArg.IsRegister() && instruction.DestArg is not ("esp" or "ebp"))
-                    {
-                        incrementIndex(instruction.DestArg);
-                    }
-
                     if (instruction.Name == "add")
                     {
                         instruction.SrcArg2 = instruction.SrcArg1;
                         instruction.SrcArg1 = instruction.DestArg;
                         replace(ref instruction.SrcArg1);
+                    }
+
+                    if (instruction.DestArg.IsRegister() && instruction.DestArg is not ("esp" or "ebp"))
+                    {
+                        incrementIndex(instruction.DestArg);
                     }
 
                     foreach (var tempVar in function.CompilerGeneratedTempVars)

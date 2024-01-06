@@ -1,4 +1,4 @@
-namespace Blitz3DDecomp.DecompilerSteps.Step3_Obsolete;
+namespace Blitz3DDecomp.DecompilerSteps.Step1;
 
 static class DimArrayAccessRewrite
 {
@@ -17,7 +17,7 @@ static class DimArrayAccessRewrite
             var dimArray = DimArray.TryFindByName(instruction.SrcArg2.StripDeref())
                 ?? throw new Exception($"Could not find dim array matching instruction arg {instruction.SrcArg2}");
             instruction.Name = "mov";
-            instruction.SrcArg1 =  $"{dimArray.Name}[{instruction.DestArg}>>2]";
+            instruction.SrcArg1 =  $"{dimArray.Name}[{instruction.SrcArg1}>>2]";
             instruction.SrcArg2 = "";
         }
     }

@@ -4,13 +4,13 @@ using B3DDecompUtils;
 using Blitz3DDecomp;
 using Blitz3DDecomp.DecompilerSteps.Step1;
 using Blitz3DDecomp.DecompilerSteps.Step2;
-using Blitz3DDecomp.DecompilerSteps.Step3_Obsolete;
+using Blitz3DDecomp.DecompilerSteps.Step3;
 
 internal static class Program
 {
     public static void Main(string[] args)
     {
-        string disasmPath = "C:/Users/juanj/Desktop/Blitz3d/ReverseEng/game_disasm/";
+        string disasmPath = "C:/Users/juanj/Desktop/Blitz3d/ReverseEng/SCP - Containment Breach v0.2_disasm/";
         string decompPath = disasmPath.Replace("_disasm", "_decomp");
         if (Directory.Exists(decompPath)) { Directory.Delete(decompPath, true); }
         Directory.CreateDirectory(decompPath);
@@ -18,6 +18,7 @@ internal static class Program
         Step0(disasmPath, decompPath);
         Step1();
         Step2();
+        Step3();
 
         WriteDebugDir(decompPath);
 
@@ -61,8 +62,8 @@ internal static class Program
         {
             LibCallCleanup.Process(function);
             CollectCalls.Process(function);
-            DimArrayAccessRewrite.Process(function);
             LocationToVarRewrite.Process(function);
+            DimArrayAccessRewrite.Process(function);
         }
     }
 
@@ -76,6 +77,30 @@ internal static class Program
         {
             HandleFloatInstructions.Process(function);
             VectorTypeDeduction.Process(function);
+        }
+    }
+
+    /// <summary>
+    /// Multi-pass type deduction
+    /// </summary>
+    private static void Step3()
+    {
+        var functionsWithAssemblySections = Function.AllFunctions.Where(f => f.AssemblySections.Any()).ToArray();
+
+        while (true)
+        {
+            bool somethingChanged = false;
+            foreach (var function in functionsWithAssemblySections)
+            {
+                somethingChanged |= BbArrayAccessRewrite.Process(function);
+                somethingChanged |= BbCustomTypeFieldAccessRewrite.Process(function);
+                somethingChanged |= VariableTypePropagation.Process(function);
+                somethingChanged |= CalleeArgumentTypePropagation.Process(function);
+                somethingChanged |= CalleeReturnTypePropagation.Process(function);
+                somethingChanged |= BbCustomTypePropagation.Process(function);
+                somethingChanged |= SelfReturnTypePropagation.Process(function);
+            }
+            if (!somethingChanged) { break; }
         }
     }
 

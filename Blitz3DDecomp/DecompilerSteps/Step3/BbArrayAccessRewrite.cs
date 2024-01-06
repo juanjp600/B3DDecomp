@@ -23,7 +23,7 @@ static class BbArrayAccessRewrite
             }
 
             instruction.Name = "mov";
-            instruction.SrcArg1 =  $"{array.Name}[{instruction.DestArg}>>2]";
+            instruction.SrcArg1 =  $"{array.Name}[{instruction.SrcArg1}>>2]";
             instruction.SrcArg2 = "";
             Logger.WriteLine($"{section.Owner}: {array.Name} access at {section.Name}:{i}");
             somethingChanged = true;

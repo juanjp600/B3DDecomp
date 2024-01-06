@@ -1,6 +1,7 @@
 ﻿using System.Diagnostics;
 using System.Globalization;
 using System.Text.RegularExpressions;
+using B3DDecompUtils;
 
 namespace Blitz3DDecomp;
 
@@ -28,7 +29,9 @@ static class CountLocals
                     initializedRegisters.Add("eax");
                 }
 
-                if (!instruction.DestArg.Contains("_builtIn", StringComparison.OrdinalIgnoreCase))
+                if (!instruction.DestArg.Contains("_builtIn__bbStrConst", StringComparison.OrdinalIgnoreCase)
+                    && !instruction.DestArg.Contains("_builtIn__bbVecAlloc", StringComparison.OrdinalIgnoreCase)
+                    && !instruction.DestArg.Contains("_builtIn__bbStrRetain", StringComparison.OrdinalIgnoreCase))
                 {
                     break;
                 }

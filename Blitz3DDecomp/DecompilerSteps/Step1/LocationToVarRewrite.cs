@@ -58,6 +58,8 @@ static class LocationToVarRewrite
                 case "call":
                 {
                     incrementIndex("eax");
+                    var newVarName = $"eax_{Indices["eax"]:X4}";
+                    instruction.ReturnOutputVar = function.DecompGeneratedTempVars[newVarName];
                     break;
                 }
                 case "mov" or "movzx" or "lea" or "pop" or "add":
@@ -73,13 +75,15 @@ static class LocationToVarRewrite
                     {
                         incrementIndex(instruction.DestArg);
                     }
-
-                    foreach (var tempVar in function.CompilerGeneratedTempVars)
+                    else
                     {
-                        if (instruction.DestArg == tempVar.ToInstructionArg())
+                        foreach (var tempVar in function.CompilerGeneratedTempVars)
                         {
-                            incrementIndex(tempVar.Name);
-                            break;
+                            if (instruction.DestArg == tempVar.ToInstructionArg())
+                            {
+                                incrementIndex(tempVar.Name);
+                                break;
+                            }
                         }
                     }
 

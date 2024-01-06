@@ -34,4 +34,13 @@ public static class Option
     public static UnspecifiedNone None => default;
     public static Option<T> Some<T>(T value) where T : notnull => Option<T>.Some(value: value);
     public static Option<T> FromNullable<T>(T? value) where T : notnull => value is null ? None : Some(value);
+
+    public static Option<T> FirstOrNone<T>(this IEnumerable<T> enumerable, Predicate<T> predicate) where T : notnull
+    {
+        foreach (var item in enumerable)
+        {
+            if (predicate(item)) { return Some(item); }
+        }
+        return None;
+    }
 }

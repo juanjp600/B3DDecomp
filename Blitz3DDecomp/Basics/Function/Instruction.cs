@@ -8,6 +8,8 @@ sealed class Instruction
     public string SrcArg2;
 
     public int[]? CallParameterAssignmentIndices;
+    public Function.DecompGeneratedTempVariable? ReturnOutputVar = null;
+
     public string? BbObjType;
 
     public Instruction(string name, string destArg = "", string srcArg1 = "", string srcArg2 = "")

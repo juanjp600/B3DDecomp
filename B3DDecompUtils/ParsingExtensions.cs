@@ -9,4 +9,10 @@ public static class ParsingExtensions
         if (s.StartsWith("0x")) { s = s[2..]; }
         return UInt32.Parse(s, NumberStyles.HexNumber);
     }
+    
+    public static bool TryHexToUint32(this string s, out UInt32 value)
+    {
+        if (s.StartsWith("0x")) { s = s[2..]; }
+        return UInt32.TryParse(s, NumberStyles.HexNumber, null, out value);
+    }
 }

@@ -45,7 +45,6 @@ static class HandleFloatInstructions
                         break;
                     case "fild":
                         if (prevVariable?.DeclType == DeclType.Unknown) { prevVariable.DeclType = DeclType.Int; }
-
                         if (nextVariable?.DeclType == DeclType.Unknown)
                         {
                             nextVariable.DeclType = DeclType.Float;

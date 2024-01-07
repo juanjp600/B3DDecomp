@@ -25,6 +25,7 @@ public class GuessIntFromNothing
         }
         processVariables(function.LocalVariables);
         processVariables(function.Parameters);
+        processVariables(function.DecompGeneratedTempVars.Values);
     }
 
     public static void Execute()

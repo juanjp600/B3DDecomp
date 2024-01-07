@@ -7,7 +7,7 @@ static class BbArrayAccessRewrite
     private static bool ProcessSection(Function.AssemblySection section)
     {
         bool somethingChanged = false;
-        for (int i = 0; i < section.Instructions.Count; i++)
+        for (int i = 0; i < section.Instructions.Length; i++)
         {
             var instruction = section.Instructions[i];
             if (instruction.Name != "add"

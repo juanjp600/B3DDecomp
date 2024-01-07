@@ -241,11 +241,11 @@ internal static class Program
             foreach (var section in function.AssemblySections.Values)
             {
                 writeLineToFile($"  {section.Name}:");
-                for (var instrIndex = 0; instrIndex < section.Instructions.Count; instrIndex++)
+                for (var instrIndex = 0; instrIndex < section.Instructions.Length; instrIndex++)
                 {
                     var instruction = section.Instructions[instrIndex];
                     var prefix = instrIndex.ToString();
-                    var maxPrefix = section.Instructions.Count.ToString();
+                    var maxPrefix = section.Instructions.Length.ToString();
                     while (prefix.Length < maxPrefix.Length) { prefix = " " + prefix; }
                     writeLineToFile($"    {prefix}: {instruction}");
                 }

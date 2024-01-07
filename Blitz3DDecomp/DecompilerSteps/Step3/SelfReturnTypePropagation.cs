@@ -7,7 +7,7 @@ static class SelfReturnTypePropagation
 {
     private static void ProcessSection(Function.AssemblySection section)
     {
-        for (int i = 1; i < section.Instructions.Count; i++)
+        for (int i = 1; i < section.Instructions.Length; i++)
         {
             var instruction = section.Instructions[i];
 

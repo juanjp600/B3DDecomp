@@ -7,7 +7,7 @@ static class CalleeReturnTypePropagation
     private static bool ProcessSection(Function.AssemblySection section)
     {
         bool somethingChanged = false;
-        for (int i = 0; i < section.Instructions.Count - 1; i++)
+        for (int i = 0; i < section.Instructions.Length - 1; i++)
         {
             var instruction = section.Instructions[i];
             if (instruction.Name != "call") { continue; }

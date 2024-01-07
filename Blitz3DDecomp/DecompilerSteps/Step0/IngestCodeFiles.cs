@@ -26,27 +26,27 @@ public static class IngestCodeFiles
             var lines = File.ReadAllLines(filePath);
             string currentSectionName = "";
             var newFunction = new Function(functionName, new Dictionary<string, Function.AssemblySection>());
-            Function.AssemblySection? currentSection = null;
+            List<Instruction>? currentInstructions = null;
 
             void commitCurrentSection()
             {
-                if (currentSection is null) { return; }
+                if (currentInstructions is null) { return; }
 
-                currentSection.Instructions.RemoveAll(i => i.Name == "nop");
+                currentInstructions.RemoveAll(i => i.Name == "nop");
                 if (!string.IsNullOrWhiteSpace(currentSectionName))
                 {
-                    newFunction.AssemblySections[currentSectionName] = currentSection;
+                    newFunction.AssemblySections[currentSectionName] = new Function.AssemblySection(newFunction, currentSectionName, currentInstructions);
                 }
             }
             foreach (var line in lines)
             {
-                if (currentSection is not null && instructionTrimRegex.Match(line) is { Success: true } instructionTrimMatch)
+                if (currentInstructions is not null && instructionTrimRegex.Match(line) is { Success: true } instructionTrimMatch)
                 {
                     var instructionStr = instructionTrimMatch.Groups[2].Value;
                     var parseNameMatch = instructionNameParseRegex.Match(instructionStr);
                     if (!parseNameMatch.Success)
                     {
-                        currentSection.Instructions.Add(new Instruction(name: instructionStr));
+                        currentInstructions.Add(new Instruction(name: instructionStr));
                         continue;
                     }
                     var instructionName = parseNameMatch.Groups[1].Value;
@@ -55,7 +55,7 @@ public static class IngestCodeFiles
                     var parseTwoSrcArgsMatch = instructionTwoSrcArgsParseRegex.Match(instructionArgsStr);
                     if (parseTwoSrcArgsMatch.Success)
                     {
-                        currentSection.Instructions.Add(new Instruction(
+                        currentInstructions.Add(new Instruction(
                             name: instructionName,
                             destArg: parseTwoSrcArgsMatch.Groups[1].Value.Trim(),
                             srcArg1: parseTwoSrcArgsMatch.Groups[2].Value.Trim(),
@@ -66,20 +66,20 @@ public static class IngestCodeFiles
                     var parseOneSrcArgsMatch = instructionOneSrcArgsParseRegex.Match(instructionArgsStr);
                     if (parseOneSrcArgsMatch.Success)
                     {
-                        currentSection.Instructions.Add(new Instruction(
+                        currentInstructions.Add(new Instruction(
                             name: instructionName,
                             destArg: parseOneSrcArgsMatch.Groups[1].Value.Trim(),
                             srcArg1: parseOneSrcArgsMatch.Groups[2].Value.Trim()));
                         continue;
                     }
 
-                    currentSection.Instructions.Add(new Instruction(name: instructionName, destArg: instructionArgsStr));
+                    currentInstructions.Add(new Instruction(name: instructionName, destArg: instructionArgsStr));
                 }
                 else if (symbolDescRegex.Match(line) is { Success: true } symbolDescMatch)
                 {
                     commitCurrentSection();
                     currentSectionName = symbolDescMatch.Groups[2].Value;
-                    currentSection = new Function.AssemblySection(newFunction, currentSectionName);
+                    currentInstructions = new List<Instruction>();
                 }
             }
             commitCurrentSection();

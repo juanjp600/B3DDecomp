@@ -36,7 +36,7 @@ static class LibCallCleanup
         foreach (var kvp in function.AssemblySections)
         {
             var section = kvp.Value;
-            for (int i = 0; i < section.Instructions.Count; i++)
+            for (int i = 0; i < section.Instructions.Length; i++)
             {
                 var instruction = section.Instructions[i];
                 if (instruction.Name != "call") { continue; }

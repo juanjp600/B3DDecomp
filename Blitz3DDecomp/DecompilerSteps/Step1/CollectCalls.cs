@@ -124,7 +124,7 @@ static class CollectCalls
         foreach (var kvp in function.AssemblySections)
         {
             var instructions = kvp.Value;
-            for (int i = instructions.Instructions.Count - 1; i >= 0; i--)
+            for (int i = instructions.Instructions.Length - 1; i >= 0; i--)
             {
                 var instruction = instructions.Instructions[i];
                 if (instruction.Name != "call") { continue; }

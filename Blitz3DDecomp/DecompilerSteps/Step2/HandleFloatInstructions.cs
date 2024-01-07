@@ -6,11 +6,11 @@ static class HandleFloatInstructions
 {
     private static void ProcessSection(Function.AssemblySection section)
     {
-        for (var i = 1; i < section.Instructions.Count - 1; i++)
+        for (var i = 1; i < section.Instructions.Length - 1; i++)
         {
             void handlePotentialFloatReturn()
             {
-                if (section.Owner.ReturnType == DeclType.Unknown && i < section.Instructions.Count - 2)
+                if (section.Owner.ReturnType == DeclType.Unknown && i < section.Instructions.Length - 2)
                 {
                     var potentialLeave = section.Instructions[i + 2];
                     if (potentialLeave.Name is "jmp"

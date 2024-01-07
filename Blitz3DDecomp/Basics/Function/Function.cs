@@ -11,12 +11,13 @@ sealed class Function
     {
         public readonly Function Owner;
         public readonly string Name;
-        public readonly List<Instruction> Instructions = new List<Instruction>();
+        public readonly Instruction[] Instructions = Array.Empty<Instruction>();
 
-        public AssemblySection(Function owner, string name)
+        public AssemblySection(Function owner, string name, IReadOnlyList<Instruction> instructions)
         {
             Owner = owner;
             Name = name;
+            Instructions = instructions.ToArray();
         }
 
         public IEnumerable<GlobalVariable> ReferencedGlobals
@@ -30,27 +31,6 @@ sealed class Function
                 .Select(Owner.InstructionArgumentToVariable)
                 .OfType<Variable>() // Removes null entries
                 .Distinct();
-
-        public void CleanupNop()
-        {
-            var nopIndices = Instructions
-                .Select((instr, index) => instr.Name == "nop" ? index : -1)
-                .Where(index => index >= 0)
-                .ToArray();
-
-            foreach (var instruction in Instructions)
-            {
-                if (instruction.CallParameterAssignmentIndices is not { } callParameterAssignmentIndices) { continue; }
-
-                for (int i = 0; i < callParameterAssignmentIndices.Length; i++)
-                {
-                    callParameterAssignmentIndices[i] -=
-                        nopIndices.Count(index => index <= callParameterAssignmentIndices[i]);
-                }
-            }
-
-            Instructions.RemoveAll(instr => instr.Name == "nop");
-        }
     }
 
     public sealed class Parameter : VariableWithOwnType
@@ -90,7 +70,7 @@ sealed class Function
     public readonly string Name;
     public readonly Dictionary<string, AssemblySection> AssemblySections;
 
-    public int TotalInstructionCount => AssemblySections.Values.Select(s => s.Instructions.Count).Sum();
+    public int TotalInstructionCount => AssemblySections.Values.Select(s => s.Instructions.Length).Sum();
 
     public static ICollection<Function> AllFunctions => lookupDictionary.Values;
 

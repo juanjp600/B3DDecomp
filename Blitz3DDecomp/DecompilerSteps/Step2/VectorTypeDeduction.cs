@@ -6,7 +6,7 @@ static class VectorTypeDeduction
 {
     private static void ProcessSection(Function function, Function.AssemblySection section)
     {
-        for (int i = 2; i < section.Instructions.Count - 1; i++)
+        for (int i = 2; i < section.Instructions.Length - 1; i++)
         {
             var instruction = section.Instructions[i];
             if (instruction.Name != "call"

@@ -43,14 +43,5 @@ public class GuessIntFromNothing
                 Logger.WriteLine($"Global variable {global.Name} is probably {DeclType.Int} because type deduction failed on all prior steps");
             }
         }
-
-        foreach (var dim in DimArray.AllDimArrays)
-        {
-            if (dim.ElementDeclType == DeclType.Unknown)
-            {
-                dim.ElementDeclType = DeclType.Int;
-                Logger.WriteLine($"Dim {dim.Name} probably has element type {DeclType.Int} because type deduction failed on all prior steps");
-            }
-        }
     }
 }

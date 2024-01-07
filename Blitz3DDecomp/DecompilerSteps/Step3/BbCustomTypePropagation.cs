@@ -8,9 +8,10 @@ static class BbCustomTypePropagation
 {
     private static DeclType InstructionArgToCustomType(Function.AssemblySection section, string arg)
     {
-        if (section.Owner.InstructionArgumentToVariable(arg) is { DeclType: { IsCustomType: true, IsArrayType: false } } var)
+        var variable = section.Owner.InstructionArgumentToVariable(arg);
+        if (variable is { DeclType: { IsCustomType: true, IsArrayType: false } })
         {
-            return var.DeclType;
+            return variable.DeclType;
         }
 
         if (arg.StartsWith("@_t", StringComparison.OrdinalIgnoreCase))

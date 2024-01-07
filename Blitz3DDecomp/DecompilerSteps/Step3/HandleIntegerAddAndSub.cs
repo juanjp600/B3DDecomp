@@ -23,7 +23,7 @@ static class HandleIntegerAddAndSub
                 somethingChanged = true;
             }
 
-            if (destVar?.DeclType == DeclType.Int || src2Var?.DeclType == DeclType.Int)
+            if (destVar?.DeclType == DeclType.Int)
             {
                 trySetVarToInt(destVar);
                 trySetVarToInt(src1Var);

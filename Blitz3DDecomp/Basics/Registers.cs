@@ -18,8 +18,6 @@ static class Registers
 
     public static string StripDeref(this string s)
     {
-        if (s.Length <= 3) { return s; }
-
         if (s.StartsWith("dword [", StringComparison.Ordinal) && s.EndsWith("]", StringComparison.Ordinal))
         {
             return s[7..^1];

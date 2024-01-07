@@ -108,6 +108,16 @@ static class LocationToVarRewrite
             // Skip preamble and first register assignment because it can't have a concrete type
             instructions = instructions.Skip(7).ToArray();
         }
+
+        if (section.Owner.Name == "EntryPoint"
+            && section.Name.Contains("_begin", StringComparison.OrdinalIgnoreCase)
+            && instructions[0] is { Name: "mov", SrcArg1: "0x0" }
+            && instructions[0].DestArg.IsRegister())
+        {
+            // Preamble in the main function is in a different section, so it needs special handling
+            instructions = instructions.Skip(1).ToArray();
+        }
+
         foreach (var instruction in instructions)
         {
             tempTracker.ProcessInstruction(instruction);

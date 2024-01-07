@@ -52,11 +52,9 @@ static class HandleFloatInstructions
                         }
                         break;
                     case "fstp":
-                        if (prevVariable?.DeclType == DeclType.Unknown) { prevVariable.DeclType = DeclType.Float; }
                         if (nextVariable?.DeclType == DeclType.Unknown) { nextVariable.DeclType = DeclType.Float; }
                         break;
                     case "fistp":
-                        if (prevVariable?.DeclType == DeclType.Unknown) { prevVariable.DeclType = DeclType.Float; }
                         if (nextVariable?.DeclType == DeclType.Unknown) { nextVariable.DeclType = DeclType.Int; }
                         break;
                 }

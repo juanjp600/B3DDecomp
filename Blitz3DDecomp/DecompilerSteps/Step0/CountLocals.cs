@@ -29,12 +29,7 @@ static class CountLocals
                     initializedRegisters.Add("eax");
                 }
 
-                if (!instruction.DestArg.Contains("_builtIn__bbStrConst", StringComparison.OrdinalIgnoreCase)
-                    && !instruction.DestArg.Contains("_builtIn__bbVecAlloc", StringComparison.OrdinalIgnoreCase)
-                    && !instruction.DestArg.Contains("_builtIn__bbStrRetain", StringComparison.OrdinalIgnoreCase))
-                {
-                    break;
-                }
+                if (!instruction.DestArg.Contains("_builtIn__bbVecAlloc", StringComparison.OrdinalIgnoreCase)) { break; }
             }
 
             if (instruction.Name == "mov" && instruction.DestArg.IsRegister() && instruction.SrcArg1 == "0x0")
@@ -46,24 +41,14 @@ static class CountLocals
             if (instruction.Name == "mov"
                 && ebpOffsetLocalRegex.Match(instruction.DestArg) is { Success: true } ebpOffsetMatch)
             {
-                if (instruction.SrcArg1.IsRegister()
-                    && !initializedRegisters.Contains(instruction.SrcArg1))
-                {
-                    break;
-                }
+                if (instruction.SrcArg1.IsRegister() && !initializedRegisters.Contains(instruction.SrcArg1)) { break; }
 
-                if (!ebpOffsets.Add(int.Parse(ebpOffsetMatch.Groups[1].Value, NumberStyles.HexNumber)))
-                {
-                    break;
-                }
+                if (!ebpOffsets.Add(int.Parse(ebpOffsetMatch.Groups[1].Value, NumberStyles.HexNumber))) { break; }
 
                 continue;
             }
 
-            if (instruction.DestArg.ContainsRegister() && instruction.DestArg.Contains("ebp"))
-            {
-                break;
-            }
+            if (instruction.DestArg.ContainsRegister() && instruction.DestArg.Contains("ebp")) { break; }
 
             if (instruction.SrcArg1.ContainsRegister() && instruction.SrcArg1.Contains("ebp"))
             {
@@ -75,22 +60,16 @@ static class CountLocals
                         var instruction2 = coreSectionInstructions[j];
                         if (instruction2.Name != "call") { continue; }
 
-                        isParamForLocalInitializer = instruction2.DestArg.Contains("_builtIn");
+                        isParamForLocalInitializer = instruction2.DestArg.Contains("_builtIn__bbVecAlloc");
                         break;
                     }
                 }
                 if (!isParamForLocalInitializer) { break; }
             }
 
-            if (instruction.DestArg.Contains("@_v") || instruction.SrcArg1.Contains("@_v"))
-            {
-                break;
-            }
+            if (instruction.DestArg.Contains("@_v") || instruction.SrcArg1.Contains("@_v")){ break; }
 
-            if (instruction.DestArg.Contains("@_f") || instruction.SrcArg1.Contains("@_f"))
-            {
-                break;
-            }
+            if (instruction.DestArg.Contains("@_f") || instruction.SrcArg1.Contains("@_f")){ break; }
         }
 
         for (int i = 4; i <= ebpOffsets.Count * 4; i += 4)

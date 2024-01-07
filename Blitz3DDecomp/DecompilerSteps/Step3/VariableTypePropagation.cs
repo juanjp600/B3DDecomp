@@ -8,14 +8,8 @@ static class VariableTypePropagation
     {
         bool somethingChanged = false;
 
-        void processInstruction(Instruction instruction)
+        void exchangeTypes(Variable destVar, Variable srcVar)
         {
-            if (instruction.Name is not ("mov" or "lea" or "xchg")) { return; }
-
-            var destVar = section.Owner.InstructionArgumentToVariable(instruction.DestArg);
-            var srcVar = section.Owner.InstructionArgumentToVariable(instruction.SrcArg1);
-            if (destVar is null || srcVar is null) { return; }
-
             if (destVar.DeclType == DeclType.Unknown && srcVar.DeclType != DeclType.Unknown)
             {
                 somethingChanged = true;
@@ -29,14 +23,54 @@ static class VariableTypePropagation
                 Logger.WriteLine($"{section.Owner}: {srcVar.Name} is {srcVar.DeclType} because {destVar}");
             }
         }
+
+        void handleMovLeaXchg(Instruction instruction)
+        {
+            if (instruction.Name is not ("mov" or "lea" or "xchg")) { return; }
+
+            var destVar = section.Owner.InstructionArgumentToVariable(instruction.DestArg);
+            var srcVar = section.Owner.InstructionArgumentToVariable(instruction.SrcArg1);
+            if (destVar is null || srcVar is null) { return; }
+
+            exchangeTypes(destVar, srcVar);
+        }
+
+        void handleCmp(Instruction instruction)
+        {
+            if (instruction.Name is not "cmp") { return; }
+
+            var destVar = section.Owner.InstructionArgumentToVariable(instruction.DestArg);
+            var srcVar = section.Owner.InstructionArgumentToVariable(instruction.SrcArg1);
+            if (destVar is null && srcVar is null) { return; }
+
+            uint parsedUint;
+            if (destVar != null && srcVar != null)
+            {
+                exchangeTypes(destVar, srcVar);
+            }
+            else if (instruction.DestArg.TryHexToUint32(out parsedUint) && parsedUint != 0 && srcVar?.DeclType == DeclType.Unknown)
+            {
+                srcVar.DeclType = DeclType.Int;
+                Logger.WriteLine($"{section.Owner}: {srcVar.Name} is {DeclType.Int} because {instruction}");
+                somethingChanged = true;
+            }
+            else if (instruction.SrcArg1.TryHexToUint32(out parsedUint) && parsedUint != 0 && destVar?.DeclType == DeclType.Unknown)
+            {
+                destVar.DeclType = DeclType.Int;
+                Logger.WriteLine($"{section.Owner}: {destVar.Name} is {DeclType.Int} because {instruction}");
+                somethingChanged = true;
+            }
+        }
         
         foreach (var instruction in section.Instructions)
         {
-            processInstruction(instruction);
+            handleMovLeaXchg(instruction);
+            handleCmp(instruction);
         }
         foreach (var instruction in Enumerable.Reverse(section.Instructions))
         {
-            processInstruction(instruction);
+            handleMovLeaXchg(instruction);
+            handleCmp(instruction);
         }
 
         return somethingChanged;

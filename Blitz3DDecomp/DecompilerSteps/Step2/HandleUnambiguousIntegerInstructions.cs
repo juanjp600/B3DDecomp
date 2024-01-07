@@ -8,7 +8,7 @@ static class HandleUnambiguousIntegerInstructions
     {
         foreach (var instruction in section.Instructions)
         {
-            if (instruction.Name is not ("shl" or "sar")) { continue; }
+            if (instruction.Name is not ("shl" or "shr" or "sar")) { continue; }
 
             var destVar = section.Owner.InstructionArgumentToVariable(instruction.DestArg);
             var srcVar = section.Owner.InstructionArgumentToVariable(instruction.SrcArg1);

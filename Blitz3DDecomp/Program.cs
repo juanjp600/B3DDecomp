@@ -5,6 +5,7 @@ using Blitz3DDecomp;
 using Blitz3DDecomp.DecompilerSteps.Step1;
 using Blitz3DDecomp.DecompilerSteps.Step2;
 using Blitz3DDecomp.DecompilerSteps.Step3;
+using Blitz3DDecomp.DecompilerSteps.Step4;
 
 internal static class Program
 {
@@ -19,6 +20,7 @@ internal static class Program
         Step1();
         Step2();
         Step3();
+        Step4();
 
         WriteDebugDir(decompPath);
 
@@ -95,15 +97,48 @@ internal static class Program
             {
                 somethingChanged |= BbArrayAccessRewrite.Process(function);
                 somethingChanged |= BbCustomTypeFieldAccessRewrite.Process(function);
+                somethingChanged |= BbCustomTypePropagation.Process(function);
                 somethingChanged |= VariableTypePropagation.Process(function);
                 somethingChanged |= CalleeArgumentTypePropagation.Process(function);
                 somethingChanged |= CalleeReturnTypePropagation.Process(function);
-                somethingChanged |= BbCustomTypePropagation.Process(function);
                 somethingChanged |= SelfReturnTypePropagation.Process(function);
                 somethingChanged |= HandleIntegerAddAndSub.Process(function);
             }
             if (!somethingChanged) { break; }
         }
+    }
+
+    /// <summary>
+    /// Guesses for variables and functions where previous steps were unable to tease out the real types
+    /// </summary>
+    private static void Step4()
+    {
+        var functionsWithAssemblySections = Function.AllFunctions.Where(f => f.AssemblySections.Any()).ToArray();
+        
+        foreach (var function in functionsWithAssemblySections)
+        {
+            GuessIntFromInstructions.Process(function);
+        }
+        foreach (var function in functionsWithAssemblySections)
+        {
+            GuessFloatsFromConstants.Process(function);
+        }
+
+        while (true)
+        {
+            bool somethingChanged = false;
+            foreach (var function in functionsWithAssemblySections)
+            {
+                somethingChanged |= VariableTypePropagation.Process(function);
+                somethingChanged |= CalleeArgumentTypePropagation.Process(function);
+                somethingChanged |= CalleeReturnTypePropagation.Process(function);
+                somethingChanged |= SelfReturnTypePropagation.Process(function);
+                somethingChanged |= HandleIntegerAddAndSub.Process(function);
+            }
+            if (!somethingChanged) { break; }
+        }
+
+        GuessIntFromNothing.Execute();
     }
 
     private static void WriteDebugDir(string decompPath)

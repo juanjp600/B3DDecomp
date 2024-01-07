@@ -10,7 +10,7 @@ internal static class Program
 {
     public static void Main(string[] args)
     {
-        string disasmPath = "C:/Users/juanj/Desktop/Blitz3d/ReverseEng/SCP - Containment Breach v0.2_disasm/";
+        string disasmPath = "C:/Users/juanj/Desktop/Blitz3d/ReverseEng/game_disasm/";
         string decompPath = disasmPath.Replace("_disasm", "_decomp");
         if (Directory.Exists(decompPath)) { Directory.Delete(decompPath, true); }
         Directory.CreateDirectory(decompPath);
@@ -76,6 +76,7 @@ internal static class Program
         foreach (var function in functionsWithAssemblySections)
         {
             HandleFloatInstructions.Process(function);
+            HandleUnambiguousIntegerInstructions.Process(function);
             VectorTypeDeduction.Process(function);
         }
     }
@@ -99,6 +100,7 @@ internal static class Program
                 somethingChanged |= CalleeReturnTypePropagation.Process(function);
                 somethingChanged |= BbCustomTypePropagation.Process(function);
                 somethingChanged |= SelfReturnTypePropagation.Process(function);
+                somethingChanged |= HandleIntegerAddAndSub.Process(function);
             }
             if (!somethingChanged) { break; }
         }
@@ -109,8 +111,33 @@ internal static class Program
         var debugDir = $"{decompPath}DebugDir/";
         if (Directory.Exists(debugDir)) { Directory.Delete(debugDir); }
         Directory.CreateDirectory(debugDir);
+
+        var referencedFunctions = new HashSet<Function>();
+        var functionsToCheck = new HashSet<Function>();
+        functionsToCheck.Add(Function.GetFunctionByName("EntryPoint"));
+        while (functionsToCheck.Count > 0)
+        {
+            var functionsCurrentlyChecking = functionsToCheck.ToArray();
+            referencedFunctions.UnionWith(functionsCurrentlyChecking);
+            functionsToCheck.Clear();
+            foreach (var function in functionsCurrentlyChecking)
+            {
+                foreach (var section in function.AssemblySections.Values)
+                {
+                    foreach (var instruction in section.Instructions)
+                    {
+                        if (instruction.Name != "call") { continue; }
+
+                        var callee = Function.GetFunctionByName(instruction.DestArg);
+                        if (referencedFunctions.Contains(callee)) { continue; }
+
+                        functionsToCheck.Add(callee);
+                    }
+                }
+            }
+        }
         
-        var functionsWithAssemblySections = Function.AllFunctions.Where(f => f.AssemblySections.Any()).ToArray();
+        var functionsWithAssemblySections = referencedFunctions.Where(f => f.AssemblySections.Count > 0).ToArray();
         foreach (var function in functionsWithAssemblySections)
         {
             using var file = File.Create($"{debugDir}{function.Name}.txt");
@@ -130,9 +157,9 @@ internal static class Program
                 {
                     var numReferences = function.AssemblySections.Values.Sum(
                         s => s.Instructions.Count(i =>
-                            i.DestArg.Contains(instructionArg)
-                            || i.SrcArg1.Contains(instructionArg)
-                            || i.SrcArg2.Contains(instructionArg)));
+                            function.InstructionArgumentToVariable(i.DestArg) == variable
+                            || function.InstructionArgumentToVariable(i.SrcArg1) == variable
+                            || function.InstructionArgumentToVariable(i.SrcArg2) == variable));
                     retVal += $" ({numReferences} references)";
                 }
                 return retVal;

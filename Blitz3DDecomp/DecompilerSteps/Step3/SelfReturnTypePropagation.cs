@@ -1,11 +1,12 @@
 ﻿using B3DDecompUtils;
 using B3DDecompUtils.Primitives;
+using Blitz3DDecomp.LowLevel;
 
 namespace Blitz3DDecomp.DecompilerSteps.Step3;
 
 static class SelfReturnTypePropagation
 {
-    private static void ProcessSection(Function.AssemblySection section)
+    private static void ProcessSection(AssemblySection section)
     {
         for (int i = 1; i < section.Instructions.Length; i++)
         {

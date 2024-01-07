@@ -1,6 +1,7 @@
 ﻿using System.Diagnostics;
 using System.Globalization;
 using System.Text.RegularExpressions;
+using Blitz3DDecomp.LowLevel;
 
 namespace Blitz3DDecomp;
 
@@ -8,7 +9,7 @@ static class CollectCalls
 {
     private static readonly Dictionary<string, int> guesses = new Dictionary<string, int>();
     
-    static void CrawlUp(Function.AssemblySection section, int startIndex, out int espDiff, out int finalI, int dep)
+    static void CrawlUp(AssemblySection section, int startIndex, out int espDiff, out int finalI, int dep)
     {
         finalI = 0;
         var startInstruction = section.Instructions[startIndex];

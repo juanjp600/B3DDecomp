@@ -1,5 +1,6 @@
 ﻿using System.Text.RegularExpressions;
 using B3DDecompUtils;
+using Blitz3DDecomp.LowLevel;
 
 namespace Blitz3DDecomp;
 
@@ -25,7 +26,7 @@ public static class IngestCodeFiles
 
             var lines = File.ReadAllLines(filePath);
             string currentSectionName = "";
-            var newFunction = new Function(functionName, new Dictionary<string, Function.AssemblySection>());
+            var newFunction = new Function(functionName, new Dictionary<string, AssemblySection>());
             List<Instruction>? currentInstructions = null;
 
             void commitCurrentSection()
@@ -35,7 +36,7 @@ public static class IngestCodeFiles
                 currentInstructions.RemoveAll(i => i.Name == "nop");
                 if (!string.IsNullOrWhiteSpace(currentSectionName))
                 {
-                    newFunction.AssemblySections[currentSectionName] = new Function.AssemblySection(newFunction, currentSectionName, currentInstructions);
+                    newFunction.AssemblySections[currentSectionName] = new AssemblySection(newFunction, currentSectionName, currentInstructions);
                 }
             }
             foreach (var line in lines)

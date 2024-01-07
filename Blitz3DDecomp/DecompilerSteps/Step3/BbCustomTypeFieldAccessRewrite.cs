@@ -1,4 +1,5 @@
 ﻿using B3DDecompUtils;
+using Blitz3DDecomp.LowLevel;
 
 namespace Blitz3DDecomp.DecompilerSteps.Step3;
 
@@ -21,7 +22,7 @@ static class BbCustomTypeFieldAccessRewrite
         return true;
     }
 
-    private static bool HandleMavless(Function.AssemblySection section, Instruction instruction)
+    private static bool HandleMavless(AssemblySection section, Instruction instruction)
     {
         if (instruction.Name != "call") { return false; }
         if (instruction.DestArg != "@_builtIn__bbFieldPtrAdd") { return false; }
@@ -35,7 +36,7 @@ static class BbCustomTypeFieldAccessRewrite
         return TryRewrite(ownerVariable, outputVar, instruction, fieldIndex);
     }
 
-    private static bool HandleVanilla(Function.AssemblySection section, Instruction instruction)
+    private static bool HandleVanilla(AssemblySection section, Instruction instruction)
     {
         if (instruction.Name != "add") { return false; }
 
@@ -48,7 +49,7 @@ static class BbCustomTypeFieldAccessRewrite
         return TryRewrite(ownerVariable, outputVar, instruction, fieldIndex);
     }
 
-    private static bool ProcessSection(Function.AssemblySection section)
+    private static bool ProcessSection(AssemblySection section)
     {
         bool somethingChanged = false;
         foreach (var instruction in section.Instructions)

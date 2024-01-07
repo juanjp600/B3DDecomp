@@ -1,10 +1,11 @@
 ﻿using System.Diagnostics;
+using Blitz3DDecomp.LowLevel;
 
 namespace Blitz3DDecomp;
 
 static class LibCallCleanup
 {
-    private static void CrawlUp(Function.AssemblySection section, int startIndex)
+    private static void CrawlUp(AssemblySection section, int startIndex)
     {
         var startInstruction = section.Instructions[startIndex];
 

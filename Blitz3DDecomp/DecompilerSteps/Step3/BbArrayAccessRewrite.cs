@@ -1,10 +1,11 @@
 ﻿using B3DDecompUtils;
+using Blitz3DDecomp.LowLevel;
 
 namespace Blitz3DDecomp.DecompilerSteps.Step3;
 
 static class BbArrayAccessRewrite
 {
-    private static bool ProcessSection(Function.AssemblySection section)
+    private static bool ProcessSection(AssemblySection section)
     {
         bool somethingChanged = false;
         for (int i = 0; i < section.Instructions.Length; i++)

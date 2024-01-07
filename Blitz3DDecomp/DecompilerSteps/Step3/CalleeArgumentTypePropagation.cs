@@ -1,10 +1,11 @@
 ﻿using B3DDecompUtils;
+using Blitz3DDecomp.LowLevel;
 
 namespace Blitz3DDecomp.DecompilerSteps.Step3;
 
 static class CalleeArgumentTypePropagation
 {
-    private static bool ProcessSection(Function.AssemblySection section)
+    private static bool ProcessSection(AssemblySection section)
     {
         bool somethingChanged = false;
         foreach (var instruction in section.Instructions)

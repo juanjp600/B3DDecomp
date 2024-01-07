@@ -1,8 +1,10 @@
+using Blitz3DDecomp.LowLevel;
+
 namespace Blitz3DDecomp.DecompilerSteps.Step1;
 
 static class DimArrayAccessRewrite
 {
-    private static void ProcessSection(Function.AssemblySection section)
+    private static void ProcessSection(AssemblySection section)
     {
         for (int i = 0; i < section.Instructions.Length; i++)
         {

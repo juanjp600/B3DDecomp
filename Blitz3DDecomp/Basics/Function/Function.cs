@@ -2,37 +2,13 @@
 using System.Diagnostics;
 using System.Globalization;
 using B3DDecompUtils;
+using Blitz3DDecomp.LowLevel;
+using Blitz3DDecomp.MidLevel;
 
 namespace Blitz3DDecomp;
 
 sealed class Function
 {
-    public sealed class AssemblySection
-    {
-        public readonly Function Owner;
-        public readonly string Name;
-        public readonly Instruction[] Instructions = Array.Empty<Instruction>();
-
-        public AssemblySection(Function owner, string name, IReadOnlyList<Instruction> instructions)
-        {
-            Owner = owner;
-            Name = name;
-            Instructions = instructions.ToArray();
-        }
-
-        public IEnumerable<GlobalVariable> ReferencedGlobals
-            => ReferencedVariables
-                .OfType<GlobalVariable>();
-
-        public IEnumerable<Variable> ReferencedVariables
-            => Instructions
-                .SelectMany(i => new[] { i.DestArg, i.SrcArg1, i.SrcArg2 })
-                .Select(s => s.StripDeref())
-                .Select(Owner.InstructionArgumentToVariable)
-                .OfType<Variable>() // Removes null entries
-                .Distinct();
-    }
-
     public sealed class Parameter : VariableWithOwnType
     {
         public readonly int Index;
@@ -69,6 +45,7 @@ sealed class Function
 
     public readonly string Name;
     public readonly Dictionary<string, AssemblySection> AssemblySections;
+    public readonly Dictionary<string, MidLevelSection> MidLevelSections;
 
     public int TotalInstructionCount => AssemblySections.Values.Select(s => s.Instructions.Length).Sum();
 
@@ -267,6 +244,11 @@ sealed class Function
     {
         Name = name;
         AssemblySections = assemblySections;
+        MidLevelSections = new Dictionary<string, MidLevelSection>();
+        foreach (var kvp in assemblySections)
+        {
+            MidLevelSections.Add(kvp.Key, new MidLevelSection(kvp.Key));
+        }
         lookupDictionary.Add(name.ToLowerInvariant(), this);
     }
 

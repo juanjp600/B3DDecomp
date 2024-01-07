@@ -1,12 +1,13 @@
 ﻿using System.Diagnostics;
 using B3DDecompUtils;
 using B3DDecompUtils.Primitives;
+using Blitz3DDecomp.LowLevel;
 
 namespace Blitz3DDecomp.DecompilerSteps.Step3;
 
 static class BbCustomTypePropagation
 {
-    private static DeclType InstructionArgToCustomType(Function.AssemblySection section, string arg)
+    private static DeclType InstructionArgToCustomType(AssemblySection section, string arg)
     {
         var variable = section.Owner.InstructionArgumentToVariable(arg);
         if (variable is { DeclType: { IsCustomType: true, IsArrayType: false } })
@@ -35,7 +36,7 @@ static class BbCustomTypePropagation
         return true;
     }
 
-    private static bool HandleReturningCall(Function.AssemblySection section, Instruction instruction)
+    private static bool HandleReturningCall(AssemblySection section, Instruction instruction)
     {
         if (instruction.Name != "call") { return false; }
         if (!instruction.DestArg.Contains("_builtIn__", StringComparison.OrdinalIgnoreCase)) { return false; }
@@ -76,7 +77,7 @@ static class BbCustomTypePropagation
         return false;
     }
 
-    private static bool HandleStoreCall(Function.AssemblySection section, Instruction instruction)
+    private static bool HandleStoreCall(AssemblySection section, Instruction instruction)
     {
         if (instruction.Name != "call") { return false; }
         if (!instruction.DestArg.Contains("_builtIn__", StringComparison.OrdinalIgnoreCase)) { return false; }
@@ -121,7 +122,7 @@ static class BbCustomTypePropagation
         return false;
     }
 
-    private static bool ProcessSection(Function.AssemblySection section)
+    private static bool ProcessSection(AssemblySection section)
     {
         bool somethingChanged = false;
         foreach (var instruction in section.Instructions)

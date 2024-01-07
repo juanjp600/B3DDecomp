@@ -1,5 +1,6 @@
 ﻿using System.Diagnostics;
 using B3DDecompUtils;
+using Blitz3DDecomp.LowLevel;
 
 namespace Blitz3DDecomp.DecompilerSteps.Step4;
 
@@ -13,7 +14,7 @@ static class GuessIntFromInstructions
         Logger.WriteLine($"{function}: {variable.Name} is probably {variable.DeclType} because {reason}");
     }
 
-    private static void ProcessSection(Function.AssemblySection section)
+    private static void ProcessSection(AssemblySection section)
     {
         foreach (var instruction in section.Instructions)
         {

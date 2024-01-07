@@ -1,10 +1,11 @@
 ﻿using B3DDecompUtils;
+using Blitz3DDecomp.LowLevel;
 
 namespace Blitz3DDecomp.DecompilerSteps.Step2;
 
 static class HandleUnambiguousIntegerInstructions
 {
-    private static void ProcessSection(Function.AssemblySection section)
+    private static void ProcessSection(AssemblySection section)
     {
         foreach (var instruction in section.Instructions)
         {

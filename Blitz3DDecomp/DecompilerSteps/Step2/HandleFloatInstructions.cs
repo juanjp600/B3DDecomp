@@ -1,10 +1,11 @@
 ﻿using B3DDecompUtils;
+using Blitz3DDecomp.LowLevel;
 
 namespace Blitz3DDecomp.DecompilerSteps.Step2;
 
 static class HandleFloatInstructions
 {
-    private static void ProcessSection(Function.AssemblySection section)
+    private static void ProcessSection(AssemblySection section)
     {
         for (var i = 1; i < section.Instructions.Length - 1; i++)
         {

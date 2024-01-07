@@ -1,4 +1,6 @@
-﻿namespace Blitz3DDecomp.DecompilerSteps.Step1;
+﻿using Blitz3DDecomp.LowLevel;
+
+namespace Blitz3DDecomp.DecompilerSteps.Step1;
 
 static class LocationToVarRewrite
 {
@@ -95,7 +97,7 @@ static class LocationToVarRewrite
         }
     }
 
-    private static void ProcessSection(TempTracker tempTracker, Function.AssemblySection section)
+    private static void ProcessSection(TempTracker tempTracker, AssemblySection section)
     {
         IReadOnlyList<Instruction> instructions = section.Instructions;
         if (instructions.Count >= 7

@@ -6,6 +6,7 @@ using Blitz3DDecomp.DecompilerSteps.Step1;
 using Blitz3DDecomp.DecompilerSteps.Step2;
 using Blitz3DDecomp.DecompilerSteps.Step3;
 using Blitz3DDecomp.DecompilerSteps.Step4;
+using Blitz3DDecomp.DecompilerSteps.Step5;
 
 internal static class Program
 {
@@ -15,14 +16,41 @@ internal static class Program
         string decompPath = disasmPath.Replace("_disasm", "_decomp");
         if (Directory.Exists(decompPath)) { Directory.Delete(decompPath, true); }
         Directory.CreateDirectory(decompPath);
-        
+
         Step0(disasmPath, decompPath);
         Step1();
         Step2();
         Step3();
         Step4();
 
-        WriteDebugDir(decompPath);
+        var referencedFunctions = new HashSet<Function>();
+        var functionsToCheck = new HashSet<Function>();
+        functionsToCheck.Add(Function.GetFunctionByName("EntryPoint"));
+        while (functionsToCheck.Count > 0)
+        {
+            var functionsCurrentlyChecking = functionsToCheck.ToArray();
+            referencedFunctions.UnionWith(functionsCurrentlyChecking);
+            functionsToCheck.Clear();
+            foreach (var function in functionsCurrentlyChecking)
+            {
+                foreach (var section in function.AssemblySections.Values)
+                {
+                    foreach (var instruction in section.Instructions)
+                    {
+                        if (instruction.Name != "call") { continue; }
+
+                        var callee = Function.GetFunctionByName(instruction.DestArg);
+                        if (referencedFunctions.Contains(callee)) { continue; }
+
+                        functionsToCheck.Add(callee);
+                    }
+                }
+            }
+        }
+
+        Step5(referencedFunctions);
+
+        WriteDebugDir(referencedFunctions, decompPath);
 
         Logger.End();
     }
@@ -141,36 +169,20 @@ internal static class Program
         GuessIntFromNothing.Execute();
     }
 
-    private static void WriteDebugDir(string decompPath)
+    private static void Step5(IEnumerable<Function> referencedFunctions)
+    {
+        var functionsWithAssemblySections = referencedFunctions.Where(f => f.AssemblySections.Any()).ToArray();
+        foreach (var function in functionsWithAssemblySections)
+        {
+            MidLevelGen.Process(function);
+        }
+    }
+
+    private static void WriteDebugDir(IEnumerable<Function> referencedFunctions, string decompPath)
     {
         var debugDir = $"{decompPath}DebugDir/";
         if (Directory.Exists(debugDir)) { Directory.Delete(debugDir); }
         Directory.CreateDirectory(debugDir);
-
-        var referencedFunctions = new HashSet<Function>();
-        var functionsToCheck = new HashSet<Function>();
-        functionsToCheck.Add(Function.GetFunctionByName("EntryPoint"));
-        while (functionsToCheck.Count > 0)
-        {
-            var functionsCurrentlyChecking = functionsToCheck.ToArray();
-            referencedFunctions.UnionWith(functionsCurrentlyChecking);
-            functionsToCheck.Clear();
-            foreach (var function in functionsCurrentlyChecking)
-            {
-                foreach (var section in function.AssemblySections.Values)
-                {
-                    foreach (var instruction in section.Instructions)
-                    {
-                        if (instruction.Name != "call") { continue; }
-
-                        var callee = Function.GetFunctionByName(instruction.DestArg);
-                        if (referencedFunctions.Contains(callee)) { continue; }
-
-                        functionsToCheck.Add(callee);
-                    }
-                }
-            }
-        }
         
         var functionsWithAssemblySections = referencedFunctions.Where(f => f.AssemblySections.Count > 0).ToArray();
         foreach (var function in functionsWithAssemblySections)

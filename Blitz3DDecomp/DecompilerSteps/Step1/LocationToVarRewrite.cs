@@ -99,6 +99,8 @@ static class LocationToVarRewrite
 
     private static void ProcessSection(TempTracker tempTracker, AssemblySection section)
     {
+        if (section is { Name: "__MAIN", Owner.Name: "EntryPoint" }) { return; }
+
         IReadOnlyList<Instruction> instructions = section.Instructions;
         if (instructions.Count >= 7
             && instructions[3] is { Name: "push", DestArg: "ebp" }

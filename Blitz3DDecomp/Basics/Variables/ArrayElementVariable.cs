@@ -3,10 +3,12 @@ namespace Blitz3DDecomp;
 sealed class ArrayElementVariable : Variable
 {
     public readonly Variable Owner;
+    public readonly string Index;
 
     public ArrayElementVariable(Variable owner, string index) : base($"{owner.Name}[{index}]")
     {
         Owner = owner;
+        Index = index;
     }
 
     public override DeclType DeclType

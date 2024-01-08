@@ -26,7 +26,7 @@ public static class IngestCodeFiles
 
             var lines = File.ReadAllLines(filePath);
             string currentSectionName = "";
-            var newFunction = new Function(functionName, new Dictionary<string, AssemblySection>());
+            var newFunction = new Function(functionName);
             List<Instruction>? currentInstructions = null;
 
             void commitCurrentSection()

@@ -4,16 +4,19 @@ sealed class DimArray
 {
     public sealed class AccessVariable : Variable
     {
-        private readonly DimArray dimArray;
+        public readonly DimArray DimArray;
+        public readonly string Index;
+
         public AccessVariable(DimArray dimArray, string arrayIndex) : base($"{dimArray.Name}[{arrayIndex}]")
         {
-            this.dimArray = dimArray;
+            this.DimArray = dimArray;
+            this.Index = arrayIndex;
         }
 
         public override DeclType DeclType
         {
-            get => dimArray.ElementDeclType;
-            set => dimArray.ElementDeclType = value;
+            get => DimArray.ElementDeclType;
+            set => DimArray.ElementDeclType = value;
         }
 
         public override string ToInstructionArg()

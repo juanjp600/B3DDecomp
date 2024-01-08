@@ -1,3 +1,3 @@
 ﻿namespace Blitz3DDecomp.MidLevel;
 
-sealed record AssignmentStatement(Variable Destination, Expression Source) : Statement;
+sealed record AssignmentStatement(AccessExpression Destination, Expression Source) : Statement;

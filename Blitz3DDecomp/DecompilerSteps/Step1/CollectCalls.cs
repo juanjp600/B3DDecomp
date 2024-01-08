@@ -25,6 +25,7 @@ static class CollectCalls
         var function = Function.TryGetFunctionByName(functionName);
         if (function is { Parameters.Count: 0 })
         {
+            startInstruction.CallParameterAssignmentIndices = Array.Empty<int>();
             finalI = startIndex;
             return;
         }
@@ -117,7 +118,6 @@ static class CollectCalls
 
         startInstruction.CallParameterAssignmentIndices =
             foundArgs.OrderBy(kvp => kvp.Key).Select(kvp => kvp.Value).ToArray();
-        section.Instructions[startIndex] = startInstruction;
     }
 
     public static void Process(Function function)

@@ -225,7 +225,7 @@ sealed class Function
         return newFunction;
     }
 
-    public Function(string name, int argCount) : this(name, new Dictionary<string, AssemblySection>())
+    public Function(string name, int argCount) : this(name)
     {
         Parameters = Enumerable.Range(0, argCount)
             .Select(i => new Parameter($"arg{i}", i) { DeclType = DeclType.Unknown })
@@ -240,15 +240,11 @@ sealed class Function
         }
     }
 
-    public Function(string name, Dictionary<string, AssemblySection> assemblySections)
+    public Function(string name)
     {
         Name = name;
-        AssemblySections = assemblySections;
+        AssemblySections = new Dictionary<string, AssemblySection>();
         MidLevelSections = new Dictionary<string, MidLevelSection>();
-        foreach (var kvp in assemblySections)
-        {
-            MidLevelSections.Add(kvp.Key, new MidLevelSection(kvp.Key));
-        }
         lookupDictionary.Add(name.ToLowerInvariant(), this);
     }
 

@@ -137,7 +137,7 @@ static class BbCustomTypePropagation
     public static bool Process(Function function)
     {
         bool somethingChanged = false;
-        foreach (var section in function.AssemblySections.Values)
+        foreach (var section in function.AssemblySections)
         {
             somethingChanged |= ProcessSection(section);
         }

@@ -72,7 +72,7 @@ static class GuessFloatsFromConstants
 
     public static void Process(Function function)
     {
-        foreach (var section in function.AssemblySections.Values)
+        foreach (var section in function.AssemblySections)
         {
             ProcessSection(section);
         }

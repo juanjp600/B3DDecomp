@@ -40,7 +40,7 @@ static class VectorTypeDeduction
 
     public static void Process(Function function)
     {
-        foreach (var section in function.AssemblySections.Values)
+        foreach (var section in function.AssemblySections)
         {
             ProcessSection(function, section);
         }

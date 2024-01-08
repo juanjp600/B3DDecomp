@@ -34,9 +34,8 @@ static class LibCallCleanup
     
     public static void Process(Function function)
     {
-        foreach (var kvp in function.AssemblySections)
+        foreach (var section in function.AssemblySections)
         {
-            var section = kvp.Value;
             for (int i = 0; i < section.Instructions.Length; i++)
             {
                 var instruction = section.Instructions[i];

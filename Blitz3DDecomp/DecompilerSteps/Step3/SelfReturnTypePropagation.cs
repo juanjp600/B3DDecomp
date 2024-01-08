@@ -47,7 +47,7 @@ static class SelfReturnTypePropagation
     public static bool Process(Function function)
     {
         if (function.ReturnType != DeclType.Unknown) { return false; }
-        foreach (var section in function.AssemblySections.Values)
+        foreach (var section in function.AssemblySections)
         {
             ProcessSection(section);
             if (function.ReturnType != DeclType.Unknown) { return true; }

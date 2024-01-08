@@ -1,3 +1,6 @@
 ﻿namespace Blitz3DDecomp.MidLevel;
 
-abstract record Statement;
+abstract record Statement
+{
+    public abstract string StringRepresentation { get; }
+}

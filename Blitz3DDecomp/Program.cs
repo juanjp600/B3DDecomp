@@ -7,6 +7,7 @@ using Blitz3DDecomp.DecompilerSteps.Step2;
 using Blitz3DDecomp.DecompilerSteps.Step3;
 using Blitz3DDecomp.DecompilerSteps.Step4;
 using Blitz3DDecomp.DecompilerSteps.Step5;
+using Blitz3DDecomp.MidLevel;
 
 internal static class Program
 {
@@ -33,7 +34,7 @@ internal static class Program
             functionsToCheck.Clear();
             foreach (var function in functionsCurrentlyChecking)
             {
-                foreach (var section in function.AssemblySections.Values)
+                foreach (var section in function.AssemblySections)
                 {
                     foreach (var instruction in section.Instructions)
                     {
@@ -48,9 +49,11 @@ internal static class Program
             }
         }
 
+        WriteDebugDirLow(referencedFunctions, decompPath);
+
         Step5(referencedFunctions);
 
-        WriteDebugDir(referencedFunctions, decompPath);
+        WriteDebugDirMid(referencedFunctions, decompPath);
 
         Logger.End();
     }
@@ -169,18 +172,9 @@ internal static class Program
         GuessIntFromNothing.Execute();
     }
 
-    private static void Step5(IEnumerable<Function> referencedFunctions)
+    private static void WriteDebugDirLow(IEnumerable<Function> referencedFunctions, string decompPath)
     {
-        var functionsWithAssemblySections = referencedFunctions.Where(f => f.AssemblySections.Any()).ToArray();
-        foreach (var function in functionsWithAssemblySections)
-        {
-            MidLevelGen.Process(function);
-        }
-    }
-
-    private static void WriteDebugDir(IEnumerable<Function> referencedFunctions, string decompPath)
-    {
-        var debugDir = $"{decompPath}DebugDir/";
+        var debugDir = $"{decompPath}DebugDirLow/";
         if (Directory.Exists(debugDir)) { Directory.Delete(debugDir); }
         Directory.CreateDirectory(debugDir);
         
@@ -202,7 +196,7 @@ internal static class Program
                 var retVal = $"    {variable} {instructionArg}";
                 if (variable.DeclType == DeclType.Unknown)
                 {
-                    var numReferences = function.AssemblySections.Values.Sum(
+                    var numReferences = function.AssemblySections.Sum(
                         s => s.Instructions.Count(i =>
                             function.InstructionArgumentToVariable(i.DestArg) == variable
                             || function.InstructionArgumentToVariable(i.SrcArg1) == variable
@@ -238,7 +232,7 @@ internal static class Program
                 }
             }
 
-            var referencedGlobals = function.AssemblySections.Values.SelectMany(s => s.ReferencedGlobals).Distinct().ToArray();
+            var referencedGlobals = function.AssemblySections.SelectMany(s => s.ReferencedGlobals).Distinct().ToArray();
             if (referencedGlobals.Length > 0)
             {
                 writeLineToFile($"  {referencedGlobals.Length} referenced globals:");
@@ -250,7 +244,7 @@ internal static class Program
 
             writeLineToFile("");
             writeLineToFile("code:");
-            foreach (var section in function.AssemblySections.Values)
+            foreach (var section in function.AssemblySections)
             {
                 writeLineToFile($"  {section.Name}:");
                 for (var instrIndex = 0; instrIndex < section.Instructions.Length; instrIndex++)
@@ -262,6 +256,48 @@ internal static class Program
                     writeLineToFile($"    {prefix}: {instruction}");
                 }
                 writeLineToFile("");
+            }
+        }
+    }
+
+    private static void Step5(IEnumerable<Function> referencedFunctions)
+    {
+        var functionsWithAssemblySections = referencedFunctions.Where(f => f.AssemblySections.Any()).ToArray();
+        foreach (var function in functionsWithAssemblySections)
+        {
+            MidLevelGen.Process(function);
+            break;
+        }
+    }
+
+    private static void WriteDebugDirMid(IEnumerable<Function> referencedFunctions, string decompPath)
+    {
+        var debugDir = $"{decompPath}DebugDirMid/";
+        if (Directory.Exists(debugDir)) { Directory.Delete(debugDir); }
+        Directory.CreateDirectory(debugDir);
+        
+        var functionsWithMidLevelSections = referencedFunctions.Where(f => f.MidLevelSections.Count > 0).ToArray();
+        foreach (var function in functionsWithMidLevelSections)
+        {
+            using var file = File.Create($"{debugDir}{function.Name}.txt");
+            
+            string indentation = "";
+            void writeLineToFile(string indent, string line)
+            {
+                file.Write(Encoding.UTF8.GetBytes($"{indent}{line}\n"));
+            }
+
+            writeLineToFile("", $"Function {function}");
+            indentation = "    ";
+            foreach (var section in function.MidLevelSections)
+            {
+                writeLineToFile("---- ", section.Name);
+                foreach (var statement in section.Statements)
+                {
+                    if (statement is NextStatement) { indentation = indentation[..^4]; }
+                    writeLineToFile(indentation, statement.StringRepresentation);
+                    if (statement is ForEachStatement) { indentation = indentation + "    "; }
+                }
             }
         }
     }

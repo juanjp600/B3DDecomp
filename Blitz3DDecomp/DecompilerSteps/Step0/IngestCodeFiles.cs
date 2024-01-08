@@ -36,7 +36,7 @@ public static class IngestCodeFiles
                 currentInstructions.RemoveAll(i => i.Name == "nop");
                 if (!string.IsNullOrWhiteSpace(currentSectionName))
                 {
-                    newFunction.AssemblySections[currentSectionName] = new AssemblySection(newFunction, currentSectionName, currentInstructions);
+                    newFunction.AddNewAssemblySection(new AssemblySection(newFunction, currentSectionName, currentInstructions));
                 }
             }
             foreach (var line in lines)

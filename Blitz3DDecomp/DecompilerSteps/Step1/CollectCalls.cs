@@ -122,14 +122,13 @@ static class CollectCalls
 
     public static void Process(Function function)
     {
-        foreach (var kvp in function.AssemblySections)
+        foreach (var section in function.AssemblySections)
         {
-            var instructions = kvp.Value;
-            for (int i = instructions.Instructions.Length - 1; i >= 0; i--)
+            for (int i = section.Instructions.Length - 1; i >= 0; i--)
             {
-                var instruction = instructions.Instructions[i];
+                var instruction = section.Instructions[i];
                 if (instruction.Name != "call") { continue; }
-                CrawlUp(instructions, i, out var espDiff, out i, 0);
+                CrawlUp(section, i, out var espDiff, out i, 0);
             }
         }
     }

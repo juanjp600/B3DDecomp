@@ -44,10 +44,17 @@ sealed class Function
     }
 
     public readonly string Name;
-    public readonly Dictionary<string, AssemblySection> AssemblySections;
-    public readonly Dictionary<string, MidLevelSection> MidLevelSections;
+    private readonly List<AssemblySection> assemblySections;
+    private readonly List<MidLevelSection> midLevelSections;
+    private readonly Dictionary<string, AssemblySection> assemblySectionsByName;
+    private readonly Dictionary<string, MidLevelSection> midLevelSectionsByName;
 
-    public int TotalInstructionCount => AssemblySections.Values.Select(s => s.Instructions.Length).Sum();
+    public IReadOnlyList<AssemblySection> AssemblySections => assemblySections;
+    public IReadOnlyDictionary<string, AssemblySection> AssemblySectionsByName => assemblySectionsByName;
+    public IReadOnlyList<MidLevelSection> MidLevelSections => midLevelSections;
+    public IReadOnlyDictionary<string, MidLevelSection> MidLevelSectionsByName => midLevelSectionsByName;
+
+    public int TotalInstructionCount => AssemblySections.Select(s => s.Instructions.Length).Sum();
 
     public static ICollection<Function> AllFunctions => lookupDictionary.Values;
 
@@ -243,9 +250,21 @@ sealed class Function
     public Function(string name)
     {
         Name = name;
-        AssemblySections = new Dictionary<string, AssemblySection>();
-        MidLevelSections = new Dictionary<string, MidLevelSection>();
+        assemblySections = new List<AssemblySection>();
+        midLevelSections = new List<MidLevelSection>();
+        assemblySectionsByName = new Dictionary<string, AssemblySection>();
+        midLevelSectionsByName = new Dictionary<string, MidLevelSection>();
         lookupDictionary.Add(name.ToLowerInvariant(), this);
+    }
+
+    public void AddNewAssemblySection(AssemblySection assemblySection)
+    {
+        assemblySections.Add(assemblySection);
+        assemblySectionsByName[assemblySection.Name] = assemblySection;
+
+        var newMidLevelSection = new MidLevelSection(assemblySection.Name);
+        midLevelSections.Add(newMidLevelSection);
+        midLevelSectionsByName[newMidLevelSection.Name] = newMidLevelSection;
     }
 
     public override string ToString()

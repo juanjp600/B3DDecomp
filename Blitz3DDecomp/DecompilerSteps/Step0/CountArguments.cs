@@ -7,7 +7,7 @@ static class CountArguments
     public static void Process(Function function)
     {
         if (!function.AssemblySections.Any()) { return; }
-        var leaveSection = function.AssemblySections.Last(kvp => kvp.Key.Contains($"_leave{function.CoreSymbolName}")).Value;
+        var leaveSection = function.AssemblySections.Last(s => s.Name.Contains($"_leave{function.CoreSymbolName}", StringComparison.Ordinal));
         var retInstruction = leaveSection.Instructions[^1];
         var retValueStr = retInstruction.DestArg[2..];
         var retValue = int.Parse(retValueStr, NumberStyles.HexNumber);

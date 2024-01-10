@@ -3,7 +3,7 @@ using System.Diagnostics;
 using System.Globalization;
 using B3DDecompUtils;
 using Blitz3DDecomp.LowLevel;
-using Blitz3DDecomp.MidLevel;
+using Blitz3DDecomp.HighLevel;
 
 namespace Blitz3DDecomp;
 

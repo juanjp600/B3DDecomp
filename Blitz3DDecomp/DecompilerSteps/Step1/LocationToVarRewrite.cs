@@ -1,4 +1,5 @@
-﻿using Blitz3DDecomp.LowLevel;
+﻿using System.Security;
+using Blitz3DDecomp.LowLevel;
 
 namespace Blitz3DDecomp.DecompilerSteps.Step1;
 
@@ -43,25 +44,43 @@ static class LocationToVarRewrite
                 }
             }
 
-            void incrementIndex(string originalName)
+            string getIndexedName(string originalName)
+            {
+                int index = Indices.GetValueOrDefault(originalName, -1);
+
+                if (index < 0)
+                {
+                    return "";
+                }
+                return $"{originalName}_{index:X4}";
+            }
+            void incrementIndex(string originalName, DeclType type, out Function.DecompGeneratedTempVariable newVar)
             {
                 int index = Indices.TryGetValue(originalName, out var i) ? (i + 1) : 0;
                 Indices[originalName] = index;
 
-                var newVarName = $"{originalName}_{index:X4}";
-                function.DecompGeneratedTempVars.Add(newVarName, new Function.DecompGeneratedTempVariable(newVarName));
+                var newVarName = getIndexedName(originalName);
+                newVar = new Function.DecompGeneratedTempVariable(newVarName) { DeclType = type };
+                function.DecompGeneratedTempVars.Add(newVarName, newVar);
             }
 
-            replace(ref instruction.SrcArg1);
-            replace(ref instruction.SrcArg2);
+            void getLastVarForName(string originalName, DeclType type, out Function.DecompGeneratedTempVariable variable)
+            {
+                var indexedName = getIndexedName(originalName);
+                if (string.IsNullOrEmpty(indexedName))
+                {
+                    incrementIndex(originalName, type, out variable);
+                    return;
+                }
+
+                variable = function.DecompGeneratedTempVars[indexedName];
+            }
 
             switch (instruction.Name)
             {
                 case "call":
                 {
-                    incrementIndex("eax");
-                    var newVarName = $"eax_{Indices["eax"]:X4}";
-                    instruction.ReturnOutputVar = function.DecompGeneratedTempVars[newVarName];
+                    incrementIndex("eax", DeclType.Unknown, out instruction.ReturnOutputVar);
                     break;
                 }
                 case "mov" or "movzx" or "lea" or "pop" or "add":
@@ -70,12 +89,14 @@ static class LocationToVarRewrite
                     {
                         instruction.SrcArg2 = instruction.SrcArg1;
                         instruction.SrcArg1 = instruction.DestArg;
-                        replace(ref instruction.SrcArg1);
                     }
+
+                    replace(ref instruction.SrcArg1);
+                    replace(ref instruction.SrcArg2);
 
                     if (instruction.DestArg.IsRegister() && instruction.DestArg is not ("esp" or "ebp"))
                     {
-                        incrementIndex(instruction.DestArg);
+                        incrementIndex(instruction.DestArg, DeclType.Unknown, out _);
                     }
                     else
                     {
@@ -83,17 +104,49 @@ static class LocationToVarRewrite
                         {
                             if (instruction.DestArg == tempVar.ToInstructionArg())
                             {
-                                incrementIndex(tempVar.Name);
+                                incrementIndex(tempVar.Name, DeclType.Unknown, out _);
                                 break;
                             }
                         }
                     }
 
+                    replace(ref instruction.DestArg);
+                    break;
+                }
+                case "xchg":
+                {
+                    var destArg = instruction.DestArg;
+                    var srcArg = instruction.SrcArg1;
+
+                    replace(ref instruction.DestArg);
+                    replace(ref instruction.SrcArg1);
+
+                    incrementIndex(destArg, DeclType.Unknown, out instruction.XchgLhsPost);
+                    incrementIndex(srcArg, DeclType.Unknown, out instruction.XchgRhsPost);
+                    break;
+                }
+                case "cdq":
+                {
+                    getLastVarForName("eax", DeclType.Int, out instruction.SignExtensionValueVar);
+                    incrementIndex("edx", DeclType.Int, out instruction.SignExtensionSignVar);
+                    break;
+                }
+                case "idiv" or "div":
+                {
+                    replace(ref instruction.DestArg);
+
+                    getLastVarForName("eax", DeclType.Int, out instruction.DivResultVar);
+                    incrementIndex("edx", DeclType.Int, out instruction.DivRemainderVar);
+                    break;
+                }
+                default:
+                {
+                    replace(ref instruction.DestArg);
+                    replace(ref instruction.SrcArg1);
+                    replace(ref instruction.SrcArg2);
                     break;
                 }
             }
-
-            replace(ref instruction.DestArg);
         }
     }
 

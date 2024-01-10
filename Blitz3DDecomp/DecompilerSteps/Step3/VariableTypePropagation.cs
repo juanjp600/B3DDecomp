@@ -25,15 +25,30 @@ static class VariableTypePropagation
             }
         }
 
-        void handleMovLeaXchg(Instruction instruction)
+        void handleMovLea(Instruction instruction)
         {
-            if (instruction.Name is not ("mov" or "lea" or "xchg")) { return; }
+            if (instruction.Name is not ("mov" or "lea")) { return; }
 
             var destVar = section.Owner.InstructionArgumentToVariable(instruction.DestArg);
             var srcVar = section.Owner.InstructionArgumentToVariable(instruction.SrcArg1);
             if (destVar is null || srcVar is null) { return; }
 
             exchangeTypes(destVar, srcVar);
+        }
+
+        void handleXchg(Instruction instruction)
+        {
+            if (instruction.Name is not "xchg") { return; }
+
+            var lhsVarPrev = section.Owner.InstructionArgumentToVariable(instruction.DestArg);
+            var rhsVarPrev = section.Owner.InstructionArgumentToVariable(instruction.SrcArg1);
+            var lhsVarPost = instruction.XchgLhsPost;
+            var rhsVarPost = instruction.XchgRhsPost;
+
+            if (lhsVarPrev is null || rhsVarPrev is null || lhsVarPost is null || rhsVarPost is null) { return; }
+
+            exchangeTypes(rhsVarPost, lhsVarPrev);
+            exchangeTypes(lhsVarPost, rhsVarPrev);
         }
 
         void handleCmp(Instruction instruction)
@@ -65,12 +80,14 @@ static class VariableTypePropagation
         
         foreach (var instruction in section.Instructions)
         {
-            handleMovLeaXchg(instruction);
+            handleMovLea(instruction);
+            handleXchg(instruction);
             handleCmp(instruction);
         }
         foreach (var instruction in Enumerable.Reverse(section.Instructions))
         {
-            handleMovLeaXchg(instruction);
+            handleMovLea(instruction);
+            handleXchg(instruction);
             handleCmp(instruction);
         }
 

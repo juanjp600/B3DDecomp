@@ -7,7 +7,7 @@ using Blitz3DDecomp.DecompilerSteps.Step2;
 using Blitz3DDecomp.DecompilerSteps.Step3;
 using Blitz3DDecomp.DecompilerSteps.Step4;
 using Blitz3DDecomp.DecompilerSteps.Step5;
-using Blitz3DDecomp.MidLevel;
+using Blitz3DDecomp.HighLevel;
 
 internal static class Program
 {
@@ -133,7 +133,7 @@ internal static class Program
                 somethingChanged |= CalleeArgumentTypePropagation.Process(function);
                 somethingChanged |= CalleeReturnTypePropagation.Process(function);
                 somethingChanged |= SelfReturnTypePropagation.Process(function);
-                somethingChanged |= HandleIntegerAddAndSub.Process(function);
+                somethingChanged |= HandleIntegerSub.Process(function);
             }
             if (!somethingChanged) { break; }
         }
@@ -153,6 +153,7 @@ internal static class Program
         foreach (var function in functionsWithAssemblySections)
         {
             GuessFloatsFromConstants.Process(function);
+            GuessFloatsFromStoreInstructions.Process(function);
         }
 
         while (true)
@@ -164,7 +165,7 @@ internal static class Program
                 somethingChanged |= CalleeArgumentTypePropagation.Process(function);
                 somethingChanged |= CalleeReturnTypePropagation.Process(function);
                 somethingChanged |= SelfReturnTypePropagation.Process(function);
-                somethingChanged |= HandleIntegerAddAndSub.Process(function);
+                somethingChanged |= HandleIntegerSub.Process(function);
             }
             if (!somethingChanged) { break; }
         }
@@ -266,7 +267,6 @@ internal static class Program
         foreach (var function in functionsWithAssemblySections)
         {
             MidLevelGen.Process(function);
-            break;
         }
     }
 
@@ -289,6 +289,10 @@ internal static class Program
 
             writeLineToFile("", $"Function {function}");
             indentation = "    ";
+            foreach (var local in function.LocalVariables)
+            {
+                writeLineToFile(indentation, $"Local {local.Name}{local.DeclType.Suffix}");
+            }
             foreach (var section in function.MidLevelSections)
             {
                 writeLineToFile("---- ", section.Name);

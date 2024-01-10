@@ -10,6 +10,15 @@ sealed class Instruction
     public int[]? CallParameterAssignmentIndices;
     public Function.DecompGeneratedTempVariable? ReturnOutputVar = null;
 
+    public Function.DecompGeneratedTempVariable? XchgLhsPost = null;
+    public Function.DecompGeneratedTempVariable? XchgRhsPost = null;
+
+    public Function.DecompGeneratedTempVariable? DivResultVar = null;
+    public Function.DecompGeneratedTempVariable? DivRemainderVar = null;
+
+    public Function.DecompGeneratedTempVariable? SignExtensionValueVar = null;
+    public Function.DecompGeneratedTempVariable? SignExtensionSignVar = null;
+
     public Instruction(string name, string destArg = "", string srcArg1 = "", string srcArg2 = "")
     {
         Name = name;

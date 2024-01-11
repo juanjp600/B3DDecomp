@@ -45,7 +45,7 @@ static class MidLevelGen
                 FieldVariable fieldVar
                     => new FieldAccessExpression(instructionArgToExpression(fieldVar.Owner.Name), fieldVar.TypeField),
                 ArrayElementVariable arrayElementVariable
-                    => new ArrayAccessExpression(instructionArgToExpression(arrayElementVariable.Owner.Name), indexStrToExpression(arrayElementVariable.Index)),
+                    => new ArrayAccessExpression(instructionArgToNonTempExpression(arrayElementVariable.Owner.Name), indexStrToExpression(arrayElementVariable.Index)),
                 DimArray.AccessVariable dimElementVar
                     => dimElementVar.DimArray.NumDimensions == 1
                         ? new DimAccessExpression(dimElementVar.DimArray, indexStrToExpression(dimElementVar.Index))
@@ -55,6 +55,18 @@ static class MidLevelGen
                 null
                     => new ConstantExpression(instructionArg.StripDeref())
             };
+        }
+
+        Expression instructionArgToNonTempExpression(string instructionArg)
+        {
+            var expression = instructionArgToExpression(instructionArg);
+
+            while (expression is VariableExpression { Variable: Function.DecompGeneratedTempVariable tempVar })
+            {
+                expression = context.TempToExpression[tempVar];
+            }
+
+            return expression;
         }
 
         Expression instructionArgToExpressionRecursive(string instructionArg)
@@ -73,7 +85,7 @@ static class MidLevelGen
             return expression.Map(reduceExpression);
         }
 
-        Variable? lastPotentialReturnVariable = null;
+        Expression? lastPotentialReturnExpression = null;
         Expression? lastCompareExpression = null;
         for (int i = 0; i < assemblySection.Instructions.Length; i++)
         {
@@ -86,12 +98,6 @@ static class MidLevelGen
             Expression st1;
 
             var instruction = assemblySection.Instructions[i];
-
-            /*bool anyReferencesAfterCurrentInstruction(Variable variable)
-                => assemblySection.Instructions.Skip(i + 1).Any(instr =>
-                    function.InstructionArgumentToVariable(instr.DestArg) == variable
-                    || function.InstructionArgumentToVariable(instr.SrcArg1) == variable
-                    || function.InstructionArgumentToVariable(instr.SrcArg2) == variable);*/
 
             void handleAssignmentToInstructionArg(string instructionArg, Expression srcExpression)
             {
@@ -118,7 +124,7 @@ static class MidLevelGen
                     {
                         midLevelSection.Statements.Add(new AssignmentStatement(new VariableExpression(destVar), srcExpression));
                     }
-                    if (destVar.Name.StartsWith("eax", StringComparison.Ordinal)) { lastPotentialReturnVariable = destVar; }
+                    if (destVar.Name.StartsWith("eax", StringComparison.Ordinal)) { lastPotentialReturnExpression = new VariableExpression(destVar); }
                 }
                 if (destVar is Function.DecompGeneratedTempVariable tempDestVar2)
                 {
@@ -160,9 +166,9 @@ static class MidLevelGen
                 case "jmp":
                     var jmpSection = function.MidLevelSectionsByName[instruction.DestArg[1..]];
                     if (jmpSection.Name.EndsWith($"_leave_f{function.Name}", StringComparison.Ordinal)
-                        && lastPotentialReturnVariable != null)
+                        && lastPotentialReturnExpression != null)
                     {
-                        midLevelSection.Statements.Add(new ReturnStatement(new VariableExpression(lastPotentialReturnVariable)));
+                        midLevelSection.Statements.Add(new ReturnStatement(lastPotentialReturnExpression));
                     }
                     else
                     {
@@ -301,7 +307,10 @@ static class MidLevelGen
                             or "_builtIn__bbAbs" or "_builtIn__bbFAbs"
                             or "_builtIn__bbSgn" or "_builtIn__bbFSgn"
                             or "_builtIn__bbFPow"
-                            or "_builtIn__bbStrConcat")
+                            or "_builtIn__bbStrConcat"
+                            or "_builtIn__bbStrToInt"
+                            or "_builtIn__bbStrToFloat"
+                            or "_builtIn__bbStrFromInt" or "_builtIn__bbStrFromFloat")
                     {
                         var arguments = new List<Expression>();
                         for (int j = 0; j < assignmentIndices.Length; j++)
@@ -310,14 +319,12 @@ static class MidLevelGen
                             arguments.Add(instructionArgToExpression(assignInstruction.SrcArg1));
                         }
 
-                        var outputExpression = new VariableExpression(returnOutputVar);
-                        handleAssignmentToVar(returnOutputVar, outputExpression);
                         if (callee.ReturnType == DeclType.Float)
                         {
-                            context.FloatStack.Push(outputExpression);
+                            context.FloatStack.Push(new VariableExpression(returnOutputVar));
                         }
                         var callExpression = new CallExpression(callee, arguments.ToArray());
-                        midLevelSection.Statements.Add(new AssignmentStatement(outputExpression, callExpression));
+                        handleAssignmentToVar(returnOutputVar, callExpression);
                     }
                     else if (callee.Name 
                         is "_builtIn__bbStrConst"
@@ -330,36 +337,12 @@ static class MidLevelGen
                         srcExpression = instructionArgToExpression(assignInstruction.SrcArg1);
                         handleAssignmentToVar(returnOutputVar, srcExpression);
                     }
-                    else if (callee.Name is "_builtIn__bbStrToInt")
-                    {
-                        var assignInstruction = function.Instructions[assignmentIndices[0]];
-                        srcExpression = instructionArgToExpression(assignInstruction.SrcArg1);
-                        handleAssignmentToVar(returnOutputVar, new ConvertToIntExpression(srcExpression));
-                    }
-                    else if (callee.Name is "_builtIn__bbStrToFloat")
-                    {
-                        var assignInstruction = function.Instructions[assignmentIndices[0]];
-                        srcExpression = instructionArgToExpression(assignInstruction.SrcArg1);
-                        context.FloatStack.Push(new ConvertToFloatExpression(srcExpression));
-                    }
-                    else if (callee.Name is "_builtIn__bbStrFromInt" or "_builtIn__bbStrFromFloat")
-                    {
-                        var assignInstruction = function.Instructions[assignmentIndices[0]];
-                        srcExpression = instructionArgToExpression(assignInstruction.SrcArg1);
-                        handleAssignmentToVar(returnOutputVar, new ConvertToStringExpression(srcExpression));
-                    }
                     else if (callee.Name is "_builtIn__bbStrStore" or "_builtIn__bbObjStore")
                     {
                         var destAssignInstruction = function.Instructions[assignmentIndices[0]];
-                        lhsExpression = instructionArgToExpression(destAssignInstruction.SrcArg1);
-                        if (lhsExpression is not AccessExpression accessExpression)
-                        {
-                            throw new Exception($"{destAssignInstruction.SrcArg1} does not resolve to an access expression");
-                        }
-
                         var srcAssignInstruction = function.Instructions[assignmentIndices[1]];
-                        rhsExpression = instructionArgToExpression(srcAssignInstruction.SrcArg1);
-                        midLevelSection.Statements.Add(new AssignmentStatement(accessExpression, rhsExpression));
+                        srcExpression = instructionArgToExpression(srcAssignInstruction.SrcArg1);
+                        handleAssignmentToInstructionArg($"[{destAssignInstruction.SrcArg1}]", srcExpression);
                     }
                     else if (callee.Name == "_builtIn__bbObjNew")
                     {
@@ -619,7 +602,7 @@ static class MidLevelGen
 
                     st0 = context.FloatStack.Pop();
                     st1 = context.FloatStack.Pop();
-                    context.FloatStack.Push(instruction.Name switch
+                    st0 = instruction.Name switch
                     {
                         "faddp" => new AddExpression(st1, st0),
                         "fsubp" => new SubtractExpression(st1, st0),
@@ -628,7 +611,12 @@ static class MidLevelGen
                         "fdivp" => new DivideExpression(st1, st0),
                         "fdivrp" => new DivideExpression(st0, st1),
                         _ => throw new Exception("unreachable")
-                    });
+                    };
+                    if (function.ReturnType == DeclType.Float)
+                    {
+                        lastPotentialReturnExpression = st0;
+                    }
+                    context.FloatStack.Push(st0);
                     break;
                 case "fucompp":
                     var fnstswAxInstruction = assemblySection.Instructions[i + 1];
@@ -660,6 +648,12 @@ static class MidLevelGen
                     context.FloatStack.Push(srcExpression);
 
                     handleAssignmentToInstructionArg(nextInstruction.DestArg, srcExpression);
+
+                    if (function.ReturnType == DeclType.Float
+                        && function.InstructionArgumentToVariable(nextInstruction.DestArg) is { } destVar)
+                    {
+                        lastPotentialReturnExpression = new VariableExpression(destVar);
+                    }
                     break;
                 case "fstp" or "fistp":
                     nextInstruction = assemblySection.Instructions[i + 1];

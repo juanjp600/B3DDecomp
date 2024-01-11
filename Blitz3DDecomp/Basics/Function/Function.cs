@@ -48,6 +48,8 @@ sealed class Function
 
     public readonly ImmutableArray<AssemblySection> AssemblySections;
     public readonly ImmutableDictionary<string, AssemblySection> AssemblySectionsByName;
+
+    public List<Statement> HighLevelStatements;
     public readonly ImmutableArray<HighLevelSection> HighLevelSections;
     public readonly ImmutableDictionary<string, HighLevelSection> HighLevelSectionsByName;
 
@@ -256,8 +258,10 @@ sealed class Function
             prevIndex = section.StartIndex;
         }
         AssemblySections = constructedSections.ToImmutableArray();
-        HighLevelSections = AssemblySections.Select(s => new HighLevelSection(s.Name)).ToImmutableArray();
         AssemblySectionsByName = AssemblySections.ToImmutableDictionary(s => s.Name, s => s);
+
+        HighLevelStatements = new List<Statement>();
+        HighLevelSections = AssemblySections.Select(s => new HighLevelSection(this, s.Name)).ToImmutableArray();
         HighLevelSectionsByName = HighLevelSections.ToImmutableDictionary(s => s.Name, s => s);
         lookupDictionary.Add(name.ToLowerInvariant(), this);
     }

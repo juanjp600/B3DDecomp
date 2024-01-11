@@ -153,23 +153,24 @@ static class BasicLowToHighLevelConversion
 
             switch (instruction.Name)
             {
-                case "jz" or "je":
-                    highLevelSection.Statements.Add(new JumpIfZeroStatement(lastCompareExpression ?? throw new Exception($"No expression ready for {instruction}"), function.HighLevelSectionsByName[instruction.DestArg[1..]]));
-                    break;
-                case "jnz" or "jne":
-                    highLevelSection.Statements.Add(new JumpIfNotZeroStatement(lastCompareExpression ?? throw new Exception($"No expression ready for {instruction}"), function.HighLevelSectionsByName[instruction.DestArg[1..]]));
-                    break;
-                case "jge":
-                    highLevelSection.Statements.Add(new JumpIfGreaterThanOrEqualToZeroStatement(lastCompareExpression ?? throw new Exception($"No expression ready for {instruction}"), function.HighLevelSectionsByName[instruction.DestArg[1..]]));
-                    break;
-                case "jg":
-                    highLevelSection.Statements.Add(new JumpIfGreaterThanZeroStatement(lastCompareExpression ?? throw new Exception($"No expression ready for {instruction}"), function.HighLevelSectionsByName[instruction.DestArg[1..]]));
-                    break;
-                case "jle":
-                    highLevelSection.Statements.Add(new JumpIfLessThanOrEqualToZeroStatement(lastCompareExpression ?? throw new Exception($"No expression ready for {instruction}"), function.HighLevelSectionsByName[instruction.DestArg[1..]]));
-                    break;
-                case "jl":
-                    highLevelSection.Statements.Add(new JumpIfLessThanZeroStatement(lastCompareExpression ?? throw new Exception($"No expression ready for {instruction}"), function.HighLevelSectionsByName[instruction.DestArg[1..]]));
+                case "jz" or "je"
+                        or "jnz" or "jne"
+                        or "jg"
+                        or "jge"
+                        or "jl"
+                        or "jle":
+                    if (lastCompareExpression is null) { throw new Exception($"No expression ready for {instruction}"); }
+
+                    highLevelSection.Statements.Add(new JumpIfExpression(instruction.Name switch
+                    {
+                        "jz" or "je" => new OneIfZeroExpression(lastCompareExpression),
+                        "jnz" or "jne" => new OneIfNotZeroExpression(lastCompareExpression),
+                        "jg" => new OneIfGreaterThanZeroExpression(lastCompareExpression),
+                        "jge" => new OneIfGreaterThanOrEqualToZeroExpression(lastCompareExpression),
+                        "jl" => new OneIfLessThanZeroExpression(lastCompareExpression),
+                        "jle" => new OneIfLessThanOrEqualToZeroExpression(lastCompareExpression),
+                        _ => throw new Exception("unreachable")
+                    }, function.HighLevelSectionsByName[instruction.DestArg[1..]]));
                     break;
                 case "jmp":
                     var jmpSection = function.HighLevelSectionsByName[instruction.DestArg[1..]];

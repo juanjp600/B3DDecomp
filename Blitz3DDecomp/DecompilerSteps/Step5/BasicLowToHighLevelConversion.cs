@@ -4,7 +4,7 @@ using Blitz3DDecomp.HighLevel;
 
 namespace Blitz3DDecomp.DecompilerSteps.Step5;
 
-static class MidLevelGen
+static class BasicLowToHighLevelConversion
 {
     private readonly record struct DimSizeAssignment(DimArray Array, int Dimension);
 
@@ -21,7 +21,7 @@ static class MidLevelGen
         if (sectionName == "__MAIN" && function.Name == "EntryPoint") { return; }
         if (sectionName.StartsWith("SGNZERO", StringComparison.Ordinal)) { return; }
         var assemblySection = function.AssemblySectionsByName[sectionName];
-        var midLevelSection = function.MidLevelSectionsByName[sectionName];
+        var highLevelSection = function.HighLevelSectionsByName[sectionName];
 
         if (assemblySection.Instructions.Any(i => i.Name == "ret")) { return; }
 
@@ -119,11 +119,11 @@ static class MidLevelGen
                         && destVar is Function.DecompGeneratedTempVariable tempDestVar1
                         && context.TempToExpression[tempDestVar1] is AccessExpression accessExpression)
                     {
-                        midLevelSection.Statements.Add(new AssignmentStatement(accessExpression, srcExpression));
+                        highLevelSection.Statements.Add(new AssignmentStatement(accessExpression, srcExpression));
                     }
                     else
                     {
-                        midLevelSection.Statements.Add(new AssignmentStatement(new VariableExpression(destVar), srcExpression));
+                        highLevelSection.Statements.Add(new AssignmentStatement(new VariableExpression(destVar), srcExpression));
                     }
                     if (destVar.Name.StartsWith("eax", StringComparison.Ordinal)) { lastPotentialReturnExpression = new VariableExpression(destVar); }
                 }
@@ -154,33 +154,33 @@ static class MidLevelGen
             switch (instruction.Name)
             {
                 case "jz" or "je":
-                    midLevelSection.Statements.Add(new JumpIfZeroStatement(lastCompareExpression ?? throw new Exception($"No expression ready for {instruction}"), function.MidLevelSectionsByName[instruction.DestArg[1..]]));
+                    highLevelSection.Statements.Add(new JumpIfZeroStatement(lastCompareExpression ?? throw new Exception($"No expression ready for {instruction}"), function.HighLevelSectionsByName[instruction.DestArg[1..]]));
                     break;
                 case "jnz" or "jne":
-                    midLevelSection.Statements.Add(new JumpIfNotZeroStatement(lastCompareExpression ?? throw new Exception($"No expression ready for {instruction}"), function.MidLevelSectionsByName[instruction.DestArg[1..]]));
+                    highLevelSection.Statements.Add(new JumpIfNotZeroStatement(lastCompareExpression ?? throw new Exception($"No expression ready for {instruction}"), function.HighLevelSectionsByName[instruction.DestArg[1..]]));
                     break;
                 case "jge":
-                    midLevelSection.Statements.Add(new JumpIfGreaterThanOrEqualToZeroStatement(lastCompareExpression ?? throw new Exception($"No expression ready for {instruction}"), function.MidLevelSectionsByName[instruction.DestArg[1..]]));
+                    highLevelSection.Statements.Add(new JumpIfGreaterThanOrEqualToZeroStatement(lastCompareExpression ?? throw new Exception($"No expression ready for {instruction}"), function.HighLevelSectionsByName[instruction.DestArg[1..]]));
                     break;
                 case "jg":
-                    midLevelSection.Statements.Add(new JumpIfGreaterThanZeroStatement(lastCompareExpression ?? throw new Exception($"No expression ready for {instruction}"), function.MidLevelSectionsByName[instruction.DestArg[1..]]));
+                    highLevelSection.Statements.Add(new JumpIfGreaterThanZeroStatement(lastCompareExpression ?? throw new Exception($"No expression ready for {instruction}"), function.HighLevelSectionsByName[instruction.DestArg[1..]]));
                     break;
                 case "jle":
-                    midLevelSection.Statements.Add(new JumpIfLessThanOrEqualToZeroStatement(lastCompareExpression ?? throw new Exception($"No expression ready for {instruction}"), function.MidLevelSectionsByName[instruction.DestArg[1..]]));
+                    highLevelSection.Statements.Add(new JumpIfLessThanOrEqualToZeroStatement(lastCompareExpression ?? throw new Exception($"No expression ready for {instruction}"), function.HighLevelSectionsByName[instruction.DestArg[1..]]));
                     break;
                 case "jl":
-                    midLevelSection.Statements.Add(new JumpIfLessThanZeroStatement(lastCompareExpression ?? throw new Exception($"No expression ready for {instruction}"), function.MidLevelSectionsByName[instruction.DestArg[1..]]));
+                    highLevelSection.Statements.Add(new JumpIfLessThanZeroStatement(lastCompareExpression ?? throw new Exception($"No expression ready for {instruction}"), function.HighLevelSectionsByName[instruction.DestArg[1..]]));
                     break;
                 case "jmp":
-                    var jmpSection = function.MidLevelSectionsByName[instruction.DestArg[1..]];
+                    var jmpSection = function.HighLevelSectionsByName[instruction.DestArg[1..]];
                     if (jmpSection.Name.EndsWith($"_leave_f{function.Name}", StringComparison.Ordinal)
                         && lastPotentialReturnExpression != null)
                     {
-                        midLevelSection.Statements.Add(new ReturnStatement(lastPotentialReturnExpression));
+                        highLevelSection.Statements.Add(new ReturnStatement(lastPotentialReturnExpression));
                     }
                     else
                     {
-                        midLevelSection.Statements.Add(new UnconditionalJumpStatement(jmpSection));
+                        highLevelSection.Statements.Add(new UnconditionalJumpStatement(jmpSection));
                     }
                     break;
                 case "setz" or "sete":
@@ -365,7 +365,7 @@ static class MidLevelGen
                             var sizeAssignmentVariable = context.VarToDimSizeAssignment.First(kvp => kvp.Value.Array == dim && kvp.Value.Dimension == j);
                             sizeAssignmentExpressions[j] = instructionArgToExpression(sizeAssignmentVariable.Key.Name);
                         }
-                        midLevelSection.Statements.Add(new AllocateDimStatement(dim, sizeAssignmentExpressions));
+                        highLevelSection.Statements.Add(new AllocateDimStatement(dim, sizeAssignmentExpressions));
                     }
                     else if (callee.Name == "_builtIn__bbVecAlloc")
                     {
@@ -391,7 +391,7 @@ static class MidLevelGen
                             throw new Exception($"{srcAssignInstruction.SrcArg1} does not resolve to a type");
                         }
 
-                        midLevelSection.Statements.Add(new ForEachStatement(accessExpression, CustomType.GetTypeWithName(typeName[3..])));
+                        highLevelSection.Statements.Add(new ForEachStatement(accessExpression, CustomType.GetTypeWithName(typeName[3..])));
 
                         var andInstruction = assemblySection.Instructions[i + 1];
                         var jzInstruction = assemblySection.Instructions[i + 2];
@@ -406,7 +406,7 @@ static class MidLevelGen
                     }
                     else if (callee.Name is "_builtIn__bbObjEachNext" or "_builtIn__bbObjEachNext2")
                     {
-                        midLevelSection.Statements.Add(new NextStatement());
+                        highLevelSection.Statements.Add(new NextStatement());
 
                         var andInstruction = assemblySection.Instructions[i + 1];
                         var jnzInstruction = assemblySection.Instructions[i + 2];
@@ -450,7 +450,7 @@ static class MidLevelGen
                         if (offsetExpression is AddExpression { Lhs: ConstantExpression { Value: "@__DATA" }, Rhs: ConstantExpression { Value: var offsetStr } }
                             && offsetStr.TryHexToUint32(out var offset))
                         {
-                            midLevelSection.Statements.Add(new RestoreStatement($"DATA_{offset:X8}"));
+                            highLevelSection.Statements.Add(new RestoreStatement($"DATA_{offset:X8}"));
                         }
                         else
                         {
@@ -483,7 +483,7 @@ static class MidLevelGen
                         var objectAssignInstruction = function.Instructions[assignmentIndices[0]];
                         var objectExpression = instructionArgToExpression(objectAssignInstruction.SrcArg1);
 
-                        midLevelSection.Statements.Add(new DestructorStatement(objectExpression));
+                        highLevelSection.Statements.Add(new DestructorStatement(objectExpression));
                     }
                     else if (callee.Name == "_builtIn__bbObjInsBefore")
                     {
@@ -492,7 +492,7 @@ static class MidLevelGen
                         var objectThatComesAfterAssignInstruction = function.Instructions[assignmentIndices[1]];
                         var objectThatComesAfterExpression = instructionArgToExpression(objectThatComesAfterAssignInstruction.SrcArg1);
 
-                        midLevelSection.Statements.Add(new InsertBeforeStatement(objectToInsertExpression, objectThatComesAfterExpression));
+                        highLevelSection.Statements.Add(new InsertBeforeStatement(objectToInsertExpression, objectThatComesAfterExpression));
                     }
                     else if (callee.Name == "_builtIn__bbObjInsAfter")
                     {
@@ -501,7 +501,7 @@ static class MidLevelGen
                         var objectThatComesBeforeAssignInstruction = function.Instructions[assignmentIndices[1]];
                         var objectThatComesBeforeExpression = instructionArgToExpression(objectThatComesBeforeAssignInstruction.SrcArg1);
 
-                        midLevelSection.Statements.Add(new InsertAfterStatement(objectToInsertExpression, objectThatComesBeforeExpression));
+                        highLevelSection.Statements.Add(new InsertAfterStatement(objectToInsertExpression, objectThatComesBeforeExpression));
                     }
                     else if (callee.Name == "_builtIn__bbObjDeleteEach")
                     {
@@ -513,7 +513,7 @@ static class MidLevelGen
                             throw new Exception($"{typeAssignInstruction.SrcArg1} does not resolve to a type");
                         }
                         var customType = CustomType.GetTypeWithName(typeName[3..]);
-                        midLevelSection.Statements.Add(new DeleteEachStatement(customType));
+                        highLevelSection.Statements.Add(new DeleteEachStatement(customType));
                     }
                     else if (callee.Name == "_builtIn__bbObjNext")
                     {

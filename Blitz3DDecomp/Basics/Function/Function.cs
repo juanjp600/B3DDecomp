@@ -48,8 +48,8 @@ sealed class Function
 
     public readonly ImmutableArray<AssemblySection> AssemblySections;
     public readonly ImmutableDictionary<string, AssemblySection> AssemblySectionsByName;
-    public readonly ImmutableArray<MidLevelSection> MidLevelSections;
-    public readonly ImmutableDictionary<string, MidLevelSection> MidLevelSectionsByName;
+    public readonly ImmutableArray<HighLevelSection> HighLevelSections;
+    public readonly ImmutableDictionary<string, HighLevelSection> HighLevelSectionsByName;
 
     public static ICollection<Function> AllFunctions => lookupDictionary.Values;
 
@@ -256,9 +256,9 @@ sealed class Function
             prevIndex = section.StartIndex;
         }
         AssemblySections = constructedSections.ToImmutableArray();
-        MidLevelSections = AssemblySections.Select(s => new MidLevelSection(s.Name)).ToImmutableArray();
+        HighLevelSections = AssemblySections.Select(s => new HighLevelSection(s.Name)).ToImmutableArray();
         AssemblySectionsByName = AssemblySections.ToImmutableDictionary(s => s.Name, s => s);
-        MidLevelSectionsByName = MidLevelSections.ToImmutableDictionary(s => s.Name, s => s);
+        HighLevelSectionsByName = HighLevelSections.ToImmutableDictionary(s => s.Name, s => s);
         lookupDictionary.Add(name.ToLowerInvariant(), this);
     }
 

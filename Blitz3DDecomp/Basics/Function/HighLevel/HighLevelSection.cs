@@ -1,11 +1,11 @@
 ﻿namespace Blitz3DDecomp.HighLevel;
 
-sealed class MidLevelSection
+sealed class HighLevelSection
 {
     public readonly string Name;
     public readonly List<Statement> Statements = new List<Statement>();
 
-    public MidLevelSection(string name)
+    public HighLevelSection(string name)
     {
         Name = name;
     }

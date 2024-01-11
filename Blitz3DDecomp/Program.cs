@@ -266,7 +266,7 @@ internal static class Program
         var functionsWithAssemblySections = referencedFunctions.Where(f => f.AssemblySections.Any()).ToArray();
         foreach (var function in functionsWithAssemblySections)
         {
-            MidLevelGen.Process(function);
+            BasicLowToHighLevelConversion.Process(function);
         }
     }
 
@@ -276,8 +276,8 @@ internal static class Program
         if (Directory.Exists(debugDir)) { Directory.Delete(debugDir); }
         Directory.CreateDirectory(debugDir);
         
-        var functionsWithMidLevelSections = referencedFunctions.Where(f => f.MidLevelSections.Length > 0).ToArray();
-        foreach (var function in functionsWithMidLevelSections)
+        var functionsWithHighLevelSections = referencedFunctions.Where(f => f.HighLevelSections.Length > 0).ToArray();
+        foreach (var function in functionsWithHighLevelSections)
         {
             using var file = File.Create($"{debugDir}{function.Name}.txt");
             
@@ -293,7 +293,7 @@ internal static class Program
             {
                 writeLineToFile(indentation, $"Local {local.Name}{local.DeclType.Suffix}");
             }
-            foreach (var section in function.MidLevelSections)
+            foreach (var section in function.HighLevelSections)
             {
                 writeLineToFile("---- ", section.Name);
                 foreach (var statement in section.Statements)

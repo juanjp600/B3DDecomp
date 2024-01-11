@@ -161,7 +161,7 @@ static class BasicLowToHighLevelConversion
                         or "jle":
                     if (lastCompareExpression is null) { throw new Exception($"No expression ready for {instruction}"); }
 
-                    highLevelSection.Statements.Add(new JumpIfExpression(instruction.Name switch
+                    highLevelSection.Statements.Add(new JumpIfExpressionStatement(instruction.Name switch
                     {
                         "jz" or "je" => new OneIfZeroExpression(lastCompareExpression),
                         "jnz" or "jne" => new OneIfNotZeroExpression(lastCompareExpression),

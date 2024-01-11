@@ -9,4 +9,7 @@ sealed record ConstructorExpression(CustomType Type) : Expression
     {
         return mapper(this);
     }
+
+    public override IEnumerable<Expression> InnerExpressions
+        => Enumerable.Empty<Expression>();
 }

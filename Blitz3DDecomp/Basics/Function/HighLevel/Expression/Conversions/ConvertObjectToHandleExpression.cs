@@ -9,4 +9,6 @@ sealed record ConvertObjectToHandleExpression(Expression ObjectExpression) : Exp
     {
         return mapper(new ConvertObjectToHandleExpression(ObjectExpression.Map(mapper)));
     }
+
+    public override IEnumerable<Expression> InnerExpressions { get; } = new[] { ObjectExpression };
 }

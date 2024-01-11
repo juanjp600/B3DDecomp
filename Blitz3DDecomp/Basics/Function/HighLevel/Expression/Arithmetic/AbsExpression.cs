@@ -9,4 +9,6 @@ sealed record AbsExpression(Expression OriginalExpression) : Expression
     {
         return mapper(new AbsExpression(OriginalExpression.Map(mapper)));
     }
+
+    public override IEnumerable<Expression> InnerExpressions { get; } = new[] { OriginalExpression };
 }

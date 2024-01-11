@@ -10,4 +10,7 @@ sealed record LastOfTypeExpression(CustomType ObjectType) : Expression
     {
         return mapper(this);
     }
+
+    public override IEnumerable<Expression> InnerExpressions
+        => Enumerable.Empty<Expression>();
 }

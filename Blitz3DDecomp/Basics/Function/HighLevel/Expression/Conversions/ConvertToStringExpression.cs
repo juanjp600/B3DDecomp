@@ -9,4 +9,6 @@ sealed record ConvertToStringExpression(Expression OriginalExpression) : Express
     {
         return mapper(new ConvertToStringExpression(OriginalExpression.Map(mapper)));
     }
+
+    public override IEnumerable<Expression> InnerExpressions { get; } = new[] { OriginalExpression };
 }

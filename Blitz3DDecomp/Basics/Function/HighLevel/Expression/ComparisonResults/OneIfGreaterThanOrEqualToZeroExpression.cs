@@ -9,4 +9,6 @@ sealed record OneIfGreaterThanOrEqualToZeroExpression(Expression OriginalExpress
     {
         return mapper(new OneIfGreaterThanOrEqualToZeroExpression(OriginalExpression.Map(mapper)));
     }
+
+    public override IEnumerable<Expression> InnerExpressions { get; } = new[] { OriginalExpression };
 }

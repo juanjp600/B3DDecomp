@@ -7,4 +7,7 @@ sealed record VariableExpression(Variable Variable) : AccessExpression
 
     public override Expression Map(Func<Expression, Expression> mapper)
         => mapper(this);
+
+    public override IEnumerable<Expression> InnerExpressions
+        => Enumerable.Empty<Expression>();
 }

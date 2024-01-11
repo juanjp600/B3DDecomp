@@ -7,4 +7,6 @@ sealed record FieldAccessExpression(Expression Owner, CustomType.Field Field) : 
 
     public override Expression Map(Func<Expression, Expression> mapper)
         => mapper(new FieldAccessExpression(Owner.Map(mapper), Field));
+
+    public override IEnumerable<Expression> InnerExpressions { get; } = new[] { Owner };
 }

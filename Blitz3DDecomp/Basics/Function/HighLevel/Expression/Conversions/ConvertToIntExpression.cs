@@ -9,4 +9,6 @@ sealed record ConvertToIntExpression(Expression OriginalExpression) : Expression
     {
         return mapper(new ConvertToIntExpression(OriginalExpression.Map(mapper)));
     }
+
+    public override IEnumerable<Expression> InnerExpressions { get; } = new[] { OriginalExpression };
 }

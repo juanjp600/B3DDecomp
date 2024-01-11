@@ -9,4 +9,6 @@ sealed record BeforeExpression(Expression OriginalExpression) : Expression
     {
         return mapper(this);
     }
+
+    public override IEnumerable<Expression> InnerExpressions { get; } = new[] { OriginalExpression };
 }

@@ -9,4 +9,6 @@ sealed record ModuloExpression(Expression Lhs, Expression Rhs) : Expression
     {
         return mapper(new ModuloExpression(Lhs.Map(mapper), Rhs.Map(mapper)));
     }
+
+    public override IEnumerable<Expression> InnerExpressions { get; } = new[] { Lhs, Rhs };
 }

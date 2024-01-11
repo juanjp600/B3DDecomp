@@ -9,4 +9,6 @@ sealed record ShiftRightSignedExpression(Expression Lhs, Expression Rhs) : Expre
     {
         return mapper(new ShiftRightSignedExpression(Lhs.Map(mapper), Rhs.Map(mapper)));
     }
+
+    public override IEnumerable<Expression> InnerExpressions { get; } = new[] { Lhs, Rhs };
 }

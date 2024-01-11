@@ -9,4 +9,6 @@ sealed record ConvertToFloatExpression(Expression OriginalExpression) : Expressi
     {
         return mapper(new ConvertToFloatExpression(OriginalExpression.Map(mapper)));
     }
+
+    public override IEnumerable<Expression> InnerExpressions { get; } = new[] { OriginalExpression };
 }

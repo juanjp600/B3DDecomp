@@ -7,4 +7,7 @@ sealed record DimAccessExpression(DimArray Owner, params Expression[] Indices) :
 
     public override Expression Map(Func<Expression, Expression> mapper)
         => mapper(new DimAccessExpression(Owner, Indices.Select(i => i.Map(mapper)).ToArray()));
+
+    public override IEnumerable<Expression> InnerExpressions
+        => Enumerable.Empty<Expression>();
 }

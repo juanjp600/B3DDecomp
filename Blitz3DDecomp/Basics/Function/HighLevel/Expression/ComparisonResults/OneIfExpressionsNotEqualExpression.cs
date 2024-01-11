@@ -9,4 +9,6 @@ sealed record OneIfExpressionsNotEqualExpression(Expression Lhs, Expression Rhs)
     {
         return mapper(new OneIfExpressionsNotEqualExpression(Lhs.Map(mapper), Rhs.Map(mapper)));
     }
+
+    public override IEnumerable<Expression> InnerExpressions { get; } = new[] { Lhs, Rhs };
 }

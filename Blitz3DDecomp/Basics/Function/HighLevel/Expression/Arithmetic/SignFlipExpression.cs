@@ -9,4 +9,6 @@ sealed record SignFlipExpression(Expression OriginalExpression) : Expression
     {
         return mapper(new SignFlipExpression(OriginalExpression.Map(mapper)));
     }
+
+    public override IEnumerable<Expression> InnerExpressions { get; } = new[] { OriginalExpression };
 }

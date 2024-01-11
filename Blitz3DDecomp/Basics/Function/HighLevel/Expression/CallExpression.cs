@@ -9,4 +9,7 @@ sealed record CallExpression(Function Callee, params Expression[] Arguments) : E
     {
         return mapper(new CallExpression(Callee, Arguments.Select(a => a.Map(mapper)).ToArray()));
     }
+
+    public override IEnumerable<Expression> InnerExpressions
+        => Arguments;
 }

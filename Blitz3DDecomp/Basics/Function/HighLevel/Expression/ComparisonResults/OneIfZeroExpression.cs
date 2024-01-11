@@ -9,4 +9,6 @@ sealed record OneIfZeroExpression(Expression OriginalExpression) : Expression
     {
         return mapper(new OneIfZeroExpression(OriginalExpression.Map(mapper)));
     }
+
+    public override IEnumerable<Expression> InnerExpressions { get; } = new[] { OriginalExpression };
 }

@@ -384,7 +384,7 @@ static class MidLevelGen
                     else if (callee.Name is "_builtIn__bbObjEachFirst" or "_builtIn__bbObjEachFirst")
                     {
                         var destAssignInstruction = function.Instructions[assignmentIndices[0]];
-                        lhsExpression = instructionArgToExpression(destAssignInstruction.SrcArg1);
+                        lhsExpression = instructionArgToNonTempExpression(destAssignInstruction.SrcArg1);
                         if (lhsExpression is not AccessExpression accessExpression)
                         {
                             throw new Exception($"{destAssignInstruction.SrcArg1} does not resolve to an access expression");

@@ -60,13 +60,13 @@ static class HandleFloatInstructions
                         break;
                 }
 
-                if (oldPrevType == DeclType.Unknown && prevVariable?.DeclType != DeclType.Unknown)
+                if (oldPrevType == DeclType.Unknown && prevVariable != null && prevVariable.DeclType != DeclType.Unknown)
                 {
-                    Logger.WriteLine($"{section.Owner}: {prevVariable?.Name} is {prevVariable?.DeclType} because {instruction}");
+                    prevVariable.Trace = prevVariable.Trace.Append($"{section.Owner}: {prevVariable.Name} is {prevVariable.DeclType} because {instruction}");
                 }
-                if (oldNextType == DeclType.Unknown && nextVariable?.DeclType != DeclType.Unknown)
+                if (oldNextType == DeclType.Unknown && nextVariable != null && nextVariable.DeclType != DeclType.Unknown)
                 {
-                    Logger.WriteLine($"{section.Owner}: {nextVariable?.Name} is {nextVariable?.DeclType} because {instruction}");
+                    nextVariable.Trace = nextVariable.Trace.Append($"{section.Owner}: {nextVariable?.Name} is {nextVariable?.DeclType} because {instruction}");
                 }
             }
         }

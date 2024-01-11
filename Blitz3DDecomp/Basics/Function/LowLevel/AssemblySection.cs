@@ -4,13 +4,16 @@ sealed class AssemblySection
 {
     public readonly Function Owner;
     public readonly string Name;
-    public readonly Instruction[] Instructions = Array.Empty<Instruction>();
 
-    public AssemblySection(Function owner, string name, IReadOnlyList<Instruction> instructions)
+    public readonly Range InstructionRange;
+    public ReadOnlySpan<Instruction> Instructions
+        => Owner.Instructions.AsSpan()[InstructionRange];
+
+    public AssemblySection(Function owner, string name, Range instructionRange)
     {
         Owner = owner;
         Name = name;
-        Instructions = instructions.ToArray();
+        InstructionRange = instructionRange;
     }
 
     public IEnumerable<GlobalVariable> ReferencedGlobals
@@ -19,6 +22,7 @@ sealed class AssemblySection
 
     public IEnumerable<Variable> ReferencedVariables
         => Instructions
+            .ToArray()
             .SelectMany(i => new[] { i.DestArg, i.SrcArg1, i.SrcArg2 })
             .Select(s => s.StripDeref())
             .Select(Owner.InstructionArgumentToVariable)

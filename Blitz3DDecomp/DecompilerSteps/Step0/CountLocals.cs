@@ -14,7 +14,7 @@ static class CountLocals
         var coreSectionInstructions =
             function.CoreSymbolName == "__MAIN"
                 ? function.AssemblySectionsByName.First(kvp => kvp.Key.EndsWith("_begin__MAIN")).Value.Instructions.ToArray()
-                : function.AssemblySectionsByName[function.CoreSymbolName].Instructions.Skip(5).ToArray();
+                : function.AssemblySectionsByName[function.CoreSymbolName].Instructions[5..].ToArray();
 
         var initializedRegisters = new HashSet<string>();
         var ebpOffsetLocalRegex = new Regex("\\[ebp-0x([0-9a-f]+)\\]");
@@ -83,8 +83,8 @@ static class CountLocals
             .Select(i => new Function.LocalVariable($"local{i}", i) { DeclType = DeclType.Unknown }));
         
         var lastLocalIndex = function.AssemblySections
-            .SelectMany(s => s.Instructions)
-            .SelectMany(i => new[] { i.DestArg, i.SrcArg1 })
+            .SelectMany(s => s.Instructions.ToArray())
+            .SelectMany(i => new[] { i.DestArg, i.SrcArg1, i.SrcArg2 })
             .Select(a => a.StripDeref())
             .Where(a => a.StartsWith("ebp-0x", StringComparison.Ordinal))
             .Distinct()

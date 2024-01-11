@@ -9,10 +9,10 @@ static class CollectCalls
 {
     private static readonly Dictionary<string, int> guesses = new Dictionary<string, int>();
     
-    static void CrawlUp(AssemblySection section, int startIndex, out int espDiff, out int finalI, int dep)
+    static void CrawlUp(IReadOnlyList<Instruction> instructions, int startIndex, out int espDiff, out int finalI, int dep)
     {
         finalI = 0;
-        var startInstruction = section.Instructions[startIndex];
+        var startInstruction = instructions[startIndex];
 
         espDiff = 0;
         if (startInstruction.DestArg.ContainsRegister())
@@ -32,7 +32,7 @@ static class CollectCalls
         var foundArgs = new Dictionary<int, int>();
         for (int i = startIndex - 1; i >= 0; i--)
         {
-            var instruction = section.Instructions[i];
+            var instruction = instructions[i];
             if (instruction is { Name: "sub", DestArg: "esp", SrcArg1: var newEspOffsetStr })
             {
                 var newEspOffset = int.Parse(newEspOffsetStr[2..], NumberStyles.HexNumber);
@@ -46,7 +46,7 @@ static class CollectCalls
             }
             else if (instruction.Name == "call")
             {
-                CrawlUp(section, i, out int newEspDiff, out i, dep + 1);
+                CrawlUp(instructions, i, out int newEspDiff, out i, dep + 1);
                 function = Function.TryGetFunctionByName(functionName);
                 espDiff += newEspDiff;
             }
@@ -122,14 +122,12 @@ static class CollectCalls
 
     public static void Process(Function function)
     {
-        foreach (var section in function.AssemblySections)
+        var instructions = function.Instructions;
+        for (int i = instructions.Length - 1; i >= 0; i--)
         {
-            for (int i = section.Instructions.Length - 1; i >= 0; i--)
-            {
-                var instruction = section.Instructions[i];
-                if (instruction.Name != "call") { continue; }
-                CrawlUp(section, i, out var espDiff, out i, 0);
-            }
+            var instruction = instructions[i];
+            if (instruction.Name != "call") { continue; }
+            CrawlUp(instructions, i, out var espDiff, out i, 0);
         }
     }
 }

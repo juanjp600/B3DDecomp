@@ -5,14 +5,14 @@ namespace Blitz3DDecomp;
 
 static class LibCallCleanup
 {
-    private static void CrawlUp(AssemblySection section, int startIndex)
+    private static void CrawlUp(Function function, int startIndex)
     {
-        var startInstruction = section.Instructions[startIndex];
+        var startInstruction = function.Instructions[startIndex];
 
         var register = startInstruction.DestArg;
         for (int i = startIndex - 1; i >= 0; i--)
         {
-            var instruction = section.Instructions[i];
+            var instruction = function.Instructions[i];
             if ((instruction.Name == "mov" && instruction.DestArg == register)
                 || (instruction.Name == "xchg" && (instruction.DestArg == register || instruction.SrcArg1 == register)))
             {
@@ -25,7 +25,6 @@ static class LibCallCleanup
                 {
                     source = source[1..^1];
                     startInstruction.DestArg = source;
-                    section.Instructions[startIndex] = startInstruction;
                     break;
                 }
             }
@@ -34,15 +33,12 @@ static class LibCallCleanup
     
     public static void Process(Function function)
     {
-        foreach (var section in function.AssemblySections)
+        for (int i = 0; i < function.Instructions.Length; i++)
         {
-            for (int i = 0; i < section.Instructions.Length; i++)
-            {
-                var instruction = section.Instructions[i];
-                if (instruction.Name != "call") { continue; }
-                if (!instruction.DestArg.ContainsRegister()) { continue; }
-                CrawlUp(section, i);
-            }
+            var instruction = function.Instructions[i];
+            if (instruction.Name != "call") { continue; }
+            if (!instruction.DestArg.ContainsRegister()) { continue; }
+            CrawlUp(function, i);
         }
     }
 }

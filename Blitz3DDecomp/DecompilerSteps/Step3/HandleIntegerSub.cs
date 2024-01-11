@@ -19,7 +19,7 @@ static class HandleIntegerSub
             {
                 if (variable?.DeclType != DeclType.Unknown) { return; }
                 variable.DeclType = DeclType.Int;
-                Logger.WriteLine($"{section.Owner}: {variable.Name} is {DeclType.Int} because {instruction}");
+                variable.Trace = variable.Trace.Append($"{section.Owner}: {variable.Name} is {DeclType.Int} because {instruction}");
                 somethingChanged = true;
             }
 

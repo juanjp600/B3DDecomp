@@ -83,6 +83,19 @@ static class LocationToVarRewrite
                     incrementIndex("eax", DeclType.Unknown, out instruction.ReturnOutputVar);
                     break;
                 }
+                /*case "and" or "or" or "xor":
+                {
+                    var originalDest = instruction.DestArg;
+                    var originalSrc = instruction.SrcArg1;
+                    replace(ref instruction.DestArg);
+                    replace(ref instruction.SrcArg1);
+                    if (originalDest.IsRegister()
+                        && originalDest == originalSrc)
+                    {
+                        incrementIndex(originalDest, DeclType.Unknown, out _);
+                    }
+                    break;
+                }*/
                 case "mov" or "movzx" or "lea" or "pop" or "add":
                 {
                     if (instruction.Name == "add")
@@ -154,8 +167,9 @@ static class LocationToVarRewrite
     {
         if (section is { Name: "__MAIN", Owner.Name: "EntryPoint" }) { return; }
 
-        IReadOnlyList<Instruction> instructions = section.Instructions;
-        if (instructions.Count >= 7
+        var instructionIndex = 0;
+        var instructions = section.Instructions;
+        if (instructions.Length >= 7
             && instructions[3] is { Name: "push", DestArg: "ebp" }
             && instructions[4] is { Name: "mov", DestArg: "ebp", SrcArg1: "esp" }
             && instructions[5] is { Name: "sub", DestArg: "esp" }
@@ -163,20 +177,20 @@ static class LocationToVarRewrite
             && instructions[6].DestArg.IsRegister())
         {
             // Skip preamble and first register assignment because it can't have a concrete type
-            instructions = instructions.Skip(7).ToArray();
+            instructionIndex = 7;
         }
-
-        if (section.Owner.Name == "EntryPoint"
+        else if (section.Owner.Name == "EntryPoint"
             && section.Name.Contains("_begin", StringComparison.OrdinalIgnoreCase)
             && instructions[0] is { Name: "mov", SrcArg1: "0x0" }
             && instructions[0].DestArg.IsRegister())
         {
             // Preamble in the main function is in a different section, so it needs special handling
-            instructions = instructions.Skip(1).ToArray();
+            instructionIndex = 1;
         }
 
-        foreach (var instruction in instructions)
+        for (;instructionIndex < instructions.Length; instructionIndex++)
         {
+            var instruction = instructions[instructionIndex];
             tempTracker.ProcessInstruction(instruction);
         }
     }

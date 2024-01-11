@@ -1,4 +1,5 @@
-﻿using System.Diagnostics;
+﻿using System.Collections.Immutable;
+using B3DDecompUtils;
 
 namespace Blitz3DDecomp;
 
@@ -7,6 +8,8 @@ abstract class Variable
     public readonly string Name;
 
     public abstract DeclType DeclType { get; set; }
+
+    public DebugTrace Trace = default;
 
     public ArrayElementVariable? GetArrayElement(string index)
         => DeclType.GetElementType() is not null

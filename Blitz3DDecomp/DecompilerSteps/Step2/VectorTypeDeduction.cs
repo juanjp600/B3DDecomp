@@ -32,7 +32,7 @@ static class VectorTypeDeduction
                 && variable != null
                 && variable.DeclType == DeclType.Unknown)
             {
-                Logger.WriteLine($"{function}: {variable.Name} is {vecType} because {vecTypeToRegister}");
+                variable.Trace = variable.Trace.Append($"{function}: {variable.Name} is {vecType} because {vecTypeToRegister}");
                 variable.DeclType = vecType;
             }
         }

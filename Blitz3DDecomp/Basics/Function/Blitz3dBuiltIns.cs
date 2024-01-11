@@ -284,6 +284,7 @@ static class Blitz3dBuiltIns
         Function.FromBlitzSymbol("EntityOrder%entity%order");
         Function.FromBlitzSymbol("HideEntity%entity");
         Function.FromBlitzSymbol("ShowEntity%entity");
+        Function.FromBlitzSymbol("%EntityHidden%entity");
         Function.FromBlitzSymbol("FreeEntity%entity");
         Function.FromBlitzSymbol("NameEntity%entity$name");
         Function.FromBlitzSymbol("$EntityName%entity");
@@ -583,9 +584,20 @@ static class Blitz3dBuiltIns
         _ = new Function("_builtIn__bbStrStore", 2);
         _ = new Function("_builtIn__bbStrConcat", DeclType.String, DeclType.String) { ReturnType = DeclType.String };
         _ = new Function("_builtIn__bbStrCompare", DeclType.String, DeclType.String) { ReturnType = DeclType.Int };
-        
-        _ = new Function("_builtIn__bbReadStr", 0);
+        _ = new Function("_builtIn__bbStrToCStr", DeclType.String) { ReturnType = DeclType.String };
+        _ = new Function("_builtIn__bbCStrToStr", DeclType.String) { ReturnType = DeclType.String };
+
         _ = new Function("_builtIn_ferrorlog", 0) { ReturnType = DeclType.String };
+
+        _ = new Function("_builtIn__bbVecAlloc", 1);
+        _ = new Function("_builtIn__bbVecFree", 2);
+
+        _ = new Function("_builtIn__bbRestore", 1);
+        _ = new Function("_builtIn__bbReadInt", 0);
+        _ = new Function("_builtIn__bbReadFloat", 0);
+        _ = new Function("_builtIn__bbReadStr", 0);
+
+        _ = new Function("_builtIn__bbLoadLibs", 1);
 
         _ = new Function("_builtIn__bbObjEachFirst", 2);
         _ = new Function("_builtIn__bbObjEachNext", 1);
@@ -594,6 +606,8 @@ static class Blitz3dBuiltIns
         _ = new Function("_builtIn__bbObjFromHandle", DeclType.Int, DeclType.Unknown);
         _ = new Function("_builtIn__bbObjToHandle", 1) { ReturnType = DeclType.Int };
         _ = new Function("_builtIn__bbObjNew", 1);
+        _ = new Function("_builtIn__bbObjFirst", 1);
+        _ = new Function("_builtIn__bbObjLast", 1);
         _ = new Function("_builtIn__bbObjNext", 1);
         _ = new Function("_builtIn__bbObjPrev", 1);
         _ = new Function("_builtIn__bbObjCompare", 2);
@@ -602,5 +616,8 @@ static class Blitz3dBuiltIns
         _ = new Function("_builtIn__bbObjLoad", 1);
         _ = new Function("_builtIn__bbFieldPtrAdd", 2);
         _ = new Function("_builtIn__bbObjDelete", 1);
+        _ = new Function("_builtIn__bbObjDeleteEach", 1);
+        _ = new Function("_builtIn__bbObjInsBefore", 2);
+        _ = new Function("_builtIn__bbObjInsAfter", 2);
     }
 }

@@ -17,7 +17,7 @@ static class GuessFloatsFromStoreInstructions
                 if (pushVar?.DeclType == DeclType.Unknown)
                 {
                     pushVar.DeclType = DeclType.Float;
-                    Logger.WriteLine($"{section.Owner}: {pushVar.Name} is probably {DeclType.Float} because {instruction}");
+                    pushVar.Trace = pushVar.Trace.Append($"{section.Owner}: {pushVar.Name} is probably {DeclType.Float} because {instruction}");
                 }
             }
         }

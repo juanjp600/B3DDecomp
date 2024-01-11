@@ -23,13 +23,13 @@ static class CalleeReturnTypePropagation
             {
                 variable.DeclType = callee.ReturnType;
                 somethingChanged = true;
-                Logger.WriteLine($"{section.Owner}: {variable.Name} is {variable.DeclType} because {callee.Name}'s return type");
+                variable.Trace = callee.Trace.Append($"{section.Owner}: {variable.Name} is {variable.DeclType} because {callee.Name}'s return type");
             }
             else if (callee.ReturnType == DeclType.Unknown && variable.DeclType != DeclType.Unknown)
             {
                 callee.ReturnType = variable.DeclType;
                 somethingChanged = true;
-                Logger.WriteLine($"{section.Owner}: {callee.Name}'s return type is {callee.ReturnType} because {variable.Name}");
+                variable.Trace = callee.Trace.Append($"{section.Owner}: {callee.Name}'s return type is {callee.ReturnType} because {variable.Name}");
             }
         }
 

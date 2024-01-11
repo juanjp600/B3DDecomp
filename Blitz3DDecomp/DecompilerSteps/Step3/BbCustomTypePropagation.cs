@@ -32,7 +32,7 @@ static class BbCustomTypePropagation
         if (variable?.DeclType != DeclType.Unknown) { return false; }
 
         variable.DeclType = new DeclType("." + instruction.SrcArg1[3..]);
-        Logger.WriteLine($"{function}: {variable.Name} is {variable.DeclType} because {instruction}");
+        variable.Trace = variable.Trace.Append($"{function}: {variable.Name} is {variable.DeclType} because {instruction}");
         return true;
     }
 
@@ -64,12 +64,15 @@ static class BbCustomTypePropagation
         {
             for (int i = 0; i < assignmentIndices.Length; i++)
             {
-                var assignmentInstruction = section.Instructions[assignmentIndices[i]];
+                var assignmentInstruction = section.Owner.Instructions[assignmentIndices[i]];
                 var argType = InstructionArgToCustomType(section, assignmentInstruction.SrcArg1);
                 if (argType is { IsCustomType: true, IsArrayType: false })
                 {
                     returnOutput.DeclType = argType;
-                    Logger.WriteLine($"{section.Owner}: {returnOutput.Name} is {returnOutput.DeclType} because ({assignmentInstruction}) & ({instruction})");
+                    var originalTrace = section.Owner.InstructionArgumentToVariable(assignmentInstruction.SrcArg1) is { } srcVar
+                        ? srcVar.Trace
+                        : section.Owner.Trace;
+                    section.Owner.Trace = originalTrace.Append($"{section.Owner}: {returnOutput.Name} is {returnOutput.DeclType} because ({assignmentInstruction}) & ({instruction})");
                     return true;
                 }
             }
@@ -99,7 +102,7 @@ static class BbCustomTypePropagation
 
         if (instruction.CallParameterAssignmentIndices is { } assignmentIndices)
         {
-            var assignmentInstructions = assignmentIndices.Select(i => section.Instructions[i]).ToArray();
+            var assignmentInstructions = assignmentIndices.Select(i => section.Owner.Instructions[i]).ToArray();
             var types = assignmentInstructions
                 .Select(i => InstructionArgToCustomType(section, i.SrcArg1))
                 .ToArray();
@@ -115,7 +118,7 @@ static class BbCustomTypePropagation
                 if (variable.DeclType != DeclType.Unknown) { continue; }
 
                 variable.DeclType = type;
-                Logger.WriteLine($"{section.Owner}: {variable.Name} is {type} because {instruction}");
+                variable.Trace = variable.Trace.Append($"{section.Owner}: {variable.Name} is {type} because {instruction}");
             }
         }
 

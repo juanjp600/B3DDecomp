@@ -26,7 +26,7 @@ static class SelfReturnTypePropagation
                     if (callee.ReturnType == DeclType.Unknown) { return; }
 
                     section.Owner.ReturnType = callee.ReturnType;
-                    Logger.WriteLine($"{section.Owner}: returns {section.Owner.ReturnType} because {prevInstruction}");
+                    section.Owner.Trace = section.Owner.Trace.Append($"{section.Owner}: returns {section.Owner.ReturnType} because {prevInstruction}");
                     return;
                 }
 
@@ -38,7 +38,7 @@ static class SelfReturnTypePropagation
                 if (variable is null || variable.DeclType == DeclType.Unknown) { break; }
 
                 section.Owner.ReturnType = variable.DeclType;
-                Logger.WriteLine($"{section.Owner}: returns {section.Owner.ReturnType} because {prevInstruction}");
+                section.Owner.Trace = section.Owner.Trace.Append($"{section.Owner}: returns {section.Owner.ReturnType} because {prevInstruction}");
                 return;
             }
         }

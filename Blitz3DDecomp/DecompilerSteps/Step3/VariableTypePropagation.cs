@@ -5,7 +5,7 @@ namespace Blitz3DDecomp.DecompilerSteps.Step3;
 
 static class VariableTypePropagation
 {
-    private static bool ProcessSection(AssemblySection section)
+    public static bool Process(Function function)
     {
         bool somethingChanged = false;
 
@@ -15,13 +15,13 @@ static class VariableTypePropagation
             {
                 somethingChanged = true;
                 destVar.DeclType = srcVar.DeclType;
-                Logger.WriteLine($"{section.Owner}: {destVar.Name} is {destVar.DeclType} because {srcVar}");
+                destVar.Trace = srcVar.Trace.Append($"{function}: {destVar.Name} is {destVar.DeclType} because {srcVar}");
             }
             if (srcVar.DeclType == DeclType.Unknown && destVar.DeclType != DeclType.Unknown)
             {
                 somethingChanged = true;
                 srcVar.DeclType = destVar.DeclType;
-                Logger.WriteLine($"{section.Owner}: {srcVar.Name} is {srcVar.DeclType} because {destVar}");
+                srcVar.Trace = destVar.Trace.Append($"{function}: {srcVar.Name} is {srcVar.DeclType} because {destVar}");
             }
         }
 
@@ -29,8 +29,8 @@ static class VariableTypePropagation
         {
             if (instruction.Name is not ("mov" or "lea")) { return; }
 
-            var destVar = section.Owner.InstructionArgumentToVariable(instruction.DestArg);
-            var srcVar = section.Owner.InstructionArgumentToVariable(instruction.SrcArg1);
+            var destVar = function.InstructionArgumentToVariable(instruction.DestArg);
+            var srcVar = function.InstructionArgumentToVariable(instruction.SrcArg1);
             if (destVar is null || srcVar is null) { return; }
 
             exchangeTypes(destVar, srcVar);
@@ -40,8 +40,8 @@ static class VariableTypePropagation
         {
             if (instruction.Name is not "xchg") { return; }
 
-            var lhsVarPrev = section.Owner.InstructionArgumentToVariable(instruction.DestArg);
-            var rhsVarPrev = section.Owner.InstructionArgumentToVariable(instruction.SrcArg1);
+            var lhsVarPrev = function.InstructionArgumentToVariable(instruction.DestArg);
+            var rhsVarPrev = function.InstructionArgumentToVariable(instruction.SrcArg1);
             var lhsVarPost = instruction.XchgLhsPost;
             var rhsVarPost = instruction.XchgRhsPost;
 
@@ -55,8 +55,8 @@ static class VariableTypePropagation
         {
             if (instruction.Name is not "cmp") { return; }
 
-            var destVar = section.Owner.InstructionArgumentToVariable(instruction.DestArg);
-            var srcVar = section.Owner.InstructionArgumentToVariable(instruction.SrcArg1);
+            var destVar = function.InstructionArgumentToVariable(instruction.DestArg);
+            var srcVar = function.InstructionArgumentToVariable(instruction.SrcArg1);
             if (destVar is null && srcVar is null) { return; }
 
             uint parsedUint;
@@ -67,40 +67,30 @@ static class VariableTypePropagation
             else if (instruction.DestArg.TryHexToUint32(out parsedUint) && parsedUint != 0 && srcVar?.DeclType == DeclType.Unknown)
             {
                 srcVar.DeclType = DeclType.Int;
-                Logger.WriteLine($"{section.Owner}: {srcVar.Name} is {DeclType.Int} because {instruction}");
+                srcVar.Trace = srcVar.Trace.Append($"{function}: {srcVar.Name} is {DeclType.Int} because {instruction}");
                 somethingChanged = true;
             }
             else if (instruction.SrcArg1.TryHexToUint32(out parsedUint) && parsedUint != 0 && destVar?.DeclType == DeclType.Unknown)
             {
                 destVar.DeclType = DeclType.Int;
-                Logger.WriteLine($"{section.Owner}: {destVar.Name} is {DeclType.Int} because {instruction}");
+                destVar.Trace = destVar.Trace.Append($"{function}: {destVar.Name} is {DeclType.Int} because {instruction}");
                 somethingChanged = true;
             }
         }
-        
-        foreach (var instruction in section.Instructions)
+
+        foreach (var instruction in function.Instructions)
         {
             handleMovLea(instruction);
             handleXchg(instruction);
             handleCmp(instruction);
         }
-        foreach (var instruction in Enumerable.Reverse(section.Instructions))
+        foreach (var instruction in function.Instructions.Reverse())
         {
             handleMovLea(instruction);
             handleXchg(instruction);
             handleCmp(instruction);
         }
 
-        return somethingChanged;
-    }
-        
-    public static bool Process(Function function)
-    {
-        bool somethingChanged = false;
-        foreach (var section in function.AssemblySections)
-        {
-            somethingChanged |= ProcessSection(section);
-        }
         return somethingChanged;
     }
 }

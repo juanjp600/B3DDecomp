@@ -39,7 +39,7 @@ static class BbArrayAccessRewrite
                     if (variable.DeclType == DeclType.Unknown)
                     {
                         variable.DeclType = DeclType.Int;
-                        Logger.WriteLine($"{section.Owner}: {variable.Name} is {DeclType.Int} because {instruction}");
+                        variable.Trace = variable.Trace.Append($"{section.Owner}: {variable.Name} is {DeclType.Int} because {instruction}");
                     }
                 }
                 else if (instructionArg.TryHexToUint32(out var constantIndex))

@@ -13,7 +13,7 @@ internal static class Program
 {
     public static void Main(string[] args)
     {
-        string disasmPath = "C:/Users/juanj/Desktop/Blitz3d/ReverseEng/game_disasm/";
+        string disasmPath = "C:/Users/juanj/Desktop/Blitz3d/ReverseEng/SCP Nine-Tailed Fox_disasm/";
         string decompPath = disasmPath.Replace("_disasm", "_decomp");
         if (Directory.Exists(decompPath)) { Directory.Delete(decompPath, true); }
         Directory.CreateDirectory(decompPath);
@@ -87,13 +87,14 @@ internal static class Program
     /// </summary>
     private static void Step1()
     {
-        var functionsWithAssemblySections = Function.AllFunctions.Where(f => f.AssemblySections.Any())
-            // Order by total instruction count to minimize lib function signature guess errors
-            .OrderBy(f => f.TotalInstructionCount)
-            .ToArray();
+        var functionsWithAssemblySections = Function.AllFunctions.Where(f => f.AssemblySections.Any()).ToArray();
         foreach (var function in functionsWithAssemblySections)
         {
             LibCallCleanup.Process(function);
+        }
+        DetermineLibParameterCount.Execute();
+        foreach (var function in functionsWithAssemblySections)
+        {
             CollectCalls.Process(function);
             LocationToVarRewrite.Process(function);
             DimArrayAccessRewrite.Process(function);
@@ -179,7 +180,7 @@ internal static class Program
         if (Directory.Exists(debugDir)) { Directory.Delete(debugDir); }
         Directory.CreateDirectory(debugDir);
         
-        var functionsWithAssemblySections = referencedFunctions.Where(f => f.AssemblySections.Count > 0).ToArray();
+        var functionsWithAssemblySections = referencedFunctions.Where(f => f.AssemblySections.Length > 0).ToArray();
         foreach (var function in functionsWithAssemblySections)
         {
             using var file = File.Create($"{debugDir}{function.Name}.txt");
@@ -197,11 +198,10 @@ internal static class Program
                 var retVal = $"    {variable} {instructionArg}";
                 if (variable.DeclType == DeclType.Unknown)
                 {
-                    var numReferences = function.AssemblySections.Sum(
-                        s => s.Instructions.Count(i =>
-                            function.InstructionArgumentToVariable(i.DestArg) == variable
-                            || function.InstructionArgumentToVariable(i.SrcArg1) == variable
-                            || function.InstructionArgumentToVariable(i.SrcArg2) == variable));
+                    var numReferences = function.Instructions.Count(i =>
+                        function.InstructionArgumentToVariable(i.DestArg) == variable
+                        || function.InstructionArgumentToVariable(i.SrcArg1) == variable
+                        || function.InstructionArgumentToVariable(i.SrcArg2) == variable);
                     retVal += $" ({numReferences} references)";
                 }
                 return retVal;
@@ -276,7 +276,7 @@ internal static class Program
         if (Directory.Exists(debugDir)) { Directory.Delete(debugDir); }
         Directory.CreateDirectory(debugDir);
         
-        var functionsWithMidLevelSections = referencedFunctions.Where(f => f.MidLevelSections.Count > 0).ToArray();
+        var functionsWithMidLevelSections = referencedFunctions.Where(f => f.MidLevelSections.Length > 0).ToArray();
         foreach (var function in functionsWithMidLevelSections)
         {
             using var file = File.Create($"{debugDir}{function.Name}.txt");

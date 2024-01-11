@@ -11,7 +11,7 @@ static class GuessIntFromInstructions
         if (variable?.DeclType != DeclType.Unknown) { return; }
 
         variable.DeclType = DeclType.Int;
-        Logger.WriteLine($"{function}: {variable.Name} is probably {variable.DeclType} because {reason}");
+        variable.Trace = variable.Trace.Append($"{function}: {variable.Name} is probably {variable.DeclType} because {reason}");
     }
 
     private static void ProcessSection(AssemblySection section)

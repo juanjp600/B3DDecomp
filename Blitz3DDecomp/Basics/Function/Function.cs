@@ -44,17 +44,12 @@ sealed class Function
     }
 
     public readonly string Name;
-    private readonly List<AssemblySection> assemblySections;
-    private readonly List<MidLevelSection> midLevelSections;
-    private readonly Dictionary<string, AssemblySection> assemblySectionsByName;
-    private readonly Dictionary<string, MidLevelSection> midLevelSectionsByName;
+    public readonly ImmutableArray<Instruction> Instructions;
 
-    public IReadOnlyList<AssemblySection> AssemblySections => assemblySections;
-    public IReadOnlyDictionary<string, AssemblySection> AssemblySectionsByName => assemblySectionsByName;
-    public IReadOnlyList<MidLevelSection> MidLevelSections => midLevelSections;
-    public IReadOnlyDictionary<string, MidLevelSection> MidLevelSectionsByName => midLevelSectionsByName;
-
-    public int TotalInstructionCount => AssemblySections.Select(s => s.Instructions.Length).Sum();
+    public readonly ImmutableArray<AssemblySection> AssemblySections;
+    public readonly ImmutableDictionary<string, AssemblySection> AssemblySectionsByName;
+    public readonly ImmutableArray<MidLevelSection> MidLevelSections;
+    public readonly ImmutableDictionary<string, MidLevelSection> MidLevelSectionsByName;
 
     public static ICollection<Function> AllFunctions => lookupDictionary.Values;
 
@@ -114,6 +109,8 @@ sealed class Function
     public readonly List<LocalVariable> LocalVariables = new List<LocalVariable>();
     public readonly List<LocalVariable> CompilerGeneratedTempVars = new List<LocalVariable>();
     public readonly Dictionary<string, DecompGeneratedTempVariable> DecompGeneratedTempVars = new();
+
+    public DebugTrace Trace = default;
 
     public Variable? InstructionArgumentToVariable(string arg)
     {
@@ -232,7 +229,7 @@ sealed class Function
         return newFunction;
     }
 
-    public Function(string name, int argCount) : this(name)
+    public Function(string name, int argCount) : this(name, Array.Empty<Instruction>(), Array.Empty<IngestCodeFiles.TempSection>())
     {
         Parameters = Enumerable.Range(0, argCount)
             .Select(i => new Parameter($"arg{i}", i) { DeclType = DeclType.Unknown })
@@ -247,24 +244,22 @@ sealed class Function
         }
     }
 
-    public Function(string name)
+    public Function(string name, IReadOnlyList<Instruction> instructions, IReadOnlyList<IngestCodeFiles.TempSection> assemblySections)
     {
         Name = name;
-        assemblySections = new List<AssemblySection>();
-        midLevelSections = new List<MidLevelSection>();
-        assemblySectionsByName = new Dictionary<string, AssemblySection>();
-        midLevelSectionsByName = new Dictionary<string, MidLevelSection>();
+        Instructions = instructions.ToImmutableArray();
+        var constructedSections = new List<AssemblySection>();
+        int prevIndex = instructions.Count;
+        foreach (var section in assemblySections.OrderByDescending(s => s.StartIndex))
+        {
+            constructedSections.Insert(0, new AssemblySection(this, section.Name, section.StartIndex..prevIndex));
+            prevIndex = section.StartIndex;
+        }
+        AssemblySections = constructedSections.ToImmutableArray();
+        MidLevelSections = AssemblySections.Select(s => new MidLevelSection(s.Name)).ToImmutableArray();
+        AssemblySectionsByName = AssemblySections.ToImmutableDictionary(s => s.Name, s => s);
+        MidLevelSectionsByName = MidLevelSections.ToImmutableDictionary(s => s.Name, s => s);
         lookupDictionary.Add(name.ToLowerInvariant(), this);
-    }
-
-    public void AddNewAssemblySection(AssemblySection assemblySection)
-    {
-        assemblySections.Add(assemblySection);
-        assemblySectionsByName[assemblySection.Name] = assemblySection;
-
-        var newMidLevelSection = new MidLevelSection(assemblySection.Name);
-        midLevelSections.Add(newMidLevelSection);
-        midLevelSectionsByName[newMidLevelSection.Name] = newMidLevelSection;
     }
 
     public override string ToString()

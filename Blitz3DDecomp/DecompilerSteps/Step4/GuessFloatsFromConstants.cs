@@ -24,7 +24,7 @@ static class GuessFloatsFromConstants
         if (potentialExponent is < 96 or > 190) { return; }
         if (potentialMantissa is (> 0) and (< 512)) { return; }
         variable.DeclType = DeclType.Float;
-        Logger.WriteLine($"{function}: {variable.Name} is probably {variable.DeclType} because {reason}");
+        variable.Trace = variable.Trace.Append($"{function}: {variable.Name} is probably {variable.DeclType} because {reason}");
     }
 
     private static void ProcessSection(AssemblySection section)
@@ -56,7 +56,7 @@ static class GuessFloatsFromConstants
                     for (int i = 0; i < assignmentIndices.Length; i++)
                     {
                         var parameter = callee.Parameters[i];
-                        var assignmentInstruction = section.Instructions[assignmentIndices[i]];
+                        var assignmentInstruction = section.Owner.Instructions[assignmentIndices[i]];
 
                         if (!assignmentInstruction.SrcArg1.TryHexToUint32(out constant))
                         {

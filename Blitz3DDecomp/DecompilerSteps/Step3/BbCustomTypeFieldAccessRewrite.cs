@@ -14,9 +14,9 @@ static class BbCustomTypeFieldAccessRewrite
 
         var customType = CustomType.GetTypeMatchingDeclType(ownerVariable.DeclType);
 
+        instruction.SrcArg1 = $"{ownerVariable.Name}\\{customType.Fields[(int)fieldIndex].Name}";
         instruction.Name = "mov";
         instruction.DestArg = outputVar.Name;
-        instruction.SrcArg1 = $"{ownerVariable.Name}\\{customType.Fields[(int)fieldIndex].Name}";
         instruction.SrcArg2 = "";
 
         return true;
@@ -30,8 +30,8 @@ static class BbCustomTypeFieldAccessRewrite
         if (instruction.CallParameterAssignmentIndices is not { Length: 2 } assignmentIndices) { return false; }
         if (instruction.ReturnOutputVar is not { } outputVar) { return false; }
 
-        var ownerVariable = section.Owner.InstructionArgumentToVariable(section.Instructions[assignmentIndices[0]].SrcArg1);
-        uint fieldIndex = section.Instructions[assignmentIndices[1]].SrcArg1.HexToUint32() >> 2;
+        var ownerVariable = section.Owner.InstructionArgumentToVariable(section.Owner.Instructions[assignmentIndices[0]].SrcArg1);
+        uint fieldIndex = section.Owner.Instructions[assignmentIndices[1]].SrcArg1.HexToUint32() >> 2;
 
         return TryRewrite(ownerVariable, outputVar, instruction, fieldIndex);
     }

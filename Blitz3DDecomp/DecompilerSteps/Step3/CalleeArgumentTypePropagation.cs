@@ -17,7 +17,7 @@ static class CalleeArgumentTypePropagation
 
             for (int i = 0; i < assignmentIndices.Length; i++)
             {
-                var assignmentInstruction = section.Instructions[assignmentIndices[i]];
+                var assignmentInstruction = section.Owner.Instructions[assignmentIndices[i]];
                 if (section.Owner.InstructionArgumentToVariable(assignmentInstruction.SrcArg1) is { } variable)
                 {
                     if (variable.DeclType != DeclType.Unknown)
@@ -27,7 +27,7 @@ static class CalleeArgumentTypePropagation
 
                         callee.Parameters[i].DeclType = variable.DeclType;
                         somethingChanged = true;
-                        Logger.WriteLine($"{section.Owner}: callee {callee.Name} arg {i} is {callee.Parameters[i].DeclType} because {variable}");
+                        callee.Parameters[i].Trace = variable.Trace.Append($"{section.Owner}: callee {callee.Name} arg {i} is {callee.Parameters[i].DeclType} because {variable}");
                     }
                     else
                     {
@@ -35,7 +35,7 @@ static class CalleeArgumentTypePropagation
 
                         variable.DeclType = callee.Parameters[i].DeclType;
                         somethingChanged = true;
-                        Logger.WriteLine($"{section.Owner}: {variable.Name} is {variable.DeclType} because {callee.Name} arg {i}");
+                        variable.Trace = callee.Parameters[i].Trace.Append($"{section.Owner}: {variable.Name} is {variable.DeclType} because {callee.Name} arg {i}");
                     }
                 }
             }

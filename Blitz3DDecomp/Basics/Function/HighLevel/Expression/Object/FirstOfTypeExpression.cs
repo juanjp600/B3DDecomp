@@ -3,5 +3,10 @@
 sealed record FirstOfTypeExpression(CustomType ObjectType) : Expression
 {
     public override string StringRepresentation
-        => $"First {ObjectType.Name}";
+        => $"(First {ObjectType.Name})";
+
+    public override Expression Map(Func<Expression, Expression> mapper)
+    {
+        return mapper(this);
+    }
 }

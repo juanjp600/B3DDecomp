@@ -4,4 +4,9 @@ sealed record ShiftRightUnsignedExpression(Expression Lhs, Expression Rhs) : Exp
 {
     public override string StringRepresentation
         => $"({Lhs.StringRepresentation} Shr {Rhs.StringRepresentation})";
+
+    public override Expression Map(Func<Expression, Expression> mapper)
+    {
+        return mapper(new ShiftRightUnsignedExpression(Lhs.Map(mapper), Rhs.Map(mapper)));
+    }
 }

@@ -4,4 +4,9 @@ sealed record OneIfLessThanOrEqualToZeroExpression(Expression OriginalExpression
 {
     public override string StringRepresentation
         => $"({OriginalExpression.StringRepresentation} <= 0)";
+
+    public override Expression Map(Func<Expression, Expression> mapper)
+    {
+        return mapper(new OneIfLessThanOrEqualToZeroExpression(OriginalExpression.Map(mapper)));
+    }
 }

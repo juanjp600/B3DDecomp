@@ -3,5 +3,10 @@
 sealed record ConstructorExpression(CustomType Type) : Expression
 {
     public override string StringRepresentation
-        => $"New {Type.Name}";
+        => $"(New {Type.Name})";
+
+    public override Expression Map(Func<Expression, Expression> mapper)
+    {
+        return mapper(this);
+    }
 }

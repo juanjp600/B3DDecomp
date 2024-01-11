@@ -4,5 +4,10 @@
 sealed record LastOfTypeExpression(CustomType ObjectType) : Expression
 {
     public override string StringRepresentation
-        => $"Last {ObjectType.Name}";
+        => $"(Last {ObjectType.Name})";
+
+    public override Expression Map(Func<Expression, Expression> mapper)
+    {
+        return mapper(this);
+    }
 }

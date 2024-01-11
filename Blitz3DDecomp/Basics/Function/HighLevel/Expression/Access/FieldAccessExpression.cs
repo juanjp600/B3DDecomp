@@ -4,4 +4,7 @@ sealed record FieldAccessExpression(Expression Owner, CustomType.Field Field) : 
 {
     public override string StringRepresentation
         => $"{Owner.StringRepresentation}\\{Field.Name}";
+
+    public override Expression Map(Func<Expression, Expression> mapper)
+        => mapper(new FieldAccessExpression(Owner.Map(mapper), Field));
 }

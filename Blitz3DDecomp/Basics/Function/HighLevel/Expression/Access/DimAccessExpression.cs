@@ -4,4 +4,7 @@ sealed record DimAccessExpression(DimArray Owner, params Expression[] Indices) :
 {
     public override string StringRepresentation
         => $"{Owner.Name}({string.Join(", ", Indices.Select(i => i.StringRepresentation))})";
+
+    public override Expression Map(Func<Expression, Expression> mapper)
+        => mapper(new DimAccessExpression(Owner, Indices.Select(i => i.Map(mapper)).ToArray()));
 }

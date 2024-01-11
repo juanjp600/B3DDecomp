@@ -3,5 +3,10 @@
 sealed record ConvertToStringExpression(Expression OriginalExpression) : Expression
 {
     public override string StringRepresentation
-        => $"Str({OriginalExpression.StringRepresentation})";
+        => $"(Str {OriginalExpression.StringRepresentation})";
+
+    public override Expression Map(Func<Expression, Expression> mapper)
+    {
+        return mapper(new ConvertToStringExpression(OriginalExpression.Map(mapper)));
+    }
 }

@@ -4,4 +4,9 @@ sealed record OneIfExpressionsNotEqualExpression(Expression Lhs, Expression Rhs)
 {
     public override string StringRepresentation
         => $"({Lhs.StringRepresentation} <> {Rhs.StringRepresentation})";
+
+    public override Expression Map(Func<Expression, Expression> mapper)
+    {
+        return mapper(new OneIfExpressionsNotEqualExpression(Lhs.Map(mapper), Rhs.Map(mapper)));
+    }
 }

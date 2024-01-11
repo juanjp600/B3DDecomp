@@ -91,6 +91,7 @@ static class MidLevelGen
         {
             Expression lhsExpression;
             Expression rhsExpression;
+            Expression combinedExpression;
             Expression? srcExpression;
             Instruction prevInstruction;
             Instruction nextInstruction;
@@ -141,6 +142,13 @@ static class MidLevelGen
                 }
                 handleAssignmentToInstructionArg(nextInstruction.DestArg, constructor());
                 i++;
+            }
+
+            void setCompareExpression(string destArg, Expression combinedExpression)
+            {
+                lastCompareExpression = function.InstructionArgumentToVariable(destArg) is { } destVar
+                    ? new VariableExpression(destVar)
+                    : combinedExpression;
             }
 
             switch (instruction.Name)
@@ -208,35 +216,21 @@ static class MidLevelGen
                     rhsExpression = instructionArgToExpression(instruction.SrcArg1);
                     handleAssignmentToInstructionArg(instruction.DestArg, new ShiftRightSignedExpression(lhsExpression, rhsExpression));
                     break;
-                case "sub":
-                    if (instruction.DestArg == "esp") { continue; }
+                case "sub" or "and" or "or" or "xor":
+                    if (instruction.Name == "sub" && instruction.DestArg == "esp") { continue; }
 
                     lhsExpression = instructionArgToExpression(instruction.DestArg);
                     rhsExpression = instructionArgToExpression(instruction.SrcArg1);
-                    lastCompareExpression = new SubtractExpression(lhsExpression, rhsExpression);
-
-                    handleAssignmentToInstructionArg(instruction.DestArg, lastCompareExpression);
-                    break;
-                case "and":
-                    lhsExpression = instructionArgToExpression(instruction.DestArg);
-                    rhsExpression = instructionArgToExpression(instruction.SrcArg1);
-                    lastCompareExpression = new AndExpression(lhsExpression, rhsExpression);
-
-                    handleAssignmentToInstructionArg(instruction.DestArg, lastCompareExpression);
-                    break;
-                case "or":
-                    lhsExpression = instructionArgToExpression(instruction.DestArg);
-                    rhsExpression = instructionArgToExpression(instruction.SrcArg1);
-                    lastCompareExpression = new OrExpression(lhsExpression, rhsExpression);
-
-                    handleAssignmentToInstructionArg(instruction.DestArg, lastCompareExpression);
-                    break;
-                case "xor":
-                    lhsExpression = instructionArgToExpression(instruction.DestArg);
-                    rhsExpression = instructionArgToExpression(instruction.SrcArg1);
-                    lastCompareExpression = new XorExpression(lhsExpression, rhsExpression);
-
-                    handleAssignmentToInstructionArg(instruction.DestArg, lastCompareExpression);
+                    combinedExpression = instruction.Name switch
+                    {
+                        "sub" => new SubtractExpression(lhsExpression, rhsExpression),
+                        "and" => new AndExpression(lhsExpression, rhsExpression),
+                        "or" => new OrExpression(lhsExpression, rhsExpression),
+                        "xor" => new XorExpression(lhsExpression, rhsExpression),
+                        _ => throw new Exception("unreachable")
+                    };
+                    setCompareExpression(instruction.DestArg, combinedExpression);
+                    handleAssignmentToInstructionArg(instruction.DestArg, combinedExpression);
                     break;
                 case "cmp":
                     lhsExpression = instructionArgToExpression(instruction.DestArg);
@@ -254,9 +248,9 @@ static class MidLevelGen
 
                     lhsExpression = instructionArgToExpression(instruction.SrcArg1);
                     rhsExpression = instructionArgToExpression(instruction.SrcArg2);
-                    lastCompareExpression = new AddExpression(lhsExpression, rhsExpression);
-
-                    handleAssignmentToInstructionArg(instruction.DestArg, lastCompareExpression);
+                    combinedExpression = new AddExpression(lhsExpression, rhsExpression);
+                    setCompareExpression(instruction.DestArg, combinedExpression);
+                    handleAssignmentToInstructionArg(instruction.DestArg, combinedExpression);
                     break;
                 case "imul":
                     (string destArg, string srcArg1, string srcArg2) = string.IsNullOrEmpty(instruction.SrcArg2)
@@ -265,9 +259,9 @@ static class MidLevelGen
 
                     lhsExpression = instructionArgToExpression(srcArg1);
                     rhsExpression = instructionArgToExpression(srcArg2);
-                    lastCompareExpression = new MultiplyExpression(lhsExpression, rhsExpression);
-
-                    handleAssignmentToInstructionArg(destArg, lastCompareExpression);
+                    combinedExpression = new MultiplyExpression(lhsExpression, rhsExpression);
+                    setCompareExpression(instruction.DestArg, combinedExpression);
+                    handleAssignmentToInstructionArg(destArg, combinedExpression);
                     break;
                 case "cdq":
                     var signExtensionSignVar = instruction.SignExtensionSignVar ?? throw new Exception("SignExtensionSignVar is null");

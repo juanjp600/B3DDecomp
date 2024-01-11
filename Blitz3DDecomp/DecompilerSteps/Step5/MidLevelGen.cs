@@ -27,13 +27,9 @@ static class MidLevelGen
 
         Expression instructionArgToExpression(string instructionArg)
         {
-            Expression shiftRight2(Expression original)
-                => original is ShiftLeftExpression { Lhs: var innerExpression, Rhs: ConstantExpression { Value: "0x2" } }
-                    ? innerExpression
-                    : new ShiftRightUnsignedExpression(original, new ConstantExpression("0x2"));
             Expression indexStrToExpression(string indexStr)
                 => indexStr.EndsWith(">>2", StringComparison.Ordinal)
-                    ? shiftRight2(instructionArgToExpression(indexStr[..^3]))
+                    ? new ShiftRightUnsignedExpression(instructionArgToExpression(indexStr[..^3]), new ConstantExpression("0x2"))
                     : instructionArgToExpression(indexStr);
 
             Expression[] deconstructDimIndices(Expression compositeExpression)
@@ -100,19 +96,33 @@ static class MidLevelGen
             void handleAssignmentToInstructionArg(string instructionArg, Expression srcExpression)
             {
                 var destVar = function.InstructionArgumentToVariable(instructionArg);
-                handleAssignmentToVar(destVar, srcExpression);
+                var instructionArgStripped = instructionArg.StripDeref();
+                bool derefDest = instructionArg != instructionArgStripped
+                                 && instructionArgStripped.Length >= 3
+                                 && instructionArgStripped[..3].IsRegister();
+                handleAssignmentToVar(destVar, srcExpression, derefDest);
             }
-            void handleAssignmentToVar(Variable? destVar, Expression srcExpression)
+
+            void handleAssignmentToVar(Variable? destVar, Expression srcExpression, bool derefDest = false)
             {
                 if (destVar is null) { return; }
                 if (!destVar.DeclType.IsArrayType)
                 {
-                    midLevelSection.Statements.Add(new AssignmentStatement(new VariableExpression(destVar), srcExpression));
+                    if (derefDest
+                        && destVar is Function.DecompGeneratedTempVariable tempDestVar1
+                        && context.TempToExpression[tempDestVar1] is AccessExpression accessExpression)
+                    {
+                        midLevelSection.Statements.Add(new AssignmentStatement(accessExpression, srcExpression));
+                    }
+                    else
+                    {
+                        midLevelSection.Statements.Add(new AssignmentStatement(new VariableExpression(destVar), srcExpression));
+                    }
                     if (destVar.Name.StartsWith("eax", StringComparison.Ordinal)) { lastPotentialReturnVariable = destVar; }
                 }
-                if (destVar is Function.DecompGeneratedTempVariable tempDestVar)
+                if (destVar is Function.DecompGeneratedTempVariable tempDestVar2)
                 {
-                    context.TempToExpression[tempDestVar] = srcExpression;
+                    context.TempToExpression[tempDestVar2] = srcExpression;
                 }
             }
 

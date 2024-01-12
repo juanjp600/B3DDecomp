@@ -4,7 +4,7 @@ using B3DDecompUtils;
 
 namespace Blitz3DDecomp;
 
-static class StringConstantDecompiler
+static class IngestStringConstants
 {
     public static void FromDir(string inputDir, string outputDir)
     {
@@ -12,7 +12,6 @@ static class StringConstantDecompiler
         var symbolValueRegex = new Regex("    \"(.+)\" 00");
         
         var filePath = inputDir.AppendToPath("Strings.txt");
-        var outputPath = outputDir.AppendToPath("Strings.bb");
         var lines = File.ReadAllLines(filePath);
         for (int i = 0; i < lines.Length - 2; i++)
         {
@@ -27,7 +26,7 @@ static class StringConstantDecompiler
             var symbolValueMatch = symbolValueRegex.Match(nextLine);
             if (!symbolValueMatch.Success) { continue; }
             var symbolValue = symbolValueMatch.Groups[1].Value;
-            File.AppendAllText(outputPath, $"Const {symbolName}$ = \"{symbolValue}\"\n");
+            StringConstants.SymbolToValue[symbolName] = symbolValue;
         }
     }
 }

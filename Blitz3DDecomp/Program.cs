@@ -72,7 +72,7 @@ internal static class Program
         LoadDimArrays.FromDir(disasmPath);
         IngestCodeFiles.FromDir(disasmPath);
 
-        StringConstantDecompiler.FromDir(disasmPath, decompPath);
+        IngestStringConstants.FromDir(disasmPath, decompPath);
         TypeDecompiler.FromDir(disasmPath, decompPath);
 
         foreach (var function in Function.AllFunctions.Where(f => f.AssemblySections.Any()))

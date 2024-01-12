@@ -20,7 +20,9 @@ static class DetermineLibParameterCount
             || instr.SrcArg1.Contains("[ebp-", StringComparison.Ordinal)
             || instr.SrcArg2.Contains("[ebp-", StringComparison.Ordinal));
         var stackPointer = 0;
+        var stackFill = 0;
         var instructionIndexToStackPointer = new Dictionary<int, int>();
+        var instructionIndexToStackFill = new Dictionary<int, int>();
         for (var instructionIndex = 1; instructionIndex < instructions.Length; instructionIndex++)
         {
             var instruction = instructions[instructionIndex];
@@ -37,19 +39,12 @@ static class DetermineLibParameterCount
                         }
                     }
                     break;
-                /*case "mov":
-                    var stripped = instruction.DestArg.StripDeref();
-                    if (stripped == instruction.DestArg) { continue; }
-                    if (stripped == "esp")
+                case "mov":
+                    if (instruction.DestArg.StartsWith("[esp", StringComparison.Ordinal))
                     {
-                        if (stack[^1] != StackSlotState.NotFilled) { Debugger.Break(); }
-                        stack[^1] = StackSlotState.Filled;
+                        stackFill++;
                     }
-                    else if (stripped.StartsWith("esp+", StringComparison.Ordinal))
-                    {
-                        stack[^(int)((stripped[4..].HexToUint32() >> 2) + 1)] = StackSlotState.Filled;
-                    }
-                    break;*/
+                    break;
                 case "call":
                     if (instruction.DestArg.EndsWith("_begin__MAIN")) { continue; }
                     var callee = Function.TryGetFunctionByName(instruction.DestArg);
@@ -68,6 +63,8 @@ static class DetermineLibParameterCount
                     if (callee.Name.EndsWith("__LIBS") && !context.SolvedFunctions.Contains(callee))
                     {
                         instructionIndexToStackPointer[instructionIndex] = stackPointer;
+                        instructionIndexToStackFill[instructionIndex] = stackFill;
+                        stackFill = 0;
                     }
                     else
                     {
@@ -84,16 +81,17 @@ static class DetermineLibParameterCount
                             stackPointer--;
                         }
                         if (stackPointer < 0) { Debugger.Break(); }
+                        stackFill = Math.Max(0, stackFill - callee.Parameters.Count);
                     }
                     break;
             }
         }
 
-        void addGuess(KeyValuePair<int, int> kvp, float certainty, int prevCount)
+        void addGuess(KeyValuePair<int, int> kvp, float certainty, int subtract)
         {
             var instruction = instructions[kvp.Key];
             var callee = Function.GetFunctionByName(instruction.DestArg);
-            var parameterCount = kvp.Value - prevCount;
+            var parameterCount = kvp.Value - subtract;
             if (!context.GuessedParameterCounts.TryGetValue(callee, out var counts))
             {
                 counts = new List<Guess>();
@@ -112,16 +110,20 @@ static class DetermineLibParameterCount
         if (instructionIndexToStackPointer.Count == 1)
         {
             var kvp = instructionIndexToStackPointer.First();
-            addGuess(kvp, certainty: 100000f, prevCount: 0);
+            addGuess(kvp, certainty: 100000f, subtract: 0);
         }
         else
         {
             int prevCount = 0;
             foreach (var kvp in instructionIndexToStackPointer)
             {
-                addGuess(kvp, certainty: 1f, prevCount: prevCount);
+                addGuess(kvp, certainty: 2f, subtract: prevCount);
                 prevCount = kvp.Value;
             }
+        }
+        foreach (var kvp in instructionIndexToStackFill)
+        {
+            addGuess(kvp, certainty: 1f, subtract: 0);
         }
     }
 
@@ -144,25 +146,29 @@ static class DetermineLibParameterCount
             var parameterCount = 0;
             var certainty = 0f;
             var sumOfAllGuesses = 0f;
+            var countToCertainty = new Dictionary<int, float>();
             foreach (var kvp in context.GuessedParameterCounts)
             {
                 var function = kvp.Key;
                 var guesses = kvp.Value;
-                var countToCertainty = new Dictionary<int, float>();
+                var currentCountToCertainty = new Dictionary<int, float>();
                 foreach (var guess in guesses)
                 {
-                    countToCertainty[guess.ParameterCount] =
-                        countToCertainty.GetValueOrDefault(guess.ParameterCount, 0f) + guess.Certainty;
+                    currentCountToCertainty[guess.ParameterCount] =
+                        currentCountToCertainty.GetValueOrDefault(guess.ParameterCount, 0f) + guess.Certainty;
                 }
 
-                var mostCertainCountKvp = countToCertainty.MaxBy(kvp => kvp.Value);
+                var mostCertainCountKvp = currentCountToCertainty.MaxBy(kvp => kvp.Value);
 
-                if (certainty < mostCertainCountKvp.Value)
+                var currentSumOfAllGuesses = guesses.Sum(guess => guess.Certainty);
+                if (certainty < mostCertainCountKvp.Value
+                    || (certainty == mostCertainCountKvp.Value && parameterCount < mostCertainCountKvp.Key))
                 {
                     mostCertainFunction = function;
                     parameterCount = mostCertainCountKvp.Key;
                     certainty = mostCertainCountKvp.Value;
-                    sumOfAllGuesses = guesses.Sum(guess => guess.Certainty);
+                    sumOfAllGuesses = currentSumOfAllGuesses;
+                    countToCertainty = currentCountToCertainty;
                 }
             }
             Logger.WriteLine($"Most certain function is {mostCertainFunction.Name} with {parameterCount} parameters (certainty {certainty} / {sumOfAllGuesses})");

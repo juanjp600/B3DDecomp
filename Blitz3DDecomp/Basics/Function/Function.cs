@@ -49,9 +49,27 @@ sealed class Function
     public readonly ImmutableArray<AssemblySection> AssemblySections;
     public readonly ImmutableDictionary<string, AssemblySection> AssemblySectionsByName;
 
-    public List<Statement> HighLevelStatements;
+    public readonly List<Statement> HighLevelStatements;
     public readonly ImmutableArray<HighLevelSection> HighLevelSections;
     public readonly ImmutableDictionary<string, HighLevelSection> HighLevelSectionsByName;
+
+    public void FindSectionForStatementIndex(int statementIndex, out HighLevelSection section, out int indexInSection)
+    {
+        indexInSection = -1;
+
+        section = HighLevelSections[0];
+        int currentIndexInSection = statementIndex;
+        for (int i = 0; i < HighLevelSections.Length; i++)
+        {
+            if (currentIndexInSection < HighLevelSections[i].Statements.Count)
+            {
+                section = HighLevelSections[i];
+                indexInSection = currentIndexInSection;
+                break;
+            }
+            currentIndexInSection -= HighLevelSections[i].Statements.Count;
+        }
+    }
 
     public static ICollection<Function> AllFunctions => lookupDictionary.Values;
 

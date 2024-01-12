@@ -1,4 +1,5 @@
-﻿using System.Security;
+﻿using System.Diagnostics;
+using System.Security;
 using Blitz3DDecomp.LowLevel;
 
 namespace Blitz3DDecomp.DecompilerSteps.Step1;
@@ -15,13 +16,13 @@ static class LocationToVarRewrite
             this.function = function;
         }
 
-        public void ProcessInstruction(Instruction instruction)
+        public void ProcessInstruction(Instruction instruction, bool canGenerateTempVars)
         {
             void replace(ref string s)
             {
                 foreach (var kvp in Indices)
                 {
-                    var newName = $"{kvp.Key}_{kvp.Value:X4}";
+                    var newName = getIndexedName(kvp.Key);
                     s = s == kvp.Key
                         ? newName
                         : s.Replace($"[{kvp.Key}", $"[{newName}");
@@ -38,7 +39,8 @@ static class LocationToVarRewrite
                 {
                     if (s == tempVar.ToInstructionArg())
                     {
-                        s = $"[{tempVar.Name}_{Indices[tempVar.Name]:X4}]";
+                        s = getIndexedName(tempVar.Name);
+                        if (string.IsNullOrEmpty(s)) { Debugger.Break(); }
                         break;
                     }
                 }
@@ -83,21 +85,10 @@ static class LocationToVarRewrite
                     incrementIndex("eax", DeclType.Unknown, out instruction.ReturnOutputVar);
                     break;
                 }
-                /*case "and" or "or" or "xor":
-                {
-                    var originalDest = instruction.DestArg;
-                    var originalSrc = instruction.SrcArg1;
-                    replace(ref instruction.DestArg);
-                    replace(ref instruction.SrcArg1);
-                    if (originalDest.IsRegister()
-                        && originalDest == originalSrc)
-                    {
-                        incrementIndex(originalDest, DeclType.Unknown, out _);
-                    }
-                    break;
-                }*/
                 case "mov" or "movzx" or "lea" or "pop" or "add":
                 {
+                    if (!canGenerateTempVars) { return; }
+
                     if (instruction.Name == "add")
                     {
                         instruction.SrcArg2 = instruction.SrcArg1;
@@ -128,6 +119,8 @@ static class LocationToVarRewrite
                 }
                 case "xchg":
                 {
+                    if (!canGenerateTempVars) { return; }
+
                     var destArg = instruction.DestArg;
                     var srcArg = instruction.SrcArg1;
 
@@ -140,12 +133,16 @@ static class LocationToVarRewrite
                 }
                 case "cdq":
                 {
+                    if (!canGenerateTempVars) { return; }
+
                     getLastVarForName("eax", DeclType.Int, out instruction.SignExtensionValueVar);
                     incrementIndex("edx", DeclType.Int, out instruction.SignExtensionSignVar);
                     break;
                 }
                 case "idiv" or "div":
                 {
+                    if (!canGenerateTempVars) { return; }
+
                     replace(ref instruction.DestArg);
 
                     getLastVarForName("eax", DeclType.Int, out instruction.DivResultVar);
@@ -154,6 +151,8 @@ static class LocationToVarRewrite
                 }
                 default:
                 {
+                    if (!canGenerateTempVars) { return; }
+
                     replace(ref instruction.DestArg);
                     replace(ref instruction.SrcArg1);
                     replace(ref instruction.SrcArg2);
@@ -167,31 +166,12 @@ static class LocationToVarRewrite
     {
         if (section is { Name: "__MAIN", Owner.Name: "EntryPoint" }) { return; }
 
-        var instructionIndex = 0;
         var instructions = section.Instructions;
-        if (instructions.Length >= 7
-            && instructions[3] is { Name: "push", DestArg: "ebp" }
-            && instructions[4] is { Name: "mov", DestArg: "ebp", SrcArg1: "esp" }
-            && instructions[5] is { Name: "sub", DestArg: "esp" }
-            && instructions[6] is { Name: "mov", SrcArg1: "0x0" }
-            && instructions[6].DestArg.IsRegister())
-        {
-            // Skip preamble and first register assignment because it can't have a concrete type
-            instructionIndex = 7;
-        }
-        else if (section.Owner.Name == "EntryPoint"
-            && section.Name.Contains("_begin", StringComparison.OrdinalIgnoreCase)
-            && instructions[0] is { Name: "mov", SrcArg1: "0x0" }
-            && instructions[0].DestArg.IsRegister())
-        {
-            // Preamble in the main function is in a different section, so it needs special handling
-            instructionIndex = 1;
-        }
 
-        for (;instructionIndex < instructions.Length; instructionIndex++)
+        for (int instructionIndex = 0; instructionIndex < instructions.Length; instructionIndex++)
         {
             var instruction = instructions[instructionIndex];
-            tempTracker.ProcessInstruction(instruction);
+            tempTracker.ProcessInstruction(instruction, canGenerateTempVars: instructionIndex > section.PreambleEndIndex);
         }
     }
 

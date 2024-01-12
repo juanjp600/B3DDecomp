@@ -1,7 +1,6 @@
 ﻿using System.Diagnostics;
 using System.Globalization;
 using System.Text.RegularExpressions;
-using B3DDecompUtils;
 
 namespace Blitz3DDecomp;
 
@@ -11,17 +10,24 @@ static class CountLocals
     {
         if (!function.AssemblySections.Any()) { return; }
 
-        var coreSectionInstructions =
+        var coreSection =
             function.CoreSymbolName == "__MAIN"
-                ? function.AssemblySectionsByName.First(kvp => kvp.Key.EndsWith("_begin__MAIN")).Value.Instructions.ToArray()
-                : function.AssemblySectionsByName[function.CoreSymbolName].Instructions[5..].ToArray();
+                ? function.AssemblySectionsByName.First(kvp => kvp.Key.EndsWith("_begin__MAIN")).Value
+                : function.AssemblySectionsByName[function.CoreSymbolName];
+        int startIndex = function.CoreSymbolName == "__MAIN" ? 0 : 5;
 
         var initializedRegisters = new HashSet<string>();
         var ebpOffsetLocalRegex = new Regex("\\[ebp-0x([0-9a-f]+)\\]");
         var ebpOffsets = new HashSet<int>();
-        for (var i = 0; i < coreSectionInstructions.Length; i++)
+        for (var i = startIndex; i < coreSection.Instructions.Length; i++)
         {
-            var instruction = coreSectionInstructions[i];
+            bool isCallAllowedInPreamble(string instructionArg)
+            {
+                return instructionArg.EndsWith("_builtIn__bbVecAlloc", StringComparison.OrdinalIgnoreCase)
+                       || instructionArg.EndsWith("_builtIn__bbStrRetain", StringComparison.OrdinalIgnoreCase);
+            }
+
+            var instruction = coreSection.Instructions[i];
             if (instruction.IsJumpOrCall)
             {
                 if (instruction.Name == "call")
@@ -29,7 +35,10 @@ static class CountLocals
                     initializedRegisters.Add("eax");
                 }
 
-                if (!instruction.DestArg.Contains("_builtIn__bbVecAlloc", StringComparison.OrdinalIgnoreCase)) { break; }
+                if (!isCallAllowedInPreamble(instruction.DestArg))
+                {
+                    break;
+                }
             }
 
             if (instruction.Name == "mov" && instruction.DestArg.IsRegister() && instruction.SrcArg1 == "0x0")
@@ -45,6 +54,8 @@ static class CountLocals
 
                 if (!ebpOffsets.Add(int.Parse(ebpOffsetMatch.Groups[1].Value, NumberStyles.HexNumber))) { break; }
 
+                coreSection.PreambleEndIndex = i;
+
                 continue;
             }
 
@@ -55,12 +66,12 @@ static class CountLocals
                 bool isParamForLocalInitializer = false;
                 if (instruction.SrcArg1.Contains("[ebp+"))
                 {
-                    for (int j = i + 1; j < coreSectionInstructions.Length; j++)
+                    for (int j = i + 1; j < coreSection.Instructions.Length; j++)
                     {
-                        var instruction2 = coreSectionInstructions[j];
+                        var instruction2 = coreSection.Instructions[j];
                         if (instruction2.Name != "call") { continue; }
 
-                        isParamForLocalInitializer = instruction2.DestArg.Contains("_builtIn__bbVecAlloc");
+                        isParamForLocalInitializer = isCallAllowedInPreamble(instruction2.DestArg);
                         break;
                     }
                 }

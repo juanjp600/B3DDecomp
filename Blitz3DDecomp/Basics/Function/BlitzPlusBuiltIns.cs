@@ -448,8 +448,8 @@ static class BlitzPlusBuiltIns
         _ = new Function("_builtIn__bbInitCStrs", 1);
         _ = new Function("_builtIn__bbStrTmp", DeclType.String) { ReturnType = DeclType.String };
         _ = new Function("_builtIn__bbStrTmpFree", 1);
-        _ = new Function("_builtIn__bbStrITmpFree", 2) { ReturnType = DeclType.Int };
-        _ = new Function("_builtIn__bbStrFTmpFree", 2) { ReturnType = DeclType.Float };
+        _ = new Function("_builtIn__bbIStrTmpFree", DeclType.Int, DeclType.Int) { ReturnType = DeclType.Int };
+        _ = new Function("_builtIn__bbStrFTmpFree", DeclType.Float, DeclType.Int) { ReturnType = DeclType.Float };
         _ = new Function("_builtIn__bbStrRetain", DeclType.String) { ReturnType = DeclType.String };
         _ = new Function("_builtIn__bbStrConst", 1) { ReturnType = DeclType.String };
         _ = new Function("_builtIn__bbStrFromInt", DeclType.Int) { ReturnType = DeclType.String };
@@ -461,9 +461,20 @@ static class BlitzPlusBuiltIns
         _ = new Function("_builtIn__bbStrStore", 2);
         _ = new Function("_builtIn__bbStrConcat", DeclType.String, DeclType.String) { ReturnType = DeclType.String };
         _ = new Function("_builtIn__bbStrCompare", DeclType.String, DeclType.String) { ReturnType = DeclType.Int };
-        
-        _ = new Function("_builtIn__bbReadStr", 0);
+        _ = new Function("_builtIn__bbStrToCStr", DeclType.String) { ReturnType = DeclType.String };
+        _ = new Function("_builtIn__bbStrFromCStr", DeclType.String) { ReturnType = DeclType.String };
+
         _ = new Function("_builtIn_ferrorlog", 0) { ReturnType = DeclType.String };
+
+        _ = new Function("_builtIn__bbVecAlloc", 1);
+        _ = new Function("_builtIn__bbVecFree", 2);
+
+        _ = new Function("_builtIn__bbRestore", 1);
+        _ = new Function("_builtIn__bbReadInt", 0);
+        _ = new Function("_builtIn__bbReadFloat", 0);
+        _ = new Function("_builtIn__bbReadStr", 0);
+
+        _ = new Function("_builtIn__bbLoadLibs", 1);
 
         _ = new Function("_builtIn__bbObjEachFirst", 2);
         _ = new Function("_builtIn__bbObjEachNext", 1);
@@ -480,5 +491,8 @@ static class BlitzPlusBuiltIns
         _ = new Function("_builtIn__bbObjLoad", 1);
         _ = new Function("_builtIn__bbFieldPtrAdd", 2);
         _ = new Function("_builtIn__bbObjDelete", 1);
+
+        _ = new Function("_builtIn__bbDimArray", 1);
+        _ = new Function("_builtIn__bbUndimArray", 1);
     }
 }

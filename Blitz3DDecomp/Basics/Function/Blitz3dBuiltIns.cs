@@ -619,5 +619,8 @@ static class Blitz3dBuiltIns
         _ = new Function("_builtIn__bbObjDeleteEach", 1);
         _ = new Function("_builtIn__bbObjInsBefore", 2);
         _ = new Function("_builtIn__bbObjInsAfter", 2);
+
+        _ = new Function("_builtIn__bbDimArray", 1);
+        _ = new Function("_builtIn__bbUndimArray", 1);
     }
 }

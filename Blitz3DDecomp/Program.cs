@@ -13,7 +13,7 @@ internal static class Program
 {
     public static void Main(string[] args)
     {
-        string disasmPath = "C:/Users/juanj/Desktop/Blitz3d/ReverseEng/SCP Nine-Tailed Fox_disasm/";
+        string disasmPath = "C:/Users/juanj/Desktop/Blitz3d/ReverseEng/3dwsmemdump_disasm/";
         string decompPath = disasmPath.Replace("_disasm", "_decomp");
         if (Directory.Exists(decompPath)) { Directory.Delete(decompPath, true); }
         Directory.CreateDirectory(decompPath);
@@ -267,6 +267,8 @@ internal static class Program
         foreach (var function in functionsWithAssemblySections)
         {
             BasicLowToHighLevelConversion.Process(function);
+            RemoveTrivialNoops.Process(function);
+            RemoveSingleUseTemps.Process(function);
         }
     }
 
@@ -295,7 +297,7 @@ internal static class Program
             }
             foreach (var section in function.HighLevelSections)
             {
-                writeLineToFile("---- ", section.Name);
+                writeLineToFile(".", section.Name);
                 foreach (var statement in section.Statements)
                 {
                     if (statement is NextStatement) { indentation = indentation[..^4]; }

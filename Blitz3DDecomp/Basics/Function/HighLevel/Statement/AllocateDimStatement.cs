@@ -10,5 +10,5 @@ sealed record AllocateDimStatement(DimArray Dim, params Expression[] Dimensions)
     protected override Statement MapImplementation(
             Func<Statement, Statement> statementMapper,
             Func<Expression, Expression> expressionMapper)
-        => statementMapper(new AllocateDimStatement(Dim, Dimensions.Select(expressionMapper).ToArray()));
+        => statementMapper(new AllocateDimStatement(Dim, Dimensions.Select(e => e.Map(expressionMapper)).ToArray()));
 }

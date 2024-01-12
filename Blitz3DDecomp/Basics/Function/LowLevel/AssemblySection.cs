@@ -9,6 +9,8 @@ sealed class AssemblySection
     public ReadOnlySpan<Instruction> Instructions
         => Owner.Instructions.AsSpan()[InstructionRange];
 
+    public int PreambleEndIndex = -1;
+
     public AssemblySection(Function owner, string name, Range instructionRange)
     {
         Owner = owner;

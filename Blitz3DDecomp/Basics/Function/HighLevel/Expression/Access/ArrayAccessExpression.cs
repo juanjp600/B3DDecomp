@@ -8,5 +8,5 @@ sealed record ArrayAccessExpression(Expression Owner, Expression Index) : Access
     public override Expression Map(Func<Expression, Expression> mapper)
         => mapper(new ArrayAccessExpression(Owner.Map(mapper), Index.Map(mapper)));
 
-    public override IEnumerable<Expression> InnerExpressions { get; } = new[] { Owner };
+    public override IEnumerable<Expression> InnerExpressions { get; } = new[] { Owner, Index };
 }

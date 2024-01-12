@@ -7,7 +7,7 @@ sealed record BeforeExpression(Expression OriginalExpression) : Expression
 
     public override Expression Map(Func<Expression, Expression> mapper)
     {
-        return mapper(this);
+        return mapper(new BeforeExpression(OriginalExpression.Map(mapper)));
     }
 
     public override IEnumerable<Expression> InnerExpressions { get; } = new[] { OriginalExpression };

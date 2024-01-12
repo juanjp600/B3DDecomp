@@ -15,8 +15,7 @@ internal static class Program
     {
         string disasmPath = "C:/Users/juanj/Desktop/Blitz3d/ReverseEng/3dwsmemdump_disasm/";
         string decompPath = disasmPath.Replace("_disasm", "_decomp");
-        if (Directory.Exists(decompPath)) { Directory.Delete(decompPath, true); }
-        Directory.CreateDirectory(decompPath);
+        DirectoryUtils.RecreateDirectory(decompPath);
 
         Step0(disasmPath, decompPath);
         Step1();
@@ -49,6 +48,8 @@ internal static class Program
             }
         }
 
+        GenerateLibDecls.FromDir(disasmPath, decompPath);
+
         WriteDebugDirLow(referencedFunctions, decompPath);
 
         Step5(referencedFunctions);
@@ -72,7 +73,7 @@ internal static class Program
         LoadDimArrays.FromDir(disasmPath);
         IngestCodeFiles.FromDir(disasmPath);
 
-        IngestStringConstants.FromDir(disasmPath, decompPath);
+        IngestStringConstants.FromDir(disasmPath);
         TypeDecompiler.FromDir(disasmPath, decompPath);
 
         foreach (var function in Function.AllFunctions.Where(f => f.AssemblySections.Any()))
@@ -177,8 +178,7 @@ internal static class Program
     private static void WriteDebugDirLow(IEnumerable<Function> referencedFunctions, string decompPath)
     {
         var debugDir = $"{decompPath}DebugDirLow/";
-        if (Directory.Exists(debugDir)) { Directory.Delete(debugDir); }
-        Directory.CreateDirectory(debugDir);
+        DirectoryUtils.RecreateDirectory(debugDir);
         
         var functionsWithAssemblySections = referencedFunctions.Where(f => f.AssemblySections.Length > 0).ToArray();
         foreach (var function in functionsWithAssemblySections)
@@ -275,8 +275,7 @@ internal static class Program
     private static void WriteDebugDirMid(IEnumerable<Function> referencedFunctions, string decompPath)
     {
         var debugDir = $"{decompPath}DebugDirMid/";
-        if (Directory.Exists(debugDir)) { Directory.Delete(debugDir); }
-        Directory.CreateDirectory(debugDir);
+        DirectoryUtils.RecreateDirectory(debugDir);
         
         var functionsWithHighLevelSections = referencedFunctions.Where(f => f.HighLevelSections.Length > 0).ToArray();
         foreach (var function in functionsWithHighLevelSections)

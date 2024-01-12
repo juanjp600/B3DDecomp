@@ -6,7 +6,7 @@ namespace Blitz3DDecomp;
 
 static class IngestStringConstants
 {
-    public static void FromDir(string inputDir, string outputDir)
+    public static void FromDir(string inputDir)
     {
         var symbolDescRegex = new Regex("@([0-9A-F]+): (.+)");
         var symbolValueRegex = new Regex("    \"(.+)\" 00");

@@ -342,8 +342,7 @@ internal static class Program
 
         var disasmPath = outputPath + exeName.Replace(".exe", "_disasm");
         
-        if (Directory.Exists(disasmPath)) { Directory.Delete(disasmPath, true); }
-        Directory.CreateDirectory(disasmPath);
+        DirectoryUtils.RecreateDirectory(disasmPath);
         
         File.WriteAllText(disasmPath + "/Compiler.txt", compiler.ToString());
 

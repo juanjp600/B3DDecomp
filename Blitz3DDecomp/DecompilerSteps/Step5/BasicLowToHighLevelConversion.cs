@@ -10,7 +10,7 @@ static class BasicLowToHighLevelConversion
 
     private readonly record struct Context(
         Dictionary<Function.DecompGeneratedTempVariable, Expression> TempToExpression,
-        Dictionary<Function.DecompGeneratedTempVariable, DimSizeAssignment> VarToDimSizeAssignment,
+        Dictionary<DimSizeAssignment, Function.DecompGeneratedTempVariable> DimSizeAssignmentToVar,
         Stack<Expression> FloatStack);
 
     private static void ProcessSection(
@@ -239,12 +239,12 @@ static class BasicLowToHighLevelConversion
                     lastCompareExpression = new SubtractExpression(lhsExpression, rhsExpression);
                     break;
                 case "add":
-                    if (instructionArgToExpression(instruction.SrcArg1) is ConstantExpression { Value: var dimSymbol }
+                    if (instructionArgToNonTempExpression(instruction.SrcArg1) is ConstantExpression { Value: var dimSymbol }
                         && DimArray.TryFindByName(dimSymbol) is { } dimArray
                         && instruction.SrcArg2.TryHexToUint32(out var dimSymbolOffset)
                         && function.InstructionArgumentToVariable(instruction.DestArg) is Function.DecompGeneratedTempVariable dimSizeDestVar)
                     {
-                        context.VarToDimSizeAssignment[dimSizeDestVar] = new DimSizeAssignment(dimArray, (int)((dimSymbolOffset - 0xc) >> 2));
+                        context.DimSizeAssignmentToVar[new DimSizeAssignment(dimArray, (int)((dimSymbolOffset - 0xc) >> 2))] = dimSizeDestVar;
                     }
 
                     lhsExpression = instructionArgToExpression(instruction.SrcArg1);
@@ -288,7 +288,7 @@ static class BasicLowToHighLevelConversion
                 case "call":
                     var assignmentIndices = instruction.CallParameterAssignmentIndices
                         ?? throw new Exception($"CallParameterAssignmentIndices is null for {instruction}");
-                    var returnOutputVar = instruction.ReturnOutputVar 
+                    var calleeReturnOutputVar = instruction.ReturnOutputVar 
                         ?? throw new Exception($"ReturnOutputVar is null for {instruction}");
 
                     var callee = Function.GetFunctionByName(instruction.DestArg);
@@ -316,21 +316,26 @@ static class BasicLowToHighLevelConversion
 
                         if (callee.ReturnType == DeclType.Float)
                         {
-                            context.FloatStack.Push(new VariableExpression(returnOutputVar));
+                            context.FloatStack.Push(new VariableExpression(calleeReturnOutputVar));
                         }
                         var callExpression = new CallExpression(callee, arguments.ToArray());
-                        handleAssignmentToVar(returnOutputVar, callExpression);
+                        handleAssignmentToVar(calleeReturnOutputVar, callExpression);
                     }
                     else if (callee.Name 
                         is "_builtIn__bbStrConst"
                         or "_builtIn__bbStrLoad"
                         or "_builtIn__bbStrToCStr"
                         or "_builtIn__bbCStrToStr"
-                        or "_builtIn__bbObjLoad")
+                        or "_builtIn__bbStrFromCStr"
+                        or "_builtIn__bbStrTmp"
+                        or "_builtIn__bbStrRetain"
+                        or "_builtIn__bbObjLoad"
+                        or "_builtIn__bbIStrTmpFree"
+                        or "_builtIn__bbFStrTmpFree")
                     {
                         var assignInstruction = function.Instructions[assignmentIndices[0]];
                         srcExpression = instructionArgToExpression(assignInstruction.SrcArg1);
-                        handleAssignmentToVar(returnOutputVar, srcExpression);
+                        handleAssignmentToVar(calleeReturnOutputVar, srcExpression);
                     }
                     else if (callee.Name is "_builtIn__bbStrStore" or "_builtIn__bbObjStore")
                     {
@@ -349,12 +354,12 @@ static class BasicLowToHighLevelConversion
                             throw new Exception($"{typeAssignInstruction.SrcArg1} does not resolve to a type");
                         }
                         var customType = CustomType.GetTypeWithName(typeName[3..]);
-                        handleAssignmentToVar(returnOutputVar, new ConstructorExpression(customType));
+                        handleAssignmentToVar(calleeReturnOutputVar, new ConstructorExpression(customType));
                     }
                     else if (callee.Name == "_builtIn__bbDimArray")
                     {
                         var dimAssignInstruction = function.Instructions[assignmentIndices[0]];
-                        var dimAssignExpression = instructionArgToExpression(dimAssignInstruction.SrcArg1);
+                        var dimAssignExpression = instructionArgToNonTempExpression(dimAssignInstruction.SrcArg1);
                         if (dimAssignExpression is not ConstantExpression { Value: var dimSymbol2 })
                         {
                             throw new Exception($"{dimAssignInstruction.SrcArg1} does not resolve to a dim");
@@ -363,8 +368,8 @@ static class BasicLowToHighLevelConversion
                         var sizeAssignmentExpressions = new Expression[dim.NumDimensions];
                         for (int j = 0; j < dim.NumDimensions; j++)
                         {
-                            var sizeAssignmentVariable = context.VarToDimSizeAssignment.First(kvp => kvp.Value.Array == dim && kvp.Value.Dimension == j);
-                            sizeAssignmentExpressions[j] = instructionArgToExpression(sizeAssignmentVariable.Key.Name);
+                            var sizeAssignmentVariable = context.DimSizeAssignmentToVar.First(kvp => kvp.Key.Array == dim && kvp.Key.Dimension == j);
+                            sizeAssignmentExpressions[j] = instructionArgToExpression(sizeAssignmentVariable.Value.Name);
                         }
                         highLevelSection.Statements.Add(new AllocateDimStatement(dim, sizeAssignmentExpressions));
                     }
@@ -397,8 +402,8 @@ static class BasicLowToHighLevelConversion
                         var andInstruction = assemblySection.Instructions[i + 1];
                         var jzInstruction = assemblySection.Instructions[i + 2];
                         if (andInstruction.Name != "and"
-                            || andInstruction.DestArg != returnOutputVar.Name
-                            || andInstruction.SrcArg1 != returnOutputVar.Name
+                            || andInstruction.DestArg != calleeReturnOutputVar.Name
+                            || andInstruction.SrcArg1 != calleeReturnOutputVar.Name
                             || jzInstruction.Name != "jz")
                         {
                             Debugger.Break();
@@ -412,8 +417,8 @@ static class BasicLowToHighLevelConversion
                         var andInstruction = assemblySection.Instructions[i + 1];
                         var jnzInstruction = assemblySection.Instructions[i + 2];
                         if (andInstruction.Name != "and"
-                            || andInstruction.DestArg != returnOutputVar.Name
-                            || andInstruction.SrcArg1 != returnOutputVar.Name
+                            || andInstruction.DestArg != calleeReturnOutputVar.Name
+                            || andInstruction.SrcArg1 != calleeReturnOutputVar.Name
                             || jnzInstruction.Name != "jnz")
                         {
                             Debugger.Break();
@@ -430,7 +435,7 @@ static class BasicLowToHighLevelConversion
                             throw new Exception($"{typeAssignInstruction.SrcArg1} does not resolve to a type");
                         }
                         var customType = CustomType.GetTypeWithName(typeName[3..]);
-                        handleAssignmentToVar(returnOutputVar, new FirstOfTypeExpression(customType));
+                        handleAssignmentToVar(calleeReturnOutputVar, new FirstOfTypeExpression(customType));
                     }
                     else if (callee.Name == "_builtIn__bbObjLast")
                     {
@@ -442,7 +447,7 @@ static class BasicLowToHighLevelConversion
                             throw new Exception($"{typeAssignInstruction.SrcArg1} does not resolve to a type");
                         }
                         var customType = CustomType.GetTypeWithName(typeName[3..]);
-                        handleAssignmentToVar(returnOutputVar, new LastOfTypeExpression(customType));
+                        handleAssignmentToVar(calleeReturnOutputVar, new LastOfTypeExpression(customType));
                     }
                     else if (callee.Name == "_builtIn__bbRestore")
                     {
@@ -463,7 +468,7 @@ static class BasicLowToHighLevelConversion
                         var objectAssignInstruction = function.Instructions[assignmentIndices[0]];
                         var objectExpression = instructionArgToExpression(objectAssignInstruction.SrcArg1);
 
-                        handleAssignmentToVar(returnOutputVar, new ConvertObjectToHandleExpression(objectExpression));
+                        handleAssignmentToVar(calleeReturnOutputVar, new ConvertObjectToHandleExpression(objectExpression));
                     }
                     else if (callee.Name == "_builtIn__bbObjFromHandle")
                     {
@@ -477,7 +482,7 @@ static class BasicLowToHighLevelConversion
                             throw new Exception($"{srcAssignInstruction.SrcArg1} does not resolve to a type");
                         }
 
-                        handleAssignmentToVar(returnOutputVar, new ConvertHandleToObjectExpression(lhsExpression, CustomType.GetTypeWithName(typeName[3..])));
+                        handleAssignmentToVar(calleeReturnOutputVar, new ConvertHandleToObjectExpression(lhsExpression, CustomType.GetTypeWithName(typeName[3..])));
                     }
                     else if (callee.Name == "_builtIn__bbObjDelete")
                     {
@@ -520,18 +525,19 @@ static class BasicLowToHighLevelConversion
                     {
                         var argAssignInstruction = function.Instructions[assignmentIndices[0]];
                         var argAssignExpression = instructionArgToExpression(argAssignInstruction.SrcArg1);
-                        handleAssignmentToVar(returnOutputVar, new AfterExpression(argAssignExpression));
+                        handleAssignmentToVar(calleeReturnOutputVar, new AfterExpression(argAssignExpression));
                     }
                     else if (callee.Name == "_builtIn__bbObjPrev")
                     {
                         var argAssignInstruction = function.Instructions[assignmentIndices[0]];
                         var argAssignExpression = instructionArgToExpression(argAssignInstruction.SrcArg1);
-                        handleAssignmentToVar(returnOutputVar, new BeforeExpression(argAssignExpression));
+                        handleAssignmentToVar(calleeReturnOutputVar, new BeforeExpression(argAssignExpression));
                     }
                     else if (callee.Name is
                         "_builtIn__bbUndimArray"
                         or "_builtIn__bbStrRelease"
-                        or "_builtIn__bbObjRelease")
+                        or "_builtIn__bbObjRelease"
+                        or "_builtIn__bbStrTmpFree")
                     {
                         continue;
                     }
@@ -686,7 +692,7 @@ static class BasicLowToHighLevelConversion
     {
         var context = new Context(
             TempToExpression: new Dictionary<Function.DecompGeneratedTempVariable, Expression>(),
-            VarToDimSizeAssignment: new Dictionary<Function.DecompGeneratedTempVariable, DimSizeAssignment>(),
+            DimSizeAssignmentToVar: new Dictionary<DimSizeAssignment, Function.DecompGeneratedTempVariable>(),
             FloatStack: new Stack<Expression>());
         foreach (var section in function.AssemblySections)
         {

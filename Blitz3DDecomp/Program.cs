@@ -267,6 +267,7 @@ internal static class Program
         foreach (var function in functionsWithAssemblySections)
         {
             BasicLowToHighLevelConversion.Process(function);
+            ConvertConstantsToFinalRepresentation.Process(function);
             RemoveTrivialNoops.Process(function);
             RemoveSingleUseTemps.Process(function);
         }

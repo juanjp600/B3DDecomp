@@ -32,19 +32,6 @@ static class RemoveTrivialNoops
                 return lhs;
             }
 
-            if (expression is ShiftRightUnsignedExpression
-                {
-                    Lhs: ShiftLeftExpression
-                    {
-                        Lhs: var unshiftedExpression,
-                        Rhs: ConstantExpression { Value: "0x2" }
-                    },
-                    Rhs: ConstantExpression { Value: "0x2" }
-                })
-            {
-                return unshiftedExpression;
-            }
-
             return expression;
         }
 

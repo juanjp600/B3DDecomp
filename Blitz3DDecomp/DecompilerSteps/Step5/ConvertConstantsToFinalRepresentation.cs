@@ -114,7 +114,7 @@ static class ConvertConstantsToFinalRepresentation
                     return extractType(signFlipExpression.OriginalExpression);
                 case SubtractExpression subtractExpression:
                     return extractType(subtractExpression.Lhs) ?? extractType(subtractExpression.Rhs);
-                case XorExpression xorExpression:
+                case XorExpression:
                     return DeclType.Int;
                 default:
                     return null;

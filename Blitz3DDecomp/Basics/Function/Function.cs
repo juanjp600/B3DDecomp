@@ -79,6 +79,9 @@ sealed class Function
     {
         switch (compiler)
         {
+            case Compiler.Blitz3dTss:
+                Blitz3dTssBuiltIns.Init();
+                break;
             case Compiler.Blitz3d:
                 Blitz3dBuiltIns.Init();
                 break;

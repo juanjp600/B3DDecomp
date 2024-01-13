@@ -40,7 +40,8 @@ static class DetermineLibParameterCount
                     }
                     break;
                 case "mov":
-                    if (instruction.DestArg.StartsWith("[esp", StringComparison.Ordinal))
+                    if (instruction.DestArg.StartsWith("[esp", StringComparison.Ordinal)
+                        || instruction.DestArg.StartsWith("dword [esp+"))
                     {
                         stackFill++;
                     }

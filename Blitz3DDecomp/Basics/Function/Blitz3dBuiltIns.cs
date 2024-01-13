@@ -375,7 +375,7 @@ static class Blitz3dBuiltIns
         Function.FromBlitzSymbol("Text%x%y$text%centre_x=0%centre_y=0");
         Function.FromBlitzSymbol("CopyRect%source_x%source_y%width%height%dest_x%dest_y%src_buffer=0%dest_buffer=0");
         Function.FromBlitzSymbol("CopyRectStretch%source_x%source_y%width%height%dest_x%dest_y%dest_w%dest_h%src_buffer=0%dest_buffer=0");
-        Function.FromBlitzSymbol("%LoadFont$fontname%height=12");
+        Function.FromBlitzSymbol("%LoadFont$fontname%height=12%bold=0%italic=0%underline=0");
         Function.FromBlitzSymbol("FreeFont%font");
         Function.FromBlitzSymbol("%FontWidth");
         Function.FromBlitzSymbol("%FontHeight");

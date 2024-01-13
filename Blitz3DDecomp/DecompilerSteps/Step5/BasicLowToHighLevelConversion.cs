@@ -34,7 +34,7 @@ static class BasicLowToHighLevelConversion
 
             Expression[] deconstructDimIndices(Expression compositeExpression)
             {
-                // TODO: actually implement this correctly
+                // This is fixed up in FixDimIndexer
                 return new[] { compositeExpression };
             }
 

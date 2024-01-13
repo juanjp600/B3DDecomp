@@ -3,7 +3,7 @@ using B3DDecompUtils;
 
 namespace Blitz3DDecomp.DecompilerSteps.Step1;
 
-static class DetermineLibParameterCount
+static class DetermineLibParameterCountOld
 {
     private readonly record struct Guess(
         int ParameterCount,

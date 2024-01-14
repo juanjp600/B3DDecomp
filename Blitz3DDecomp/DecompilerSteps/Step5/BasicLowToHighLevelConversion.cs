@@ -87,7 +87,7 @@ static class BasicLowToHighLevelConversion
 
         Expression? lastPotentialReturnExpression = null;
         Expression? lastCompareExpression = null;
-        for (int i = 0; i < assemblySection.Instructions.Length; i++)
+        for (int i = assemblySection.PreambleEndIndex + 1; i < assemblySection.Instructions.Length; i++)
         {
             Expression lhsExpression;
             Expression rhsExpression;
@@ -375,10 +375,10 @@ static class BasicLowToHighLevelConversion
                     }
                     else if (callee.Name == "_builtIn__bbVecAlloc")
                     {
-                        if (function.InstructionArgumentToVariable(assemblySection.Instructions[i + 1].SrcArg1) != instruction.ReturnOutputVar)
+                        /*if (function.InstructionArgumentToVariable(assemblySection.Instructions[i + 1].SrcArg1) != instruction.ReturnOutputVar)
                         {
                             Debugger.Break();
-                        }
+                        }*/
                         i++;
                     }
                     else if (callee.Name is "_builtIn__bbObjEachFirst" or "_builtIn__bbObjEachFirst")

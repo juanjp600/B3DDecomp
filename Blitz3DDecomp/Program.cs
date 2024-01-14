@@ -270,6 +270,7 @@ internal static class Program
             RemoveTrivialNoops.Process(function);
             RemoveSingleUseTemps.Process(function);
             FixDimIndexer.Process(function);
+            ConvertFunctionCallsToFinalRepresentation.Process(function);
             ConvertConstantsToFinalRepresentation.Process(function);
         }
     }
@@ -306,6 +307,7 @@ internal static class Program
                     if (statement is ForEachStatement) { indentation = indentation + "    "; }
                 }
             }
+            writeLineToFile("", "End Function");
         }
     }
 }

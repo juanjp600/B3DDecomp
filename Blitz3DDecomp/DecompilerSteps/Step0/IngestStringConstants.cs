@@ -9,11 +9,11 @@ static class IngestStringConstants
     public static void FromDir(string inputDir)
     {
         var symbolDescRegex = new Regex("@([0-9A-F]+): (.+)");
-        var symbolValueRegex = new Regex("    \"(.+)\" 00");
+        var symbolValueRegex = new Regex("    \"(.*)\" 00");
         
         var filePath = inputDir.AppendToPath("Strings.txt");
         var lines = File.ReadAllLines(filePath);
-        for (int i = 0; i < lines.Length - 2; i++)
+        for (int i = 0; i < lines.Length - 1; i++)
         {
             var line = lines[i];
             var nextLine = lines[i+1];

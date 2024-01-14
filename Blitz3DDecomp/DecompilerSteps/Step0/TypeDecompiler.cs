@@ -11,6 +11,7 @@ static class TypeDecompiler
         var symbolValueRegex = new Regex("    Field (.+): (.+)");
         
         inputDir = inputDir.AppendToPath("Type");
+        if (!Directory.Exists(inputDir)) { return; }
         outputDir = outputDir.AppendToPath("Types");
         Directory.CreateDirectory(outputDir);
         foreach (var filePath in Directory.GetFiles(inputDir))

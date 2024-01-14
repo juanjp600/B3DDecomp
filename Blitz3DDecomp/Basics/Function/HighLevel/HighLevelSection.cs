@@ -13,24 +13,9 @@ sealed class HighLevelSection
             this.owner = owner;
         }
 
-        private int StartIndex
-        {
-            get
-            {
-                var indexOfSelfInOwnerSectionList = owner.Owner.HighLevelSections.IndexOf(owner);
-
-                int startIndex = 0;
-                for (int i = 0; i < indexOfSelfInOwnerSectionList; i++)
-                {
-                    startIndex += owner.Owner.HighLevelSections[i].Statements.Count;
-                }
-                return startIndex;
-            }
-        }
-
         public IEnumerator<Statement> GetEnumerator()
         {
-            int startIndex = StartIndex;
+            int startIndex = owner.StartIndex;
             for (int i = 0; i < Count; i++)
             {
                 yield return owner.Owner.HighLevelStatements[startIndex + i];
@@ -42,21 +27,21 @@ sealed class HighLevelSection
 
         public void Add(Statement item)
         {
-            int startIndex = StartIndex;
+            int startIndex = owner.StartIndex;
             owner.Owner.HighLevelStatements.Insert(startIndex + Count, item);
             count++;
         }
 
         public void Clear()
         {
-            int startIndex = StartIndex;
+            int startIndex = owner.StartIndex;
             owner.Owner.HighLevelStatements.RemoveRange(startIndex, Count);
             count = 0;
         }
 
         public bool Contains(Statement item)
         {
-            int startIndex = StartIndex;
+            int startIndex = owner.StartIndex;
             for (int i = 0; i < Count; i++)
             {
                 if (owner.Owner.HighLevelStatements[startIndex + i].Equals(item)) { return true; }
@@ -68,7 +53,7 @@ sealed class HighLevelSection
         {
             if (array.Length == 0) { return; }
             owner.Owner.HighLevelStatements.CopyTo(
-                index: StartIndex,
+                index: owner.StartIndex,
                 array: array,
                 arrayIndex: arrayIndex,
                 count: Count);
@@ -76,7 +61,7 @@ sealed class HighLevelSection
 
         public bool Remove(Statement item)
         {
-            int startIndex = StartIndex;
+            int startIndex = owner.StartIndex;
             for (int i = 0; i < Count; i++)
             {
                 if (owner.Owner.HighLevelStatements[startIndex + i].Equals(item))
@@ -96,7 +81,7 @@ sealed class HighLevelSection
 
         public int IndexOf(Statement item)
         {
-            int startIndex = StartIndex;
+            int startIndex = owner.StartIndex;
             for (int i = 0; i < Count; i++)
             {
                 if (owner.Owner.HighLevelStatements[startIndex + i].Equals(item)) { return i; }
@@ -106,15 +91,15 @@ sealed class HighLevelSection
 
         public void Insert(int index, Statement item)
         {
-            CheckIndexWithinRange(index);
-            owner.Owner.HighLevelStatements.Insert(StartIndex + index, item);
+            if (index < 0 || index > Count) { throw new ArgumentOutOfRangeException(nameof(index)); }
+            owner.Owner.HighLevelStatements.Insert(owner.StartIndex + index, item);
             count++;
         }
 
         public void RemoveAt(int index)
         {
             CheckIndexWithinRange(index);
-            owner.Owner.HighLevelStatements.RemoveAt(StartIndex + index);
+            owner.Owner.HighLevelStatements.RemoveAt(owner.StartIndex + index);
             count--;
         }
 
@@ -123,12 +108,12 @@ sealed class HighLevelSection
             get
             {
                 CheckIndexWithinRange(index);
-                return owner.Owner.HighLevelStatements[StartIndex + index];
+                return owner.Owner.HighLevelStatements[owner.StartIndex + index];
             }
             set
             {
                 CheckIndexWithinRange(index);
-                owner.Owner.HighLevelStatements[StartIndex + index] = value;
+                owner.Owner.HighLevelStatements[owner.StartIndex + index] = value;
             }
         }
 
@@ -141,6 +126,21 @@ sealed class HighLevelSection
     public readonly string Name;
     public readonly IList<Statement> Statements;
     public readonly Function Owner;
+
+    public int StartIndex
+    {
+        get
+        {
+            var indexOfSelfInOwnerSectionList = Owner.HighLevelSections.IndexOf(this);
+
+            int startIndex = 0;
+            for (int i = 0; i < indexOfSelfInOwnerSectionList; i++)
+            {
+                startIndex += Owner.HighLevelSections[i].Statements.Count;
+            }
+            return startIndex;
+        }
+    }
 
     public HighLevelSection(Function owner, string name)
     {

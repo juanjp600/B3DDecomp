@@ -13,4 +13,6 @@ sealed record ForEachStatement(AccessExpression Iterator, CustomType Type) : Sta
         => statementMapper(new ForEachStatement(
             Iterator.Map(expressionMapper) as AccessExpression ?? throw new Exception($"expressionMapper did not return an AccessExpression"),
             Type));
+
+    public override int IndentationToAdd => 1;
 }

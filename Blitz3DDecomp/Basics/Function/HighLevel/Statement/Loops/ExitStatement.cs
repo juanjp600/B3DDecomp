@@ -1,9 +1,9 @@
-﻿namespace Blitz3DDecomp.HighLevel;
+﻿namespace Blitz3DDecomp.HighLevel.Loops;
 
-sealed record UnconditionalJumpStatement(string SectionName) : Statement
+sealed record ExitStatement : Statement
 {
     public override string StringRepresentation
-        => $"Goto section{SectionName}";
+        => "Exit";
 
     public override IEnumerable<Expression> InnerExpressions => Enumerable.Empty<Expression>();
 

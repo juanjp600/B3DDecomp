@@ -97,6 +97,10 @@ static class ConvertConstantsToFinalRepresentation
                     return extractType(multiplyExpression.Lhs) ?? extractType(multiplyExpression.Rhs);
                 case OneIfExpressionsEqualExpression:
                 case OneIfExpressionsNotEqualExpression:
+                case OneIfExpressionIsGreaterThanOtherExpression:
+                case OneIfExpressionIsGreaterThanOrEqualToOtherExpression:
+                case OneIfExpressionIsLessThanOtherExpression:
+                case OneIfExpressionIsLessThanOrEqualToOtherExpression:
                 case OneIfGreaterThanOrEqualToZeroExpression:
                 case OneIfGreaterThanZeroExpression:
                 case OneIfLessThanOrEqualToZeroExpression:
@@ -305,6 +309,9 @@ static class ConvertConstantsToFinalRepresentation
                     map(assignmentStatement.Destination, null) as AccessExpression
                         ?? throw new Exception("map did not return an AccessExpression"),
                     map(assignmentStatement.Source, extractType(assignmentStatement.Destination))),
+            DataReadStatement dataReadStatement
+                => new DataReadStatement(map(dataReadStatement.Destination, null) as AccessExpression
+                        ?? throw new Exception("map did not return an AccessExpression")),
             DeleteEachStatement deleteEachStatement
                 => deleteEachStatement,
             DestructorStatement destructorStatement
@@ -326,8 +333,8 @@ static class ConvertConstantsToFinalRepresentation
                     map(insertBeforeStatement.ObjectThatComesAfter, null)),
             JumpIfExpressionStatement jumpIfExpressionStatement
                 => new JumpIfExpressionStatement(
-                    map(jumpIfExpressionStatement.Expression, null),
-                    jumpIfExpressionStatement.Section),
+                    map(jumpIfExpressionStatement.Condition, null),
+                    jumpIfExpressionStatement.SectionName),
             NextStatement nextStatement
                 => nextStatement,
             RestoreStatement restoreStatement

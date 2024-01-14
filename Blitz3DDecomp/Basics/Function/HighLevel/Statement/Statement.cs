@@ -16,4 +16,7 @@ abstract record Statement
         expressionMapper ??= expr => expr;
         return MapImplementation(statementMapper, expressionMapper);
     }
+
+    public virtual int IndentationToAdd => 0;
+    public virtual int IndentationToSubtract => 0;
 }

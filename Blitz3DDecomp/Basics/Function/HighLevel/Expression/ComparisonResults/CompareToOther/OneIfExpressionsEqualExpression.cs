@@ -1,6 +1,8 @@
-﻿namespace Blitz3DDecomp.HighLevel;
+﻿using Blitz3DDecomp.HighLevel.ComparisonResults;
 
-sealed record OneIfExpressionsEqualExpression(Expression Lhs, Expression Rhs) : Expression
+namespace Blitz3DDecomp.HighLevel;
+
+sealed record OneIfExpressionsEqualExpression(Expression Lhs, Expression Rhs) : BooleanExpression
 {
     public override string StringRepresentation
         => $"({Lhs.StringRepresentation} = {Rhs.StringRepresentation})";
@@ -11,4 +13,7 @@ sealed record OneIfExpressionsEqualExpression(Expression Lhs, Expression Rhs) : 
     }
 
     public override IEnumerable<Expression> InnerExpressions { get; } = new[] { Lhs, Rhs };
+
+    public override BooleanExpression Negated
+        => new OneIfExpressionsNotEqualExpression(Lhs, Rhs);
 }

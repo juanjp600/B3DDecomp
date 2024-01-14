@@ -1,9 +1,9 @@
 ﻿namespace Blitz3DDecomp.HighLevel;
 
-sealed record UnconditionalJumpStatement(string SectionName) : Statement
+sealed record ElseStatement : Statement
 {
     public override string StringRepresentation
-        => $"Goto section{SectionName}";
+        => "Else";
 
     public override IEnumerable<Expression> InnerExpressions => Enumerable.Empty<Expression>();
 
@@ -11,4 +11,7 @@ sealed record UnconditionalJumpStatement(string SectionName) : Statement
             Func<Statement, Statement> statementMapper,
             Func<Expression, Expression> expressionMapper)
         => statementMapper(this);
+
+    public override int IndentationToAdd => 1;
+    public override int IndentationToSubtract => 1;
 }

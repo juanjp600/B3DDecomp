@@ -13,7 +13,7 @@ internal static class Program
 {
     public static void Main(string[] args)
     {
-        string disasmPath = "C:/Users/juanj/Desktop/Blitz3d/ReverseEng/3dwsmemdump_disasm/";
+        string disasmPath = "C:/Users/juanj/Desktop/Blitz3d/ReverseEng/SCP - Containment Breach v0.2_disasm/";
         string decompPath = disasmPath.Replace("_disasm", "_decomp");
         DirectoryUtils.RecreateDirectory(decompPath);
 
@@ -271,7 +271,16 @@ internal static class Program
             RemoveSingleUseTemps.Process(function);
             FixDimIndexer.Process(function);
             ConvertFunctionCallsToFinalRepresentation.Process(function);
+            CleanupBooleanExpressions.Process(function);
             ConvertConstantsToFinalRepresentation.Process(function);
+            CleanupSelect.Process(function);
+            CleanupUselessGoto.Process(function);
+            CleanupWhile.Process(function);
+            CleanupRepeat.Process(function);
+            CleanupIfs.Process(function);
+            CleanupElse.Process(function);
+            CleanupExit.Process(function);
+            CleanupUselessGoto.Process(function);
         }
     }
 
@@ -280,9 +289,20 @@ internal static class Program
         var debugDir = $"{decompPath}DebugDirMid/";
         DirectoryUtils.RecreateDirectory(debugDir);
         
-        var functionsWithHighLevelSections = referencedFunctions.Where(f => f.HighLevelSections.Length > 0).ToArray();
+        var functionsWithHighLevelSections = referencedFunctions.Where(f => f.HighLevelSections.Count > 0).ToArray();
         foreach (var function in functionsWithHighLevelSections)
         {
+            var referencedSections = function
+                .HighLevelStatements
+                .SelectMany(stmt =>
+                    stmt switch
+                    {
+                        UnconditionalJumpStatement unconditionalJumpStatement => new[] { unconditionalJumpStatement.SectionName },
+                        JumpIfExpressionStatement jumpIfExpressionStatement => new[] { jumpIfExpressionStatement.SectionName },
+                        _ => Array.Empty<string>()
+                    })
+                .ToHashSet();
+            
             using var file = File.Create($"{debugDir}{function.Name}.txt");
             
             string indentation = "";
@@ -299,12 +319,15 @@ internal static class Program
             }
             foreach (var section in function.HighLevelSections)
             {
-                writeLineToFile(".", section.Name);
+                if (referencedSections.Contains(section.Name))
+                {
+                    writeLineToFile(".section", section.Name);
+                }
                 foreach (var statement in section.Statements)
                 {
-                    if (statement is NextStatement) { indentation = indentation[..^4]; }
+                    for (int i=0;i<statement.IndentationToSubtract;i++) { indentation = indentation[..^4]; }
                     writeLineToFile(indentation, statement.StringRepresentation);
-                    if (statement is ForEachStatement) { indentation = indentation + "    "; }
+                    for (int i=0;i<statement.IndentationToAdd;i++) { indentation = indentation + "    "; }
                 }
             }
             writeLineToFile("", "End Function");

@@ -1,9 +1,9 @@
-﻿namespace Blitz3DDecomp.HighLevel;
+﻿namespace Blitz3DDecomp.HighLevel.Select;
 
-sealed record NextStatement : Statement
+sealed record EndSelectStatement : Statement
 {
     public override string StringRepresentation
-        => "Next";
+        => "End Select";
 
     public override IEnumerable<Expression> InnerExpressions => Enumerable.Empty<Expression>();
 
@@ -11,4 +11,6 @@ sealed record NextStatement : Statement
             Func<Statement, Statement> statementMapper,
             Func<Expression, Expression> expressionMapper)
         => statementMapper(this);
+
+    public override int IndentationToSubtract => 2;
 }

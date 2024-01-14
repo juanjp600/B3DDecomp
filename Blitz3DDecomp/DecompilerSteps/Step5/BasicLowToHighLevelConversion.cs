@@ -21,7 +21,8 @@ static class BasicLowToHighLevelConversion
         if (sectionName == "__MAIN" && function.Name == "EntryPoint") { return; }
         if (sectionName.StartsWith("SGNZERO", StringComparison.Ordinal)) { return; }
         var assemblySection = function.AssemblySectionsByName[sectionName];
-        var highLevelSection = function.HighLevelSectionsByName[sectionName];
+        var highLevelSectionsByName = function.HighLevelSectionsByName;
+        var highLevelSection = highLevelSectionsByName[sectionName];
 
         if (assemblySection.Instructions.Any(i => i.Name == "ret")) { return; }
 
@@ -170,18 +171,18 @@ static class BasicLowToHighLevelConversion
                         "jl" => new OneIfLessThanZeroExpression(lastCompareExpression),
                         "jle" => new OneIfLessThanOrEqualToZeroExpression(lastCompareExpression),
                         _ => throw new Exception("unreachable")
-                    }, function.HighLevelSectionsByName[instruction.DestArg[1..]]));
+                    }, instruction.DestArg[1..]));
                     break;
                 case "jmp":
-                    var jmpSection = function.HighLevelSectionsByName[instruction.DestArg[1..]];
-                    if (jmpSection.Name.EndsWith($"_leave_f{function.Name}", StringComparison.Ordinal)
+                    var jmpSectionName = instruction.DestArg[1..];
+                    if (jmpSectionName.EndsWith($"_leave_f{function.Name}", StringComparison.Ordinal)
                         && lastPotentialReturnExpression != null)
                     {
                         highLevelSection.Statements.Add(new ReturnStatement(lastPotentialReturnExpression));
                     }
                     else
                     {
-                        highLevelSection.Statements.Add(new UnconditionalJumpStatement(jmpSection));
+                        highLevelSection.Statements.Add(new UnconditionalJumpStatement(jmpSectionName));
                     }
                     break;
                 case "setz" or "sete":

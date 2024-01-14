@@ -50,8 +50,9 @@ sealed class Function
     public readonly ImmutableDictionary<string, AssemblySection> AssemblySectionsByName;
 
     public readonly List<Statement> HighLevelStatements;
-    public readonly ImmutableArray<HighLevelSection> HighLevelSections;
-    public readonly ImmutableDictionary<string, HighLevelSection> HighLevelSectionsByName;
+    public readonly List<HighLevelSection> HighLevelSections;
+    public ImmutableDictionary<string, HighLevelSection> HighLevelSectionsByName
+        => HighLevelSections.ToImmutableDictionary(s => s.Name, s => s);
 
     public void FindSectionForStatementIndex(int statementIndex, out HighLevelSection section, out int indexInSection)
     {
@@ -59,7 +60,7 @@ sealed class Function
 
         section = HighLevelSections[0];
         int currentIndexInSection = statementIndex;
-        for (int i = 0; i < HighLevelSections.Length; i++)
+        for (int i = 0; i < HighLevelSections.Count; i++)
         {
             if (currentIndexInSection < HighLevelSections[i].Statements.Count)
             {
@@ -282,8 +283,7 @@ sealed class Function
         AssemblySectionsByName = AssemblySections.ToImmutableDictionary(s => s.Name, s => s);
 
         HighLevelStatements = new List<Statement>();
-        HighLevelSections = AssemblySections.Select(s => new HighLevelSection(this, s.Name)).ToImmutableArray();
-        HighLevelSectionsByName = HighLevelSections.ToImmutableDictionary(s => s.Name, s => s);
+        HighLevelSections = AssemblySections.Select(s => new HighLevelSection(this, s.Name)).ToList();
         lookupDictionary.Add(name.ToLowerInvariant(), this);
     }
 

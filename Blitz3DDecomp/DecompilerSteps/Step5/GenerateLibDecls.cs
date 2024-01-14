@@ -7,12 +7,13 @@ static class GenerateLibDecls
     public static void FromDir(string disasmPath, string decompPath)
     {
         var inputDir = disasmPath.AppendToPath("Libs");
+        if (!Directory.Exists(inputDir)) { return; }
         var outputDir = decompPath.AppendToPath("Decls");
         Directory.CreateDirectory(outputDir);
         foreach (var filePath in Directory.GetFiles(inputDir))
         {
             var outputLines = new List<string>();
-            
+
             var lines = File.ReadAllLines(filePath);
             var dllName = lines[0].Trim();
             outputLines.Add($".lib \"{dllName}\"");

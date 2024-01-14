@@ -1,6 +1,8 @@
-﻿namespace Blitz3DDecomp.HighLevel;
+﻿using Blitz3DDecomp.HighLevel.ComparisonResults;
 
-sealed record OneIfZeroExpression(Expression OriginalExpression) : Expression
+namespace Blitz3DDecomp.HighLevel;
+
+sealed record OneIfZeroExpression(Expression OriginalExpression) : BooleanExpression
 {
     public override string StringRepresentation
         => $"({OriginalExpression.StringRepresentation} = 0)";
@@ -11,4 +13,7 @@ sealed record OneIfZeroExpression(Expression OriginalExpression) : Expression
     }
 
     public override IEnumerable<Expression> InnerExpressions { get; } = new[] { OriginalExpression };
+
+    public override BooleanExpression Negated
+        => new OneIfNotZeroExpression(OriginalExpression);
 }

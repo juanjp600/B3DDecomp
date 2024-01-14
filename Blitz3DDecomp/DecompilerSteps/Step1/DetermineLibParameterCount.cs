@@ -130,7 +130,11 @@ static class DetermineLibParameterCount
                 Functions: libFunctions.ToImmutableArray(),
                 MaxPossibleParameters: maximumPossibleParameters.ToImmutableDictionary(),
                 StackUsage: stackFill));
-        }        
+        }
+        else if (stackFill != 0)
+        {
+            Debugger.Break();
+        }
     }
 
     private static void ProduceGuesses(Context context, Function function)
@@ -255,6 +259,5 @@ static class DetermineLibParameterCount
                 }
             }
         }
-        Debugger.Break();
     }
 }

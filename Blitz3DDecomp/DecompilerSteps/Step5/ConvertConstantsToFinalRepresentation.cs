@@ -198,6 +198,11 @@ static class ConvertConstantsToFinalRepresentation
                     return new MultiplyExpression(
                         map(multiplyExpression.Lhs, declType),
                         map(multiplyExpression.Rhs, declType));
+                case ExponentiationExpression exponentiationExpression:
+                    declType = extractType(exponentiationExpression) ?? declType;
+                    return new ExponentiationExpression(
+                        map(exponentiationExpression.Base, declType),
+                        map(exponentiationExpression.Exponent, declType));
                 case OneIfExpressionsEqualExpression oneIfExpressionsEqualExpression:
                     declType = extractType(oneIfExpressionsEqualExpression.Lhs) ?? extractType(oneIfExpressionsEqualExpression.Rhs);
                     return new OneIfExpressionsEqualExpression(
@@ -208,6 +213,26 @@ static class ConvertConstantsToFinalRepresentation
                     return new OneIfExpressionsNotEqualExpression(
                         map(oneIfExpressionsNotEqualExpression.Lhs, declType),
                         map(oneIfExpressionsNotEqualExpression.Rhs, declType));
+                case OneIfExpressionIsLessThanOtherExpression oneIfExpressionIsLessThanOtherExpression:
+                    declType = extractType(oneIfExpressionIsLessThanOtherExpression.Lhs) ?? extractType(oneIfExpressionIsLessThanOtherExpression.Rhs);
+                    return new OneIfExpressionIsLessThanOtherExpression(
+                        map(oneIfExpressionIsLessThanOtherExpression.Lhs, declType),
+                        map(oneIfExpressionIsLessThanOtherExpression.Rhs, declType));
+                case OneIfExpressionIsLessThanOrEqualToOtherExpression oneIfExpressionIsLessThanOrEqualToOtherExpression:
+                    declType = extractType(oneIfExpressionIsLessThanOrEqualToOtherExpression.Lhs) ?? extractType(oneIfExpressionIsLessThanOrEqualToOtherExpression.Rhs);
+                    return new OneIfExpressionIsLessThanOrEqualToOtherExpression(
+                        map(oneIfExpressionIsLessThanOrEqualToOtherExpression.Lhs, declType),
+                        map(oneIfExpressionIsLessThanOrEqualToOtherExpression.Rhs, declType));
+                case OneIfExpressionIsGreaterThanOtherExpression oneIfExpressionIsGreaterThanOtherExpression:
+                    declType = extractType(oneIfExpressionIsGreaterThanOtherExpression.Lhs) ?? extractType(oneIfExpressionIsGreaterThanOtherExpression.Rhs);
+                    return new OneIfExpressionIsGreaterThanOtherExpression(
+                        map(oneIfExpressionIsGreaterThanOtherExpression.Lhs, declType),
+                        map(oneIfExpressionIsGreaterThanOtherExpression.Rhs, declType));
+                case OneIfExpressionIsGreaterThanOrEqualToOtherExpression oneIfExpressionIsGreaterThanOrEqualToOtherExpression:
+                    declType = extractType(oneIfExpressionIsGreaterThanOrEqualToOtherExpression.Lhs) ?? extractType(oneIfExpressionIsGreaterThanOrEqualToOtherExpression.Rhs);
+                    return new OneIfExpressionIsGreaterThanOrEqualToOtherExpression(
+                        map(oneIfExpressionIsGreaterThanOrEqualToOtherExpression.Lhs, declType),
+                        map(oneIfExpressionIsGreaterThanOrEqualToOtherExpression.Rhs, declType));
                 case OneIfGreaterThanOrEqualToZeroExpression oneIfGreaterThanOrEqualToZeroExpression:
                     declType = extractType(oneIfGreaterThanOrEqualToZeroExpression.OriginalExpression);
                     return new OneIfGreaterThanOrEqualToZeroExpression(
@@ -308,7 +333,7 @@ static class ConvertConstantsToFinalRepresentation
             RestoreStatement restoreStatement
                 => restoreStatement,
             ReturnStatement returnStatement
-                => new ReturnStatement(map(returnStatement.Expression, null)),
+                => new ReturnStatement(map(returnStatement.Expression, function.ReturnType)),
             UnconditionalJumpStatement unconditionalJumpStatement
                 => unconditionalJumpStatement,
             _ => throw new ArgumentOutOfRangeException()

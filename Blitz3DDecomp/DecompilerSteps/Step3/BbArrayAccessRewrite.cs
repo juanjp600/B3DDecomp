@@ -44,7 +44,7 @@ static class BbArrayAccessRewrite
                 }
                 else if (instructionArg.TryHexToUint32(out var constantIndex))
                 {
-                    arrayIndex = (constantIndex >> 2).ToString();
+                    arrayIndex = "0x" + (constantIndex >> 2).ToString("X1");
                 }
             }
             tryExtractArrayIndex(instruction.SrcArg1, srcVar1);

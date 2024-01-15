@@ -114,6 +114,8 @@ static class ConvertConstantsToFinalRepresentation
                     return DeclType.String;
                 case DivideExpression divideExpression:
                     return extractType(divideExpression.Lhs) ?? extractType(divideExpression.Rhs);
+                case ExponentiationExpression exponentiationExpression:
+                    return extractType(exponentiationExpression.Base) ?? extractType(exponentiationExpression.Exponent);
                 case FirstOfTypeExpression firstOfTypeExpression:
                     return new DeclType("." + firstOfTypeExpression.ObjectType.Name);
                 case LastOfTypeExpression lastOfTypeExpression:
@@ -192,13 +194,13 @@ static class ConvertConstantsToFinalRepresentation
                         map(convertHandleToObjectExpression.HandleExpression, DeclType.Int),
                         convertHandleToObjectExpression.ObjectType);
                 case ConvertObjectToHandleExpression convertObjectToHandleExpression:
-                    return new ConvertObjectToHandleExpression(map(convertObjectToHandleExpression.ObjectExpression, declType));
+                    return new ConvertObjectToHandleExpression(map(convertObjectToHandleExpression.ObjectExpression, null));
                 case ConvertToFloatExpression convertToFloatExpression:
-                    return new ConvertToFloatExpression(map(convertToFloatExpression.OriginalExpression, extractType(convertToFloatExpression.OriginalExpression)));
+                    return new ConvertToFloatExpression(map(convertToFloatExpression.OriginalExpression, null));
                 case ConvertToIntExpression convertToIntExpression:
-                    return new ConvertToIntExpression(map(convertToIntExpression.OriginalExpression, extractType(convertToIntExpression.OriginalExpression)));
+                    return new ConvertToIntExpression(map(convertToIntExpression.OriginalExpression, null));
                 case ConvertToStringExpression convertToStringExpression:
-                    return new ConvertToStringExpression(map(convertToStringExpression.OriginalExpression, extractType(convertToStringExpression.OriginalExpression)));
+                    return new ConvertToStringExpression(map(convertToStringExpression.OriginalExpression, null));
                 case DivideExpression divideExpression:
                     declType = extractType(divideExpression) ?? declType;
                     return new DivideExpression(

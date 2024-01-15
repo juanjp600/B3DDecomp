@@ -196,6 +196,21 @@ static class DetermineLibParameterCount
             Equations: new List<Equation>(),
             SolvedFunctions: new HashSet<Function>(),
             Guesses: new List<Guess>());
+
+        foreach (var dll in LibSymbols.Dlls)
+        {
+            foreach (var entry in dll.Entries)
+            {
+                if (entry.ParameterCount is { } parameterCount)
+                {
+                    var newLibFunction = new Function(entry.DecompName, parameterCount);
+                    context.SolvedFunctions.Add(newLibFunction);
+                    Logger.WriteLine($"Solved {entry.DecompName} from dll symbol {entry.DllSymbolName}");
+                }
+            }
+        }
+
+
         foreach (var function in functionsWithAssemblySections)
         {
             ProduceEquation(context, function);

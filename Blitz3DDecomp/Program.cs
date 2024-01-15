@@ -48,7 +48,7 @@ internal static class Program
             }
         }
 
-        GenerateLibDecls.FromDir(disasmPath, decompPath);
+        GenerateLibDecls.ToDir(decompPath);
 
         WriteDebugDirLow(referencedFunctions, decompPath);
 
@@ -103,6 +103,7 @@ internal static class Program
         LoadGlobalList.FromDir(disasmPath);
         LoadDimArrays.FromDir(disasmPath);
         IngestCodeFiles.FromDir(disasmPath);
+        IngestLibInfo.FromDir(disasmPath);
 
         IngestStringConstants.FromDir(disasmPath);
         TypeDecompiler.FromDir(disasmPath, decompPath);

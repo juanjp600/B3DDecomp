@@ -19,24 +19,43 @@ static class CleanupIfs
             if (jumpStatementSection.StartIndex < i) { continue; }
 
             int indent = 0;
+            bool couldBeValidIf = true;
             for (int j = i; j < jumpStatementSection.StartIndex; j++)
             {
                 indent -= function.HighLevelStatements[j].IndentationToSubtract;
-                if (indent < 0) { break; }
+                if (indent < 0 && function.HighLevelStatements[j].IndentationToAdd > 0)
+                {
+                    couldBeValidIf = false;
+                    break;
+                }
                 indent += function.HighLevelStatements[j].IndentationToAdd;
             }
+
             if (indent != 0)
             {
-                bool isStillValidIf = indent > 0;
-                for (int j = 1; j <= indent; j++)
+                if (indent > 0)
                 {
-                    if (function.HighLevelStatements[jumpStatementSection.StartIndex - j] is not RepeatStatement)
+                    for (int j = 1; j <= indent; j++)
                     {
-                        isStillValidIf = false;
-                        break;
+                        if (function.HighLevelStatements[jumpStatementSection.StartIndex - j] is not RepeatStatement)
+                        {
+                            couldBeValidIf = false;
+                            break;
+                        }
                     }
                 }
-                if (!isStillValidIf) { continue; }
+                else
+                {
+                    for (int j = 1; j <= -indent; j++)
+                    {
+                        if (function.HighLevelStatements[jumpStatementSection.StartIndex - j] is not EndIfStatement)
+                        {
+                            couldBeValidIf = false;
+                            break;
+                        }
+                    }
+                }
+                if (!couldBeValidIf) { continue; }
             }
 
             function.HighLevelStatements[i] = new IfStatement(condition.Negated);

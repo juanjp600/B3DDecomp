@@ -23,7 +23,7 @@ static class CleanupRepeat
             if (string.IsNullOrEmpty(sectionName) || replacementStatement is null) { continue; }
 
             var jumpStatementSection = function.HighLevelSectionsByName[sectionName];
-            if (jumpStatementSection.StartIndex >= i) { continue; }
+            if (jumpStatementSection.StartIndex > i) { continue; }
 
             int indent = 0;
             for (int j = jumpStatementSection.StartIndex; j < i; j++)

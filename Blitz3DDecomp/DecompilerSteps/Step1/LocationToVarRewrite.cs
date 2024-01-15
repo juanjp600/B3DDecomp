@@ -85,6 +85,20 @@ static class LocationToVarRewrite
                     incrementIndex("eax", DeclType.Unknown, out instruction.ReturnOutputVar);
                     break;
                 }
+                case "shl" or "shr" or "sal" or "sar":
+                {
+                    if (!canGenerateTempVars) { return; }
+
+                    replace(ref instruction.DestArg);
+                    replace(ref instruction.SrcArg1);
+                    if (instruction.SrcArg1 == "cl"
+                        && !string.IsNullOrEmpty(getIndexedName("ecx")))
+                    {
+                        instruction.SrcArg1 = getIndexedName("ecx");
+                    }
+
+                    break;
+                }
                 case "mov" or "movzx" or "lea" or "pop" or "add":
                 {
                     if (!canGenerateTempVars) { return; }

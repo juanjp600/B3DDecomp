@@ -1,4 +1,5 @@
-﻿using System.Linq.Expressions;
+﻿using System.Diagnostics;
+using System.Linq.Expressions;
 using B3DDecompUtils;
 using Blitz3DDecomp.HighLevel;
 using Expression = Blitz3DDecomp.HighLevel.Expression;
@@ -39,7 +40,7 @@ static class RemoveSingleUseTemps
         bool moreThanOneUse = false;
         int jumpIndex = -1;
 
-        for (int i = statementIndex + 1; i < Math.Min(statementIndex + 201, function.HighLevelStatements.Count); i++)
+        for (int i = statementIndex + 1; i < Math.Min(statementIndex + 60, function.HighLevelStatements.Count); i++)
         {
             var statement = function.HighLevelStatements[i];
             if (jumpIndex < 0 && statement is UnconditionalJumpStatement or JumpIfExpressionStatement) { jumpIndex = i; }
@@ -81,6 +82,7 @@ static class RemoveSingleUseTemps
             else
             {
                 var freestandingStatement = new FreeStandingExpressionStatement(srcExpression);
+                if (srcExpression is not (CallExpression or ConstructorExpression)) { Debugger.Break(); }
                 Logger.WriteLine($"{function}: rewriting {statementToRemove.StringRepresentation} as {freestandingStatement.StringRepresentation}");
                 function.HighLevelStatements[statementIndex] = freestandingStatement;
             }

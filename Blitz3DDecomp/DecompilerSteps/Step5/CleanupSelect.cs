@@ -26,11 +26,11 @@ static class CleanupSelect
                 ? condition.Rhs
                 : condition.Lhs;
 
-        void handleChain(ref int i)
+        void handleChain(ref int outerLoopIndex)
         {
             try
             {
-                var chainEnd = i - 1;
+                var chainEnd = outerLoopIndex - 1;
                 if (chainStart < 0 || chainEnd < 0) { return; }
                 if (chainStart == chainEnd) { return; }
                 function.FindSectionForStatementIndex(chainStart, out var startSection, out var indexInStartSection);
@@ -60,7 +60,12 @@ static class CleanupSelect
 
                 var sectionsByName = function.HighLevelSectionsByName;
 
-                var firstCaseSection = cases.Keys.Select(key => sectionsByName[key]).MinBy(s => s.StartIndex)!;
+                var allCaseSections = cases.Keys
+                    .Select(key => sectionsByName[key])
+                    .OrderBy(s => s.StartIndex)
+                    .ToArray();
+
+                var firstCaseSection = allCaseSections.First();
                 var firstCaseStatementIndex = firstCaseSection.StartIndex;
                 if (firstCaseStatementIndex < startSection.StartIndex) { Debugger.Break(); }
 
@@ -100,7 +105,7 @@ static class CleanupSelect
 
                 var chainStartIndexInStartSection = chainStart - startSection.StartIndex;
                 int startSectionSize = startSection.Statements.Count;
-                for (int j = chainStartIndexInStartSection; j < startSectionSize - 1; j++)
+                for (int j = chainStartIndexInStartSection; j < startSectionSize; j++)
                 {
                     var stmt = startSection.Statements[chainStartIndexInStartSection];
                     startSection.Statements.RemoveAt(chainStartIndexInStartSection);
@@ -116,9 +121,10 @@ static class CleanupSelect
                     sectionToClean.Statements.RemoveAt(sectionToClean.Statements.Count - 1);
                 }
 
-                foreach (var caseSection in cases.Keys.Select(key => sectionsByName[key]))
+                for (var j = 0; j < allCaseSections.Length; j++)
                 {
-                    cleanUpGotoOfPrevSection(caseSection);
+                    var caseSection = allCaseSections[j];
+                    if (j > 0) { cleanUpGotoOfPrevSection(caseSection); }
 
                     caseSection.Statements.Insert(0, new CaseStatement(cases[caseSection.Name].ToArray()));
                 }
@@ -164,7 +170,13 @@ static class CleanupSelect
 
                 startSection.Statements.Add(new SelectStatement(selectInnerExpression));
 
-                i = chainStart;
+                if (function.HighLevelStatements.Count(stmt => stmt is SelectStatement)
+                    != function.HighLevelStatements.Count(stmt => stmt is EndSelectStatement))
+                {
+                    Debugger.Break();
+                }
+
+                outerLoopIndex = chainStart;
             }
             finally
             {

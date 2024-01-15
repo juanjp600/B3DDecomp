@@ -116,9 +116,19 @@ static class BasicLowToHighLevelConversion
                 if (destVar is null) { return; }
                 if (!destVar.DeclType.IsArrayType)
                 {
+                    Expression reduceExpression(Expression expression)
+                    {
+                        if (expression is VariableExpression { Variable: Function.DecompGeneratedTempVariable tempVar }
+                            && context.TempToExpression[tempVar] != expression)
+                        {
+                            return reduceExpression(context.TempToExpression[tempVar]);
+                        }
+                        return expression;
+                    }
+
                     if (derefDest
                         && destVar is Function.DecompGeneratedTempVariable tempDestVar1
-                        && context.TempToExpression[tempDestVar1] is AccessExpression accessExpression)
+                        && reduceExpression(context.TempToExpression[tempDestVar1]) is AccessExpression accessExpression)
                     {
                         highLevelSection.Statements.Add(new AssignmentStatement(accessExpression, srcExpression));
                     }

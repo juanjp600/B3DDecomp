@@ -1,4 +1,5 @@
 ﻿using Blitz3DDecomp.HighLevel;
+using Blitz3DDecomp.HighLevel.ComparisonResults;
 
 namespace Blitz3DDecomp.DecompilerSteps.Step5;
 
@@ -27,7 +28,16 @@ static class CleanupElse
             if (indent != -1) { continue; }
 
             jumpStatementSection.Statements.Insert(0, new EndIfStatement());
-            function.HighLevelStatements[i + 1] = new ElseStatement();
+            if (i > 0 && function.HighLevelStatements[i - 1] is IfStatement { Condition: BooleanExpression ifCondition })
+            {
+                function.HighLevelStatements[i - 1] = new IfStatement(ifCondition.Negated);
+                function.FindSectionForStatementIndex(i + 1, out var nextStatementSection, out var indexInNextSection);
+                nextStatementSection.Statements.RemoveAt(indexInNextSection);
+            }
+            else
+            {
+                function.HighLevelStatements[i + 1] = new ElseStatement();
+            }
 
             function.FindSectionForStatementIndex(i, out var section, out int indexInSection);
             section.Statements.RemoveAt(indexInSection);

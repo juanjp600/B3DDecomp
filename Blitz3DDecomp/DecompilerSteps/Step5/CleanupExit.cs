@@ -35,7 +35,17 @@ static class CleanupExit
                     }
                 }
             }
-            if (exitIndex != jumpStatementSection.StartIndex - 1) { continue; }
+
+            bool isValidExit = true;
+            for (int j = exitIndex + 1; j < jumpStatementSection.StartIndex; j++)
+            {
+                if (function.HighLevelStatements[j] is not EndIfStatement)
+                {
+                    isValidExit = false;
+                    break;
+                }
+            }
+            if (!isValidExit) { continue; }
 
             function.HighLevelStatements[i] = new ExitStatement();
         }

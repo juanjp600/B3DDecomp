@@ -8,6 +8,7 @@ readonly record struct DeclType(string Suffix)
     public static readonly DeclType Int = new DeclType("%");
     public static readonly DeclType Float = new DeclType("#");
     public static readonly DeclType String = new DeclType("$");
+    public static readonly DeclType Pointer = new DeclType("*");
 
     public static DeclType FromDesc(string descStr)
     {

@@ -25,13 +25,37 @@ static class VariableTypePropagation
             }
         }
 
-        void handleMovLea(Instruction instruction)
+        void handleMovLea(Instruction instruction, int instructionIndex)
         {
             if (instruction.Name is not ("mov" or "lea")) { return; }
 
             var destVar = function.InstructionArgumentToVariable(instruction.DestArg);
             var srcVar = function.InstructionArgumentToVariable(instruction.SrcArg1);
             if (destVar is null || srcVar is null) { return; }
+
+            if (srcVar.DeclType == DeclType.Int
+                && instruction.Name == "mov"
+                && instruction.SrcArg1.StripDeref() != instruction.SrcArg1)
+            {
+                // Might be passing a Bank to a lib function as a pointer,
+                // check for some pointer offset magic
+                for (int i = instructionIndex - 1; i >= Math.Max(0, instructionIndex - 200); i--)
+                {
+                    var prevInstruction = function.Instructions[i];
+                    if (prevInstruction.Name != "add") { continue; }
+                    if (prevInstruction.DestArg != instruction.SrcArg1.StripDeref()) { continue; }
+
+                    if (prevInstruction.SrcArg2 != "0x4") { break; }
+
+                    var newSrcVar = function.InstructionArgumentToVariable(prevInstruction.SrcArg1);
+                    if (newSrcVar?.DeclType != DeclType.Int) { break; }
+
+                    instruction.SrcArg1 = prevInstruction.SrcArg1;
+                    destVar.DeclType = DeclType.Pointer;
+                    destVar.Trace = newSrcVar.Trace.Append($"{function}: {destVar.Name} is {DeclType.Pointer} because it's a bank passed to a lib function");
+                    return;
+                }
+            }
 
             exchangeTypes(destVar, srcVar);
         }
@@ -78,15 +102,18 @@ static class VariableTypePropagation
             }
         }
 
-        foreach (var instruction in function.Instructions)
+        for (var instructionIndex = 0; instructionIndex < function.Instructions.Length; instructionIndex++)
         {
-            handleMovLea(instruction);
+            var instruction = function.Instructions[instructionIndex];
+            handleMovLea(instruction, instructionIndex);
             handleXchg(instruction);
             handleCmp(instruction);
         }
-        foreach (var instruction in function.Instructions.Reverse())
+
+        for (var instructionIndex = function.Instructions.Length - 1; instructionIndex >= 0; instructionIndex--)
         {
-            handleMovLea(instruction);
+            var instruction = function.Instructions[instructionIndex];
+            handleMovLea(instruction, instructionIndex);
             handleXchg(instruction);
             handleCmp(instruction);
         }

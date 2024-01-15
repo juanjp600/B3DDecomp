@@ -458,7 +458,7 @@ static class BlitzPlusBuiltIns
         _ = new Function("_builtIn__bbStrToFloat", DeclType.String) { ReturnType = DeclType.Float };
         _ = new Function("_builtIn__bbStrLoad", DeclType.String) { ReturnType = DeclType.String };
         _ = new Function("_builtIn__bbStrRelease", DeclType.String);
-        _ = new Function("_builtIn__bbStrStore", 2);
+        _ = new Function("_builtIn__bbStrStore", DeclType.String, DeclType.String);
         _ = new Function("_builtIn__bbStrConcat", DeclType.String, DeclType.String) { ReturnType = DeclType.String };
         _ = new Function("_builtIn__bbStrCompare", DeclType.String, DeclType.String) { ReturnType = DeclType.Int };
         _ = new Function("_builtIn__bbStrToCStr", DeclType.String) { ReturnType = DeclType.String };

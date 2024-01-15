@@ -1,5 +1,7 @@
-﻿using B3DDecompUtils;
+﻿using System.Diagnostics;
+using B3DDecompUtils;
 using Blitz3DDecomp.HighLevel;
+using Blitz3DDecomp.HighLevel.ComparisonResults;
 
 namespace Blitz3DDecomp.DecompilerSteps.Step5;
 
@@ -19,6 +21,22 @@ static class ConvertConstantsToFinalRepresentation
             if (type == DeclType.Float)
             {
                 float floatValue = BitConverter.UInt32BitsToSingle(expression.Value.HexToUint32());
+                if (floatValue == 0.0f)
+                {
+                    return new ConstantExpression("0.0");
+                }
+                if (float.IsPositiveInfinity(floatValue))
+                {
+                    return new ConstantExpression("INFINITY");
+                }
+                if (float.IsNegativeInfinity(floatValue))
+                {
+                    return new SignFlipExpression(new ConstantExpression("INFINITY"));
+                }
+                if (float.IsNaN(floatValue))
+                {
+                    return new ConstantExpression("NAN");
+                }
                 string stringRepresentation = floatValue.ToString("0.0" + new string('#', 99));
                 if (stringRepresentation.IndexOf('.', StringComparison.Ordinal) is >= 0 and var indexOfDecimalPoint)
                 {
@@ -43,6 +61,15 @@ static class ConvertConstantsToFinalRepresentation
                 {
                     return new ConstantExpression($"\"{str}\"");
                 }
+            }
+
+            if (type.IsCustomType)
+            {
+                if (expression.Value.TryHexToUint32(out var value) && value == 0)
+                {
+                    return new ConstantExpression("Null");
+                }
+                Debugger.Break();
             }
             return expression;
         }
@@ -95,18 +122,7 @@ static class ConvertConstantsToFinalRepresentation
                     return extractType(moduloExpression.Lhs) ?? extractType(moduloExpression.Rhs);
                 case MultiplyExpression multiplyExpression:
                     return extractType(multiplyExpression.Lhs) ?? extractType(multiplyExpression.Rhs);
-                case OneIfExpressionsEqualExpression:
-                case OneIfExpressionsNotEqualExpression:
-                case OneIfExpressionIsGreaterThanOtherExpression:
-                case OneIfExpressionIsGreaterThanOrEqualToOtherExpression:
-                case OneIfExpressionIsLessThanOtherExpression:
-                case OneIfExpressionIsLessThanOrEqualToOtherExpression:
-                case OneIfGreaterThanOrEqualToZeroExpression:
-                case OneIfGreaterThanZeroExpression:
-                case OneIfLessThanOrEqualToZeroExpression:
-                case OneIfLessThanZeroExpression:
-                case OneIfNotZeroExpression:
-                case OneIfZeroExpression:
+                case BooleanExpression:
                 case OrExpression:
                 case ShiftLeftExpression:
                 case ShiftRightSignedExpression:

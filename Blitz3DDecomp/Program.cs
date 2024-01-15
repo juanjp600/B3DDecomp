@@ -54,7 +54,36 @@ internal static class Program
 
         Step5(referencedFunctions);
 
-        WriteDebugDirMid(referencedFunctions, decompPath);
+        var restoreStatements = new HashSet<RestoreStatement>();
+        WriteFunctions(referencedFunctions, decompPath, restoreStatements);
+        File.WriteAllLines(decompPath.AppendToPath("Globals.bb"), GlobalVariable.AllGlobals.OrderBy(g => g.Name).Select(g => $"Global {g.Name}{g.DeclType.Suffix}"));
+
+        var mainFileLines = new List<string>();
+        mainFileLines.Add($"; {Path.GetFileNameWithoutExtension(disasmPath)}");
+        mainFileLines.Add("");
+        mainFileLines.Add("Include \"Globals.bb\"");
+        mainFileLines.Add("");
+        foreach (var function in referencedFunctions)
+        {
+            if (!function.HighLevelStatements.Any()) { continue; }
+            mainFileLines.Add($"Include \"Functions/{function.Name}.bb\"");
+        }
+        mainFileLines.Add("");
+        foreach (var customType in CustomType.AllTypes)
+        {
+            mainFileLines.Add($"Include \"Types/{customType.Name}.bb\"");
+        }
+        mainFileLines.Add("");
+        foreach (var dimArray in DimArray.AllDimArrays)
+        {
+            mainFileLines.Add($"Dim {dimArray.Name}{dimArray.ElementDeclType.Suffix}({string.Join(", ", Enumerable.Repeat("0", dimArray.NumDimensions))})");
+        }
+        mainFileLines.Add("");
+        mainFileLines.Add("Const INFINITY# = (999.0) ^ (99999.0)");
+        mainFileLines.Add("Const NAN# = (-1.0) ^ (0.5)");
+        mainFileLines.Add("");
+        mainFileLines.Add("EntryPoint()");
+        File.WriteAllLines(decompPath.AppendToPath("Main.bb"), mainFileLines);
 
         Logger.End();
     }
@@ -284,11 +313,11 @@ internal static class Program
         }
     }
 
-    private static void WriteDebugDirMid(IEnumerable<Function> referencedFunctions, string decompPath)
+    private static void WriteFunctions(IEnumerable<Function> referencedFunctions, string decompPath, HashSet<RestoreStatement> restoreStatements)
     {
-        var debugDir = $"{decompPath}DebugDirMid/";
-        DirectoryUtils.RecreateDirectory(debugDir);
-        
+        var outputDir = decompPath.AppendToPath("Functions");
+        DirectoryUtils.RecreateDirectory(outputDir);
+
         var functionsWithHighLevelSections = referencedFunctions.Where(f => f.HighLevelSections.Count > 0).ToArray();
         foreach (var function in functionsWithHighLevelSections)
         {
@@ -302,17 +331,15 @@ internal static class Program
                         _ => Array.Empty<string>()
                     })
                 .ToHashSet();
-            
-            using var file = File.Create($"{debugDir}{function.Name}.txt");
-            
-            string indentation = "";
+
+            using var file = File.Create(outputDir.AppendToPath($"{function.Name}.bb"));
+
+            writeLineToFile("", $"Function {function}");
+            var indentation = "    ";
             void writeLineToFile(string indent, string line)
             {
                 file.Write(Encoding.UTF8.GetBytes($"{indent}{line}\n"));
             }
-
-            writeLineToFile("", $"Function {function}");
-            indentation = "    ";
             foreach (var local in function.LocalVariables)
             {
                 writeLineToFile(indentation, $"Local {local.Name}{local.DeclType.Suffix}");
@@ -327,6 +354,7 @@ internal static class Program
                 {
                     for (int i=0;i<statement.IndentationToSubtract;i++) { indentation = indentation[..^4]; }
                     writeLineToFile(indentation, statement.StringRepresentation);
+                    if (statement is RestoreStatement restoreStatement) { restoreStatements.Add(restoreStatement); }
                     for (int i=0;i<statement.IndentationToAdd;i++) { indentation = indentation + "    "; }
                 }
             }

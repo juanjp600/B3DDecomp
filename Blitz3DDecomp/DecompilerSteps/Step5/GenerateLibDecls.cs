@@ -26,8 +26,14 @@ static class GenerateLibDecls
                 var dllSymbolName = split[1];
 
                 var function = Function.GetFunctionByName(disasmName);
+
+                string extractSuffixForBlitzSignature(DeclType declType)
+                {
+                    if (declType.IsCustomType) { return "*"; }
+                    return declType.Suffix;
+                }
                 var blitzSignature =
-                    $"{blitzName}{function.ReturnType.Suffix}({string.Join(", ", function.Parameters.Select(p => p.Name + p.DeclType.Suffix))})";
+                    $"{blitzName}{extractSuffixForBlitzSignature(function.ReturnType)}({string.Join(", ", function.Parameters.Select(p => p.Name + extractSuffixForBlitzSignature(p.DeclType)))})";
                 outputLines.Add($"{blitzSignature}:\"{dllSymbolName}\"");
             }
             File.WriteAllLines(outputDir.AppendToPath(dllName.CleanupPath().Replace("/", "_").Replace(".dll", "") + ".decls"), outputLines);

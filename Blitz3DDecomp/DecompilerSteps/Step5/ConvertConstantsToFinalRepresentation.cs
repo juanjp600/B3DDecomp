@@ -7,73 +7,73 @@ namespace Blitz3DDecomp.DecompilerSteps.Step5;
 
 static class ConvertConstantsToFinalRepresentation
 {
-    private static void ProcessStatement(Function function, int statementIndex)
+    public static Expression ConvertConstant(ConstantExpression expression, DeclType type)
     {
-        static Expression convertToFinalRepresentation(ConstantExpression expression, DeclType type)
+        if (type == DeclType.Int)
         {
-            if (type == DeclType.Int)
+            if (expression.Value.TryHexToUint32(out var intValue))
             {
-                if (expression.Value.TryHexToUint32(out var intValue))
-                {
-                    return new ConstantExpression("$" + intValue.ToString("X2"));
-                }
+                return new ConstantExpression("$" + intValue.ToString("X2"));
             }
-            if (type == DeclType.Float)
+        }
+        if (type == DeclType.Float)
+        {
+            float floatValue = BitConverter.UInt32BitsToSingle(expression.Value.HexToUint32());
+            if (floatValue == 0.0f)
             {
-                float floatValue = BitConverter.UInt32BitsToSingle(expression.Value.HexToUint32());
-                if (floatValue == 0.0f)
+                return new ConstantExpression("0.0");
+            }
+            if (float.IsPositiveInfinity(floatValue))
+            {
+                return new ConstantExpression("INFINITY");
+            }
+            if (float.IsNegativeInfinity(floatValue))
+            {
+                return new SignFlipExpression(new ConstantExpression("INFINITY"));
+            }
+            if (float.IsNaN(floatValue))
+            {
+                return new ConstantExpression("NAN");
+            }
+            string stringRepresentation = floatValue.ToString("0.0" + new string('#', 99));
+            if (stringRepresentation.IndexOf('.', StringComparison.Ordinal) is >= 0 and var indexOfDecimalPoint)
+            {
+                var wholePortion = stringRepresentation[..indexOfDecimalPoint];
+                var fraction = stringRepresentation[(indexOfDecimalPoint+1)..];
+                if (wholePortion.Length <= 3 && fraction.Length >= 4)
                 {
-                    return new ConstantExpression("0.0");
-                }
-                if (float.IsPositiveInfinity(floatValue))
-                {
-                    return new ConstantExpression("INFINITY");
-                }
-                if (float.IsNegativeInfinity(floatValue))
-                {
-                    return new SignFlipExpression(new ConstantExpression("INFINITY"));
-                }
-                if (float.IsNaN(floatValue))
-                {
-                    return new ConstantExpression("NAN");
-                }
-                string stringRepresentation = floatValue.ToString("0.0" + new string('#', 99));
-                if (stringRepresentation.IndexOf('.', StringComparison.Ordinal) is >= 0 and var indexOfDecimalPoint)
-                {
-                    var wholePortion = stringRepresentation[..indexOfDecimalPoint];
-                    var fraction = stringRepresentation[(indexOfDecimalPoint+1)..];
-                    if (wholePortion.Length <= 3 && fraction.Length >= 4)
+                    var inverseStringRepresentation = (1f / floatValue).ToString("0.0" + new string('#', 99));
+                    if (inverseStringRepresentation.Length < stringRepresentation.Length)
                     {
-                        var inverseStringRepresentation = (1f / floatValue).ToString("0.0" + new string('#', 99));
-                        if (inverseStringRepresentation.Length < stringRepresentation.Length)
-                        {
-                            return new DivideExpression(
-                                Lhs: new ConstantExpression("1.0"),
-                                Rhs: new ConstantExpression(inverseStringRepresentation));
-                        }
+                        return new DivideExpression(
+                            Lhs: new ConstantExpression("1.0"),
+                            Rhs: new ConstantExpression(inverseStringRepresentation));
                     }
                 }
-                return new ConstantExpression(stringRepresentation);
             }
-            if (type == DeclType.String)
+            return new ConstantExpression(stringRepresentation);
+        }
+        if (type == DeclType.String)
+        {
+            if (StringConstants.SymbolToValue.TryGetValue(expression.Value[1..], out var str))
             {
-                if (StringConstants.SymbolToValue.TryGetValue(expression.Value[1..], out var str))
-                {
-                    return new ConstantExpression($"\"{str}\"");
-                }
+                return new ConstantExpression($"\"{str}\"");
             }
-
-            if (type.IsCustomType)
-            {
-                if (expression.Value.TryHexToUint32(out var value) && value == 0)
-                {
-                    return new ConstantExpression("Null");
-                }
-                Debugger.Break();
-            }
-            return expression;
         }
 
+        if (type.IsCustomType)
+        {
+            if (expression.Value.TryHexToUint32(out var value) && value == 0)
+            {
+                return new ConstantExpression("Null");
+            }
+            Debugger.Break();
+        }
+        return expression;
+    }
+
+    private static void ProcessStatement(Function function, int statementIndex)
+    {
         static DeclType? extractType(Expression expression)
         {
             switch (expression)
@@ -185,7 +185,7 @@ static class ConvertConstantsToFinalRepresentation
                     return new CallExpression(callExpression.Callee, arguments);
                 case ConstantExpression constantExpression:
                     return declType is { } type
-                        ? convertToFinalRepresentation(constantExpression, type)
+                        ? ConvertConstant(constantExpression, type)
                         : constantExpression;
                 case ConstructorExpression constructorExpression:
                     return constructorExpression;

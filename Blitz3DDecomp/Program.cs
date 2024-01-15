@@ -13,7 +13,7 @@ internal static class Program
 {
     public static void Main(string[] args)
     {
-        string disasmPath = "C:/Users/juanj/Desktop/Blitz3d/ReverseEng/SCP - Containment Breach v0.2_disasm/";
+        string disasmPath = "C:/Users/juanj/Desktop/Blitz3d/ReverseEng/game_disasm/";
         string decompPath = disasmPath.Replace("_disasm", "_decomp");
         DirectoryUtils.RecreateDirectory(decompPath);
 
@@ -52,16 +52,18 @@ internal static class Program
 
         WriteDebugDirLow(referencedFunctions, decompPath);
 
-        Step5(referencedFunctions);
+        Step5(decompPath, referencedFunctions);
 
         var restoreStatements = new HashSet<RestoreStatement>();
         WriteFunctions(referencedFunctions, decompPath, restoreStatements);
         File.WriteAllLines(decompPath.AppendToPath("Globals.bb"), GlobalVariable.AllGlobals.OrderBy(g => g.Name).Select(g => $"Global {g.Name}{g.DeclType.Suffix}"));
+        DecompileData.Process(disasmPath, decompPath, restoreStatements);
 
         var mainFileLines = new List<string>();
         mainFileLines.Add($"; {Path.GetFileNameWithoutExtension(disasmPath)}");
         mainFileLines.Add("");
         mainFileLines.Add("Include \"Globals.bb\"");
+        mainFileLines.Add("Include \"Data.bb\"");
         mainFileLines.Add("");
         foreach (var function in referencedFunctions)
         {
@@ -290,7 +292,7 @@ internal static class Program
         }
     }
 
-    private static void Step5(IEnumerable<Function> referencedFunctions)
+    private static void Step5(string decompPath, IEnumerable<Function> referencedFunctions)
     {
         var functionsWithAssemblySections = referencedFunctions.Where(f => f.AssemblySections.Any()).ToArray();
         foreach (var function in functionsWithAssemblySections)

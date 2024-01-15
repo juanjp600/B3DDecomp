@@ -12,7 +12,7 @@ internal static class Program
 {
     private static void Main(string[] args)
     {
-        var exePath = "C:/Users/juanj/Desktop/Blitz3D/ReverseEng/CursedSelect.exe";
+        var exePath = "C:/Users/juanj/Desktop/Blitz3D/ReverseEng/game.exe";
         var outputPath = $"{Path.GetDirectoryName(exePath)!.Replace('\\', '/')}/";
 
         var exeName = Path.GetFileName(exePath);
@@ -185,7 +185,7 @@ internal static class Program
             {
                 int dataType = dataReader.ReadInt32();
                 if (dataType == 0) { break; }
-                int value = dataReader.ReadInt32();
+                uint value = dataReader.ReadUInt32();
                 dataMembers.Add(new DataMember { Type = dataType, Value = value });
             }
         }
@@ -478,18 +478,20 @@ internal static class Program
             {
                 foreach (var dataMember in dataMembers)
                 {
-
                     switch (dataMember.Type)
                     {
                         case 1:
-                            File.AppendAllText(textFilePath, $"    INT:{dataMember.Value}\n");
+                            File.AppendAllText(textFilePath, $"    INT:{dataMember.Value:X8}\n");
                             break;
                         case 2:
-                            File.AppendAllText(textFilePath, $"    FLT:{BitConverter.Int32BitsToSingle(dataMember.Value)}\n");
+                            File.AppendAllText(textFilePath, $"    FLT:{dataMember.Value:X8}\n");
                             break;
                         case 4:
-                            var stringSymbol = symbolByAddress[dataMember.Value];
+                            var stringSymbol = symbolByAddress[(int)dataMember.Value];
                             File.AppendAllText(textFilePath, $"    STR:@{stringSymbol.NameToPrint}\n");
+                            break;
+                        default:
+                            File.AppendAllText(textFilePath, $"    {dataMember.Type}:{dataMember.Value}");
                             break;
                     }
                 }

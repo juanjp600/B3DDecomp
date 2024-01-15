@@ -3,5 +3,5 @@
 struct DataMember
 {
     public int Type;
-    public int Value;
+    public uint Value;
 }

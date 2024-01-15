@@ -12,6 +12,8 @@ static class IngestStringConstants
         var symbolValueRegex = new Regex("    \"(.*)\" 00");
         
         var filePath = inputDir.AppendToPath("Strings.txt");
+        if (!File.Exists(filePath)) { return; }
+
         var lines = File.ReadAllLines(filePath);
         for (int i = 0; i < lines.Length - 1; i++)
         {

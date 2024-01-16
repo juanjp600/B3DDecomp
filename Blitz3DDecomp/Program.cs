@@ -13,9 +13,13 @@ internal static class Program
 {
     public static void Main(string[] args)
     {
-        string disasmPath = "C:/Users/juanj/Desktop/Blitz3d/ReverseEng/game_disasm/";
+        string disasmPath = "C:/Users/juanj/Desktop/Blitz3d/ReverseEng/3dwsmemdump_disasm/";
         string decompPath = disasmPath.Replace("_disasm", "_decomp");
         DirectoryUtils.RecreateDirectory(decompPath);
+
+        CurrentCompiler.Value = Enum.Parse<Compiler>(
+            File.ReadAllText(disasmPath.AppendToPath("Compiler.txt")).Trim(),
+            ignoreCase: true);
 
         Step0(disasmPath, decompPath);
         Step1();
@@ -95,10 +99,7 @@ internal static class Program
     /// </summary>
     private static void Step0(string disasmPath, string decompPath)
     {
-        Function.InitBuiltIn(
-            Enum.Parse<Compiler>(
-                File.ReadAllText(disasmPath + "Compiler.txt").Trim(),
-                ignoreCase: true));
+        Function.InitBuiltIn(CurrentCompiler.Value);
 
         LoadGlobalList.FromDir(disasmPath);
         LoadDimArrays.FromDir(disasmPath);

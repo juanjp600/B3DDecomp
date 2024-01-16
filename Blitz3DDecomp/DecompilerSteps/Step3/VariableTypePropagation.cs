@@ -45,7 +45,10 @@ static class VariableTypePropagation
                     if (prevInstruction.Name != "add") { continue; }
                     if (prevInstruction.DestArg != instruction.SrcArg1.StripDeref()) { continue; }
 
-                    if (prevInstruction.SrcArg2 != "0x4") { break; }
+                    var bankOffsetConstant = CurrentCompiler.Value is Compiler.BlitzPlus
+                        ? "0x1c"
+                        : "0x4";
+                    if (prevInstruction.SrcArg2 != bankOffsetConstant) { break; }
 
                     var newSrcVar = function.InstructionArgumentToVariable(prevInstruction.SrcArg1);
                     if (newSrcVar?.DeclType != DeclType.Int) { break; }

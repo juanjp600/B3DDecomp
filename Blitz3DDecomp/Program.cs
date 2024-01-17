@@ -13,7 +13,7 @@ internal static class Program
 {
     public static void Main(string[] args)
     {
-        string disasmPath = "C:/Users/juanj/Desktop/Blitz3d/ReverseEng/game_disasm/";
+        string disasmPath = "C:/Users/juanj/Desktop/Blitz3d/ReverseEng/SCP - Containment Breach v0.2_disasm/";
         string decompPath = disasmPath.Replace("_disasm", "_decomp");
         DirectoryUtils.RecreateDirectory(decompPath);
 
@@ -64,10 +64,14 @@ internal static class Program
         DecompileData.Process(disasmPath, decompPath, restoreStatements);
 
         var mainFileLines = new List<string>();
-        mainFileLines.Add($"; {Path.GetFileNameWithoutExtension(disasmPath)}");
+        mainFileLines.Add($"; {disasmPath.CleanupPath().Split('/').Last(s => !string.IsNullOrWhiteSpace(s))}");
+        mainFileLines.Add($"; Decompiled on {DateTime.UtcNow}");
         mainFileLines.Add("");
         mainFileLines.Add("Include \"Globals.bb\"");
-        mainFileLines.Add("Include \"Data.bb\"");
+        if (File.Exists(decompPath.AppendToPath("Data.bb")))
+        {
+            mainFileLines.Add("Include \"Data.bb\"");
+        }
         mainFileLines.Add("");
         foreach (var function in referencedFunctions)
         {

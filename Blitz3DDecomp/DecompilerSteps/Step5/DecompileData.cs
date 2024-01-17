@@ -43,6 +43,9 @@ static class DecompileData
             currOffset += 8;
         }
 
-        File.WriteAllLines(outputPath, outputLines);
+        if (outputLines.Count > 0)
+        {
+            File.WriteAllLines(outputPath, outputLines);
+        }
     }
 }

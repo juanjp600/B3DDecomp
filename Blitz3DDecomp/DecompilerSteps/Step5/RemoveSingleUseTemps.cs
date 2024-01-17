@@ -2,6 +2,7 @@
 using System.Linq.Expressions;
 using B3DDecompUtils;
 using Blitz3DDecomp.HighLevel;
+using Blitz3DDecomp.Utils;
 using Expression = Blitz3DDecomp.HighLevel.Expression;
 
 namespace Blitz3DDecomp.DecompilerSteps.Step5;
@@ -93,9 +94,12 @@ static class RemoveSingleUseTemps
         if (section != secondSection) { return; }
 
         Expression expressionMapper(Expression expression)
-            => expression is VariableExpression { Variable: var variable } && variable == tempVariable
-                ? srcExpression
-                : expression;
+            => expression switch
+            {
+                VariableExpression { Variable: var variable } when variable == tempVariable => srcExpression,
+                ArrayAccessExpression { Owner: var owner, Index: var index } => new ArrayAccessExpression(owner, CleanupIndexer.Process(index)),
+                _ => expression
+            };
 
         var secondUseStatement = function.HighLevelStatements[secondUseIndex];
 

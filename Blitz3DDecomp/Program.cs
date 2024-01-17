@@ -1,5 +1,4 @@
-﻿using System.Diagnostics;
-using System.Text;
+﻿using System.Text;
 using B3DDecompUtils;
 using Blitz3DDecomp;
 using Blitz3DDecomp.DecompilerSteps.Step1;

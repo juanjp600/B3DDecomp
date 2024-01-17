@@ -1,6 +1,7 @@
 ﻿using System.Diagnostics;
 using B3DDecompUtils;
 using Blitz3DDecomp.HighLevel;
+using Blitz3DDecomp.Utils;
 
 namespace Blitz3DDecomp.DecompilerSteps.Step5;
 
@@ -46,7 +47,7 @@ static class FixDimIndexer
             if (dimAccessExpression.Indices.Length > 1
                 || dimAccessExpression.Owner.NumDimensions <= 1)
             {
-                return new DimAccessExpression(dim, indices);
+                return new DimAccessExpression(dim, indices.Select(CleanupIndexer.Process).ToArray());
             }
 
             var indexExpression = indices[0];
@@ -104,7 +105,7 @@ static class FixDimIndexer
             }
 
             if (newIndices.Contains(null)) { throw new Exception($"At least one index not set"); }
-            return new DimAccessExpression(dim, newIndices.OfType<Expression>().ToArray());
+            return new DimAccessExpression(dim, newIndices.OfType<Expression>().Select(CleanupIndexer.Process).ToArray());
         }
 
         for (int i = 0; i < function.HighLevelStatements.Count; i++)

@@ -13,7 +13,7 @@ internal static class Program
 {
     public static void Main(string[] args)
     {
-        string disasmPath = "C:/Users/juanj/Desktop/Blitz3d/ReverseEng/3dwsmemdump_disasm/";
+        string disasmPath = "C:/Users/juanj/Desktop/Blitz3d/ReverseEng/game_disasm/";
         string decompPath = disasmPath.Replace("_disasm", "_decomp");
         DirectoryUtils.RecreateDirectory(decompPath);
 

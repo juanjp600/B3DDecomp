@@ -285,5 +285,21 @@ static class CleanupSelect
                 function.HighLevelSections.Insert(reinsertIndex, section);
             }
         }
+
+        for (int i = 1; i < function.HighLevelStatements.Count; i++)
+        {
+            if (function.HighLevelStatements[i] is not SelectStatement selectStatement) { continue; }
+
+            var selectInnerExpression = selectStatement.Expression;
+            if (selectInnerExpression is not VariableExpression { Variable: Function.LocalVariable variable1 }) { continue; }
+            if (function.HighLevelStatements[i - 1] is not AssignmentStatement { Destination: VariableExpression { Variable: Function.LocalVariable variable2 }, Source: var assignmentSource }) { continue; }
+            if (variable1 != variable2) { continue; }
+
+            function.HighLevelStatements[i] = new SelectStatement(assignmentSource);
+            function.FindSectionForStatementIndex(i - 1, out var section, out var indexInSection);
+            section.Statements.RemoveAt(indexInSection);
+            function.LocalVariables.Remove(variable1);
+            i--;
+        }
     }
 }

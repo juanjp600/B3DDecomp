@@ -494,5 +494,12 @@ static class BlitzPlusBuiltIns
 
         _ = new Function("_builtIn__bbDimArray", 1);
         _ = new Function("_builtIn__bbUndimArray", 1);
+
+        _ = new Function("_builtIn__bbDebugEnter", 3);
+        _ = new Function("_builtIn__bbDebugLeave", 0);
+        _ = new Function("_builtIn__bbDebugStmt", 2);
+        _ = new Function("_builtIn__bbNullObjEx", 0);
+        _ = new Function("_builtIn__bbArrayBoundsEx", 0);
+        _ = new Function("_builtIn__bbVecBoundsEx", 0);
     }
 }

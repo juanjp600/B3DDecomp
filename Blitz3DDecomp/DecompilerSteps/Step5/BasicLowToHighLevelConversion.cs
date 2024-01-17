@@ -33,12 +33,6 @@ static class BasicLowToHighLevelConversion
                     ? new ShiftRightUnsignedExpression(instructionArgToExpression(indexStr[..^3]), new ConstantExpression("0x2"))
                     : instructionArgToExpression(indexStr);
 
-            Expression[] deconstructDimIndices(Expression compositeExpression)
-            {
-                // This is fixed up in FixDimIndexer
-                return new[] { compositeExpression };
-            }
-
             var srcVar = function.InstructionArgumentToVariable(instructionArg);
 
             return srcVar switch
@@ -48,9 +42,7 @@ static class BasicLowToHighLevelConversion
                 ArrayElementVariable arrayElementVariable
                     => new ArrayAccessExpression(instructionArgToNonTempExpression(arrayElementVariable.Owner.Name), indexStrToExpression(arrayElementVariable.Index)),
                 DimArray.AccessVariable dimElementVar
-                    => dimElementVar.DimArray.NumDimensions == 1
-                        ? new DimAccessExpression(dimElementVar.DimArray, indexStrToExpression(dimElementVar.Index))
-                        : new DimAccessExpression(dimElementVar.DimArray, deconstructDimIndices(indexStrToExpression(dimElementVar.Index))),
+                    => new DimAccessExpression(dimElementVar.DimArray, indexStrToExpression(dimElementVar.Index)),
                 not null
                     => new VariableExpression(srcVar),
                 null
@@ -170,6 +162,9 @@ static class BasicLowToHighLevelConversion
                         or "jge"
                         or "jl"
                         or "jle":
+                    if (instruction.DestArg.Contains("_builtIn__bbNullObjEx", StringComparison.Ordinal)
+                        || instruction.DestArg.Contains("_builtIn__bbVecBoundsEx", StringComparison.Ordinal)
+                        || instruction.DestArg.Contains("_builtIn__bbArrayBoundsEx", StringComparison.Ordinal)) { continue; }
                     if (lastCompareExpression is null) { throw new Exception($"No expression ready for {instruction}"); }
 
                     highLevelSection.Statements.Add(new JumpIfExpressionStatement(instruction.Name switch
@@ -182,6 +177,12 @@ static class BasicLowToHighLevelConversion
                         "jle" => new OneIfLessThanOrEqualToZeroExpression(lastCompareExpression),
                         _ => throw new Exception("unreachable")
                     }, instruction.DestArg[1..]));
+                    break;
+                case "jae":
+                    if (instruction.DestArg.Contains("_builtIn__bbNullObjEx", StringComparison.Ordinal)
+                        || instruction.DestArg.Contains("_builtIn__bbArrayBoundsEx", StringComparison.Ordinal)
+                        || instruction.DestArg.Contains("_builtIn__bbVecBoundsEx", StringComparison.Ordinal)) { continue; }
+                    Debugger.Break();
                     break;
                 case "jmp":
                     var jmpSectionName = instruction.DestArg[1..];
@@ -384,12 +385,8 @@ static class BasicLowToHighLevelConversion
                         }
                         highLevelSection.Statements.Add(new AllocateDimStatement(dim, sizeAssignmentExpressions));
                     }
-                    else if (callee.Name == "_builtIn__bbVecAlloc")
+                    else if (callee.Name is "_builtIn__bbVecAlloc")
                     {
-                        /*if (function.InstructionArgumentToVariable(assemblySection.Instructions[i + 1].SrcArg1) != instruction.ReturnOutputVar)
-                        {
-                            Debugger.Break();
-                        }*/
                         i++;
                     }
                     else if (callee.Name is "_builtIn__bbObjEachFirst" or "_builtIn__bbObjEachFirst")
@@ -548,7 +545,13 @@ static class BasicLowToHighLevelConversion
                         "_builtIn__bbUndimArray"
                         or "_builtIn__bbStrRelease"
                         or "_builtIn__bbObjRelease"
-                        or "_builtIn__bbStrTmpFree")
+                        or "_builtIn__bbStrTmpFree"
+                        or "_builtIn__bbDebugEnter"
+                        or "_builtIn__bbDebugLeave"
+                        or "_builtIn__bbDebugStmt"
+                        or "_builtIn__bbArrayBoundsEx"
+                        or "_builtIn__bbVecBoundsEx"
+                        or "_builtIn__bbNullObjEx")
                     {
                         continue;
                     }

@@ -355,17 +355,32 @@ internal static class Program
             if (symbolEnd > codeLen) { symbolEnd = codeLen; }
 
             var symbolData = codeBytesForReading[symbol.Address..symbolEnd];
-            if (compiler == Compiler.BlitzPlus) { symbolData = symbolData[4..]; }
+            if (symbolData.Length == 0) { Debugger.Break(); }
+
+            bool hasFourLeadingZeroes = false;
+            if (compiler == Compiler.BlitzPlus)
+            {
+                if (symbolData.Length > 4)
+                {
+                    hasFourLeadingZeroes = BitConverter.ToUInt32(symbolData[..4]) == 0;
+                }
+            }
             if (symbol.Name == "__CSTRS") { continue; }
 
             int indexOfNul = -1;
-            for (int j = 0; j < symbolData.Length; j++)
+
+            for (int j = hasFourLeadingZeroes ? 4 : 0; j < symbolData.Length; j++)
             {
                 if (symbolData[j] == '\0')
                 {
                     indexOfNul = j;
                     break;
                 }
+            }
+            if (hasFourLeadingZeroes)
+            {
+                symbolData = symbolData[4..];
+                indexOfNul -= 4;
             }
 
             string strValue = Encoding.ASCII.GetString(symbolData[..indexOfNul]);

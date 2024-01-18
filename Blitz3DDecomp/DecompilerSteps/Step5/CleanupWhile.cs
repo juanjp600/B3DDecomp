@@ -1,4 +1,5 @@
-﻿using Blitz3DDecomp.HighLevel;
+﻿using System.Diagnostics;
+using Blitz3DDecomp.HighLevel;
 
 namespace Blitz3DDecomp.DecompilerSteps.Step5;
 
@@ -13,6 +14,13 @@ static class CleanupWhile
             if (statement is not UnconditionalJumpStatement jumpStatement) { continue; }
             var jumpStatementSection = sectionsByName[jumpStatement.SectionName];
             if (jumpStatementSection.StartIndex < i) { continue; }
+            var indexOfJumpStatementSection = function.HighLevelSections.IndexOf(jumpStatementSection);
+            while (jumpStatementSection.Statements.Count == 0)
+            {
+                indexOfJumpStatementSection++;
+                if (indexOfJumpStatementSection == function.HighLevelSections.Count) { break; }
+                jumpStatementSection = function.HighLevelSections[indexOfJumpStatementSection];
+            }
             if (jumpStatementSection.Statements.Count < 1) { continue; }
 
             if (jumpStatementSection.Statements[0] is not JumpIfExpressionStatement conditionalJumpStatement) { continue; }

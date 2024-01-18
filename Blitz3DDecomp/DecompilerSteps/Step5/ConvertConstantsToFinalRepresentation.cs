@@ -361,7 +361,10 @@ static class ConvertConstantsToFinalRepresentation
                 => new ReturnStatement(map(returnStatement.Expression, function.ReturnType)),
             UnconditionalJumpStatement unconditionalJumpStatement
                 => unconditionalJumpStatement,
-            _ => throw new ArgumentOutOfRangeException()
+            CommentStatement commentStatement
+                => commentStatement,
+            _
+                => throw new ArgumentOutOfRangeException()
         };
     }
 

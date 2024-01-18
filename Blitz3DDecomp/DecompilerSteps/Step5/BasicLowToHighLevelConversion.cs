@@ -24,7 +24,10 @@ static class BasicLowToHighLevelConversion
         var highLevelSectionsByName = function.HighLevelSectionsByName;
         var highLevelSection = highLevelSectionsByName[sectionName];
 
-        if (assemblySection.Instructions.Any(i => i.Name == "ret")) { return; }
+        if (assemblySection.Instructions.Any(i => i.Name == "ret")
+            && function.Name != "EntryPoint") { return; }
+        if (function.Name == "EntryPoint"
+            && sectionName.EndsWith("_leave__MAIN", StringComparison.OrdinalIgnoreCase)) { return; }
 
         Expression instructionArgToExpression(string instructionArg)
         {
@@ -106,30 +109,29 @@ static class BasicLowToHighLevelConversion
             void handleAssignmentToVar(Variable? destVar, Expression srcExpression, bool derefDest = false)
             {
                 if (destVar is null) { return; }
-                if (!destVar.DeclType.IsArrayType)
-                {
-                    Expression reduceExpression(Expression expression)
-                    {
-                        if (expression is VariableExpression { Variable: Function.DecompGeneratedTempVariable tempVar }
-                            && context.TempToExpression[tempVar] != expression)
-                        {
-                            return reduceExpression(context.TempToExpression[tempVar]);
-                        }
-                        return expression;
-                    }
 
-                    if (derefDest
-                        && destVar is Function.DecompGeneratedTempVariable tempDestVar1
-                        && reduceExpression(context.TempToExpression[tempDestVar1]) is AccessExpression accessExpression)
+                Expression reduceExpression(Expression expression)
+                {
+                    if (expression is VariableExpression { Variable: Function.DecompGeneratedTempVariable tempVar }
+                        && context.TempToExpression[tempVar] != expression)
                     {
-                        highLevelSection.Statements.Add(new AssignmentStatement(accessExpression, srcExpression));
+                        return reduceExpression(context.TempToExpression[tempVar]);
                     }
-                    else
-                    {
-                        highLevelSection.Statements.Add(new AssignmentStatement(new VariableExpression(destVar), srcExpression));
-                    }
-                    if (destVar.Name.StartsWith("eax", StringComparison.Ordinal)) { lastPotentialReturnExpression = new VariableExpression(destVar); }
+                    return expression;
                 }
+
+                if (derefDest
+                    && destVar is Function.DecompGeneratedTempVariable tempDestVar1
+                    && reduceExpression(context.TempToExpression[tempDestVar1]) is AccessExpression accessExpression)
+                {
+                    highLevelSection.Statements.Add(new AssignmentStatement(accessExpression, srcExpression));
+                }
+                else
+                {
+                    highLevelSection.Statements.Add(new AssignmentStatement(new VariableExpression(destVar), srcExpression));
+                }
+                if (destVar.Name.StartsWith("eax", StringComparison.Ordinal)) { lastPotentialReturnExpression = new VariableExpression(destVar); }
+
                 if (destVar is Function.DecompGeneratedTempVariable tempDestVar2)
                 {
                     context.TempToExpression[tempDestVar2] = srcExpression;
@@ -555,6 +557,10 @@ static class BasicLowToHighLevelConversion
                     {
                         continue;
                     }
+                    else if (callee.Name is "_builtIn__bbFieldPtrAdd")
+                    {
+                        highLevelSection.Statements.Add(new CommentStatement($"bbFieldPtrAdd at {assemblySection.Name}:{i}, probably for an object of unknowable type"));
+                    }
                     else
                     {
                         Debugger.Break();
@@ -695,6 +701,8 @@ static class BasicLowToHighLevelConversion
                 case "push" or "pop":
                     // Skip because there's nothing useful that can be done with these
                     break;
+                case "ret":
+                    return;
                 default:
                     Debugger.Break();
                     break;

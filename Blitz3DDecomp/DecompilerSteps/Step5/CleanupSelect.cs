@@ -93,6 +93,7 @@ static class CleanupSelect
                         : tempSections.First(s => s.Name == currentSection.Name);
                     tempSection.Statements.Add(function.HighLevelStatements[j]);
                 }
+                while (tempSections.Last().Statements.Count == 0) { tempSections.RemoveAt(tempSections.Count - 1); }
 
                 // Every case ends with an unconditional jump to the same place
                 // so we'll get it from the default case if it exists

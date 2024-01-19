@@ -17,7 +17,7 @@ static class CleanupElseIf
             for (; j < function.HighLevelStatements.Count; j++)
             {
                 indent -= function.HighLevelStatements[j].IndentationToSubtract;
-                if (indent < 0) { break; }
+                if (indent < 0 && function.HighLevelStatements[j] is not ElseStatement) { break; }
                 indent += function.HighLevelStatements[j].IndentationToAdd;
             }
             if (indent != -1

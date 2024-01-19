@@ -12,8 +12,20 @@ internal static class Program
 {
     private static void Main(string[] args)
     {
-        var exePath = "C:/Users/juanj/Repos/Decomps/scpcb_temp/SCP - Containment Breach v0.6.4.exe";
-        var outputPath = $"{Path.GetDirectoryName(exePath)!.Replace('\\', '/')}/";
+        if (args.Length == 0)
+        {
+            Console.WriteLine("No input given, closing");
+            return;
+        }
+
+        string exePath = args[0].CleanupPath();
+        if (!exePath.EndsWith(".exe"))
+        {
+            Console.WriteLine("Input isn't an exe, closing");
+            return;
+        }
+
+        var outputPath = Directory.GetCurrentDirectory().CleanupPath();
 
         var exeName = Path.GetFileName(exePath);
         var fileToInspect = PEImage.FromFile(exePath);
@@ -190,7 +202,7 @@ internal static class Program
             }
         }
 
-        File.WriteAllBytes(outputPath + exeName.Replace(".exe", "_code.dat"), codeBytesForReading);
+        //File.WriteAllBytes(outputPath + exeName.Replace(".exe", "_code.dat"), codeBytesForReading);
         var relocsBackup = relocs.ToList();
         bool inferenceDone = false;
         while (!inferenceDone)
@@ -340,7 +352,7 @@ internal static class Program
             symbol.NewName = newName;
         }
 
-        var disasmPath = outputPath + exeName.Replace(".exe", "_disasm");
+        var disasmPath = outputPath.AppendToPath(exeName.Replace(".exe", "_disasm"));
         
         DirectoryUtils.RecreateDirectory(disasmPath);
         

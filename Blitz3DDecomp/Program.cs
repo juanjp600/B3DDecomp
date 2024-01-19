@@ -1,4 +1,5 @@
-﻿using System.Text;
+﻿using System.Diagnostics;
+using System.Text;
 using B3DDecompUtils;
 using Blitz3DDecomp;
 using Blitz3DDecomp.DecompilerSteps.Step1;
@@ -12,7 +13,20 @@ internal static class Program
 {
     public static void Main(string[] args)
     {
-        string disasmPath = "C:/Users/juanj/Repos/Decomps/scpcb_temp/SCP - Containment Breach v0.2.1_disasm/";
+        if (args.Length == 0)
+        {
+            Console.WriteLine("No input given, closing");
+            return;
+        }
+
+        string disasmPath = args[0].CleanupPath();
+        if (disasmPath.EndsWith(".exe"))
+        {
+            var disasmProcess = Process.Start("Blitz3DDisasm.exe", args);
+            disasmProcess.WaitForExit();
+            disasmPath = Directory.GetCurrentDirectory().CleanupPath().AppendToPath(Path.GetFileNameWithoutExtension(args[0])+"_disasm");
+        }
+
         string decompPath = disasmPath.Replace("_disasm", "_decomp");
         DirectoryUtils.RecreateDirectory(decompPath);
 

@@ -20,7 +20,8 @@ static class CleanupElseIf
                 if (indent < 0) { break; }
                 indent += function.HighLevelStatements[j].IndentationToAdd;
             }
-            if (function.HighLevelStatements[j] is not EndIfStatement
+            if (indent != -1
+                || function.HighLevelStatements[j] is not EndIfStatement
                 || function.HighLevelStatements[j - 1] is not EndIfStatement) { continue; }
 
             function.FindSectionForStatementIndex(j, out var endIfSection, out var indexInEndIfSection);

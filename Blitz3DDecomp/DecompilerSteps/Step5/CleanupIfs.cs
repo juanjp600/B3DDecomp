@@ -19,57 +19,23 @@ static class CleanupIfs
             if (jumpStatementSection.StartIndex < i) { continue; }
 
             int indent = 0;
-            bool couldBeValidIf = true;
             for (int j = i; j < jumpStatementSection.StartIndex; j++)
             {
                 indent -= function.HighLevelStatements[j].IndentationToSubtract;
-                if (indent < 0 && function.HighLevelStatements[j].IndentationToAdd > 0)
-                {
-                    couldBeValidIf = false;
-                    break;
-                }
+                if (indent < 0) { break; }
                 indent += function.HighLevelStatements[j].IndentationToAdd;
             }
 
-            if (indent != 0)
+            var endIfSection = jumpStatementSection;
+            while (endIfSection is { LinkedAssemblySection.Instructions.Length: 0, NextSection: { } nextSection })
             {
-                if (indent > 0)
-                {
-                    for (int j = 1; j <= indent; j++)
-                    {
-                        if (function.HighLevelStatements[jumpStatementSection.StartIndex - j] is not RepeatStatement)
-                        {
-                            couldBeValidIf = false;
-                            break;
-                        }
-                    }
-                }
-                else
-                {
-                    for (int j = 1; j <= -indent; j++)
-                    {
-                        if (function.HighLevelStatements[jumpStatementSection.StartIndex - j] is not EndIfStatement)
-                        {
-                            couldBeValidIf = false;
-                            break;
-                        }
-                    }
-                }
-                if (!couldBeValidIf) { continue; }
+                endIfSection = nextSection;
             }
 
-            function.HighLevelStatements[i] = new IfStatement(condition.Negated);
-
-            if (indent == 0)
-            {
-                jumpStatementSection.Statements.Insert(0, new EndIfStatement());
-            }
-            else
-            {
-                int endIfStatementIndex = jumpStatementSection.StartIndex - indent;
-                function.FindSectionForStatementIndex(endIfStatementIndex, out var endIfStatementOwner, out var indexInSection);
-                endIfStatementOwner.Statements.Insert(indexInSection, new EndIfStatement());
-            }
+            function.FindSectionForStatementIndex(i, out var jumpSection, out var indexInJumpSection);
+            jumpSection.Statements.RemoveAt(indexInJumpSection);
+            jumpSection.Statements.Insert(indexInJumpSection, new IfStatement(condition.Negated));
+            endIfSection.Statements.Insert(0, new EndIfStatement());
         }
     }
 }

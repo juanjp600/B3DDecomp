@@ -1,4 +1,5 @@
 ﻿using System.Collections;
+using Blitz3DDecomp.LowLevel;
 
 namespace Blitz3DDecomp.HighLevel;
 
@@ -141,6 +142,30 @@ sealed class HighLevelSection
             return startIndex;
         }
     }
+
+    public HighLevelSection? PreviousSection
+    {
+        get
+        {
+            var indexOfSelf = Owner.HighLevelSections.IndexOf(this);
+            if (indexOfSelf <= 0) { return null; }
+            return Owner.HighLevelSections[indexOfSelf - 1];
+        }
+    }
+
+    public HighLevelSection? NextSection
+    {
+        get
+        {
+            var indexOfSelf = Owner.HighLevelSections.IndexOf(this);
+            if (indexOfSelf < 0) { return null; }
+            if (indexOfSelf >= Owner.HighLevelSections.Count - 1) { return null; }
+            return Owner.HighLevelSections[indexOfSelf + 1];
+        }
+    }
+
+    public AssemblySection? LinkedAssemblySection
+        => Owner.AssemblySectionsByName.GetValueOrDefault(Name);
 
     public HighLevelSection(Function owner, string name)
     {

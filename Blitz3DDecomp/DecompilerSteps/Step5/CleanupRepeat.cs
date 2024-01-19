@@ -35,7 +35,12 @@ static class CleanupRepeat
             if (indent != 0) { continue; }
 
             function.HighLevelStatements[i] = replacementStatement;
-            jumpStatementSection.Statements.Insert(0, new RepeatStatement());
+            var repeatSection = jumpStatementSection;
+            while (repeatSection is { LinkedAssemblySection.Instructions.Length: 0, NextSection: { } nextSection })
+            {
+                repeatSection = nextSection;
+            }
+            repeatSection.Statements.Insert(0, new RepeatStatement());
             i++;
         }
     }

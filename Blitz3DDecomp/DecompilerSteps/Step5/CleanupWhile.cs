@@ -14,12 +14,10 @@ static class CleanupWhile
             if (statement is not UnconditionalJumpStatement jumpStatement) { continue; }
             var jumpStatementSection = sectionsByName[jumpStatement.SectionName];
             if (jumpStatementSection.StartIndex < i) { continue; }
-            var indexOfJumpStatementSection = function.HighLevelSections.IndexOf(jumpStatementSection);
             while (jumpStatementSection.Statements.Count == 0)
             {
-                indexOfJumpStatementSection++;
-                if (indexOfJumpStatementSection == function.HighLevelSections.Count) { break; }
-                jumpStatementSection = function.HighLevelSections[indexOfJumpStatementSection];
+                if (jumpStatementSection.NextSection is not { } nextSection) { break; }
+                jumpStatementSection = nextSection;
             }
             if (jumpStatementSection.Statements.Count < 1) { continue; }
 

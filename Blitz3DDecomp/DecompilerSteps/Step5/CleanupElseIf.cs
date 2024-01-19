@@ -13,7 +13,7 @@ static class CleanupElseIf
             if (function.HighLevelStatements[i] is not ElseStatement
                 || function.HighLevelStatements[i + 1] is not IfStatement ifStatement) { continue; }
             int indent = 0;
-            int j = i + 1;
+            int j = i + 2;
             for (; j < function.HighLevelStatements.Count; j++)
             {
                 indent -= function.HighLevelStatements[j].IndentationToSubtract;
@@ -22,7 +22,7 @@ static class CleanupElseIf
             }
             if (indent != -1
                 || function.HighLevelStatements[j] is not EndIfStatement
-                || function.HighLevelStatements[j - 1] is not EndIfStatement) { continue; }
+                || function.HighLevelStatements[j + 1] is not EndIfStatement) { continue; }
 
             function.FindSectionForStatementIndex(j, out var endIfSection, out var indexInEndIfSection);
             endIfSection.Statements.RemoveAt(indexInEndIfSection);

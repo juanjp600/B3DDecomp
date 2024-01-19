@@ -12,7 +12,7 @@ internal static class Program
 {
     public static void Main(string[] args)
     {
-        string disasmPath = "C:/Users/juanj/Desktop/Blitz3d/ReverseEng/SCP - Containment Breach v0.2_disasm/";
+        string disasmPath = "C:/Users/juanj/Repos/Decomps/scpcb_temp/SCP - Containment Breach v0.2.1_disasm/";
         string decompPath = disasmPath.Replace("_disasm", "_decomp");
         DirectoryUtils.RecreateDirectory(decompPath);
 
@@ -53,7 +53,7 @@ internal static class Program
 
         GenerateLibDecls.ToDir(decompPath);
 
-        WriteDebugDirLow(referencedFunctions, decompPath);
+        //WriteDebugDirLow(referencedFunctions, decompPath);
 
         Step5(decompPath, referencedFunctions);
 
@@ -312,11 +312,13 @@ internal static class Program
             CleanupSelect.Process(function);
             CleanupUselessGoto.Process(function);
             CleanupWhile.Process(function);
+            CleanupForOnInt.Process(function);
             CleanupRepeat.Process(function);
             CleanupIfs.Process(function);
             CleanupElse.Process(function);
             CleanupExit.Process(function);
             CleanupUselessGoto.Process(function);
+            CleanupElseIf.Process(function);
         }
     }
 

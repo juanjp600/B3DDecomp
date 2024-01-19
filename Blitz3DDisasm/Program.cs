@@ -12,7 +12,7 @@ internal static class Program
 {
     private static void Main(string[] args)
     {
-        var exePath = "C:/Users/juanj/Desktop/Blitz3D/ReverseEng/game.exe";
+        var exePath = "C:/Users/juanj/Repos/Decomps/scpcb_temp/SCP - Containment Breach v0.6.4.exe";
         var outputPath = $"{Path.GetDirectoryName(exePath)!.Replace('\\', '/')}/";
 
         var exeName = Path.GetFileName(exePath);

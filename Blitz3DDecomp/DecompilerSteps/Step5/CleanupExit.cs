@@ -21,7 +21,7 @@ static class CleanupExit
             int innerLoops = 0;
             for (int j = i; j < jumpStatementSection.StartIndex; j++)
             {
-                if (function.HighLevelStatements[j] is WhileStatement or ForEachStatement or RepeatStatement)
+                if (function.HighLevelStatements[j] is WhileStatement or ForEachStatement or ForOnIntStatement or RepeatStatement)
                 {
                     innerLoops++;
                 }
@@ -36,16 +36,7 @@ static class CleanupExit
                 }
             }
 
-            bool isValidExit = true;
-            for (int j = exitIndex + 1; j < jumpStatementSection.StartIndex; j++)
-            {
-                if (function.HighLevelStatements[j] is not EndIfStatement)
-                {
-                    isValidExit = false;
-                    break;
-                }
-            }
-            if (!isValidExit) { continue; }
+            if (exitIndex != jumpStatementSection.StartIndex - 1) { continue; }
 
             function.HighLevelStatements[i] = new ExitStatement();
         }

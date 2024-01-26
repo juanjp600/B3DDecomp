@@ -20,10 +20,8 @@ static class RemoveTrivialNoops
                     lhs = tempLhs;
                     rhs = tempRhs;
                     break;
-                case XorExpression { Lhs: var tempLhs, Rhs: var tempRhs }:
-                    lhs = tempLhs;
-                    rhs = tempRhs;
-                    break;
+                case XorExpression { Lhs: VariableExpression { Variable: Function.DecompGeneratedTempVariable } tempLhs, Rhs: var tempRhs } when tempLhs == tempRhs:
+                    return new ConstantExpression(Value: "0x0");
             }
 
             if (lhs is VariableExpression { Variable: Function.DecompGeneratedTempVariable }

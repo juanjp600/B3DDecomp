@@ -117,7 +117,7 @@ internal static class Program
     /// </summary>
     private static void Step0(string disasmPath, string decompPath)
     {
-        Function.InitBuiltIn(CurrentCompiler.Value);
+        Function.InitBuiltIn(disasmPath, CurrentCompiler.Value);
 
         LoadGlobalList.FromDir(disasmPath);
         LoadDimArrays.FromDir(disasmPath);

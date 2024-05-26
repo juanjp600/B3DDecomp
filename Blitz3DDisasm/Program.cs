@@ -28,8 +28,8 @@ internal static class Program
         var outputPath = Directory.GetCurrentDirectory().CleanupPath();
 
         var exeName = Path.GetFileName(exePath);
-        var fileToInspect = PEImage.FromFile(exePath);
-        var resources = fileToInspect.Resources;
+        var peImage = PEImage.FromFile(exePath);
+        var resources = peImage.Resources;
         if (resources?.Entries is not IEnumerable<IResourceEntry> entries)
         {
             throw new Exception($"");
@@ -357,6 +357,9 @@ internal static class Program
         DirectoryUtils.RecreateDirectory(disasmPath);
         
         File.WriteAllText(disasmPath + "/Compiler.txt", compiler.ToString());
+
+        var builtInSymbols = BuiltInSymbolExtractor.FromFile(exePath);
+        File.WriteAllLines(disasmPath + "/BuiltInSymbols.txt", builtInSymbols);
 
         for (int i = 0; i < symbols.Count; i++)
         {

@@ -76,13 +76,11 @@ sealed class Function
 
     private static Dictionary<string, Function> lookupDictionary = new Dictionary<string, Function>();
 
-    public static void InitBuiltIn(Compiler compiler)
+    public static void InitBuiltIn(string inputDir, Compiler compiler)
     {
+        BlitzSymbol.Init(inputDir.AppendToPath("BuiltInSymbols.txt"));
         switch (compiler)
         {
-            case Compiler.Blitz3dTss:
-                Blitz3dTssBuiltIns.Init();
-                break;
             case Compiler.Blitz3d:
                 Blitz3dBuiltIns.Init();
                 break;
@@ -209,47 +207,17 @@ sealed class Function
         return null;
     }
 
-    public static Function FromBlitzSymbol(string str)
+    public static Function? FromBlitzSymbol(string str)
     {
-        static DeclType ripTypeFromStr(ref string str, DeclType defaultType)
+        var symbolOption = BlitzSymbol.FromString(str);
+        if (!symbolOption.TryUnwrap(out var symbol)) { return null; }
+        if (BlitzSymbol.SymbolsDeclaredByExecutable.TryGetValue(symbol.FunctionName, out var existingSymbol))
         {
-            if (str[0] == '#')
-            {
-                str = str[1..];
-                return DeclType.Float;
-            }
-            if (str[0] == '%')
-            {
-                str = str[1..];
-                return DeclType.Int;
-            }
-            if (str[0] == '$')
-            {
-                str = str[1..];
-                return DeclType.String;
-            }
-            return defaultType;
+            symbol = existingSymbol;
         }
 
-        DeclType returnType = ripTypeFromStr(ref str, DeclType.Unknown);
-
-        str = str
-            .Replace("%", " %")
-            .Replace("#", " #")
-            .Replace("$", " $");
-        var split = str.Split(" ");
-        var parameters = new List<Parameter>();
-        var funcName = split[0].ToLowerInvariant();
-        split = split.Skip(1).ToArray();
-        for (var argIndex = 0; argIndex < split.Length; argIndex++)
-        {
-            var argName = split[argIndex];
-            var argType = ripTypeFromStr(ref argName, DeclType.Int);
-            parameters.Add(new Parameter(argName, argIndex) { DeclType = argType });
-        }
-
-        var newFunction = new Function($"_builtIn_f{funcName}", 0) { ReturnType = returnType };
-        newFunction.Parameters.Clear(); newFunction.Parameters.AddRange(parameters);
+        var newFunction = new Function($"_builtIn_f{symbol.FunctionName}", 0) { ReturnType = symbol.ReturnType };
+        newFunction.Parameters.Clear(); newFunction.Parameters.AddRange(symbol.Parameters.Select((p, i) => new Parameter(p.Name, i)));
         return newFunction;
     }
 

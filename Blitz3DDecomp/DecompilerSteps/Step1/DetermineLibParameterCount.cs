@@ -91,6 +91,7 @@ static class DetermineLibParameterCount
                         || context.SolvedFunctions.Contains(callee))
                     {
                         stackFill -= callee.Parameters.Count;
+                        Logger.WriteLine($"{function.Name} calls {callee.Name}({callee.Parameters.Count})");
                         if (stackFill < 0) { Debugger.Break(); }
                         if (stackFill == 0)
                         {

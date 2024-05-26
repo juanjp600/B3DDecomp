@@ -22,7 +22,8 @@ internal static class Program
         string disasmPath = args[0].CleanupPath();
         if (disasmPath.EndsWith(".exe"))
         {
-            var disasmProcess = Process.Start("Blitz3DDisasm.exe", args);
+            var disasmExecutableName = "Blitz3DDisasm";
+            var disasmProcess = Process.Start(disasmExecutableName, args);
             disasmProcess.WaitForExit();
             disasmPath = Directory.GetCurrentDirectory().CleanupPath().AppendToPath(Path.GetFileNameWithoutExtension(args[0])+"_disasm");
         }

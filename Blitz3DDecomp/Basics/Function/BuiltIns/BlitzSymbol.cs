@@ -70,6 +70,5 @@ readonly record struct BlitzSymbol(
                 SymbolsDeclaredByExecutable[symbol.FunctionName] = symbol;
             }
         }
-        Debugger.Break();
     }
 }

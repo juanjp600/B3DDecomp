@@ -217,7 +217,7 @@ sealed class Function
         }
 
         var newFunction = new Function($"_builtIn_f{symbol.FunctionName}", 0) { ReturnType = symbol.ReturnType };
-        newFunction.Parameters.Clear(); newFunction.Parameters.AddRange(symbol.Parameters.Select((p, i) => new Parameter(p.Name, i)));
+        newFunction.Parameters.Clear(); newFunction.Parameters.AddRange(symbol.Parameters.Select((p, i) => new Parameter(p.Name, i) { DeclType = p.DeclType }));
         return newFunction;
     }
 

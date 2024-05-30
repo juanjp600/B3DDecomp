@@ -352,7 +352,7 @@ static class ConvertConstantsToFinalRepresentation
             JumpIfExpressionStatement jumpIfExpressionStatement
                 => new JumpIfExpressionStatement(
                     map(jumpIfExpressionStatement.Condition, null),
-                    jumpIfExpressionStatement.SectionName),
+                    jumpIfExpressionStatement.SectionName, function),
             NextStatement nextStatement
                 => nextStatement,
             RestoreStatement restoreStatement

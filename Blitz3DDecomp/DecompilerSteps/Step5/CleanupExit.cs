@@ -12,7 +12,7 @@ static class CleanupExit
         for (int i = 0; i < function.HighLevelStatements.Count; i++)
         {
             var statement = function.HighLevelStatements[i];
-            if (statement is not UnconditionalJumpStatement jumpStatement) { continue; }
+            if (statement is not UnconditionalJumpStatement { PointsToUserSection: false } jumpStatement) { continue; }
 
             var jumpStatementSection = sectionsByName[jumpStatement.SectionName];
             if (jumpStatementSection.StartIndex < i) { continue; }

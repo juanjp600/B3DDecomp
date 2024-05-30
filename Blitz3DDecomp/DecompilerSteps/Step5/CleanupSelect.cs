@@ -229,6 +229,7 @@ static class CleanupSelect
         for (int i = 0; i < function.HighLevelStatements.Count; i++)
         {
             var statement = function.HighLevelStatements[i];
+            if (statement is JumpStatement { PointsToUserSection: true }) { continue; }
             if (statement is not JumpIfExpressionStatement { Condition: OneIfExpressionsEqualExpression currentCondition })
             {
                 handleChain(ref i);

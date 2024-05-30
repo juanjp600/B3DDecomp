@@ -13,7 +13,7 @@ static class CleanupElse
         {
             var statement = function.HighLevelStatements[i];
             var nextStatement = function.HighLevelStatements[i + 1];
-            if (statement is not UnconditionalJumpStatement jumpStatement
+            if (statement is not UnconditionalJumpStatement { PointsToUserSection: false } jumpStatement
                 || nextStatement is not EndIfStatement) { continue; }
 
             var jumpStatementSection = sectionsByName[jumpStatement.SectionName];

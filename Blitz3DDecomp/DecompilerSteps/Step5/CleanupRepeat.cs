@@ -10,7 +10,7 @@ static class CleanupRepeat
     {
         for (int i = 0; i < function.HighLevelStatements.Count; i++)
         {
-            var statement = function.HighLevelStatements[i];
+            if (function.HighLevelStatements[i] is not JumpStatement { PointsToUserSection: false } statement) { continue; }
             var (sectionName, replacementStatement) = statement switch
             {
                 UnconditionalJumpStatement unconditionalJumpStatement

@@ -12,8 +12,14 @@ static class CleanupIfs
         var sectionsByName = function.HighLevelSectionsByName;
         for (int i = 0; i < function.HighLevelStatements.Count; i++)
         {
-            var statement = function.HighLevelStatements[i];
-            if (statement is not JumpIfExpressionStatement { Condition: BooleanExpression condition } conditionalJumpStatement) { continue; }
+            if (function.HighLevelStatements[i] is not JumpIfExpressionStatement
+                {
+                    PointsToUserSection: false,
+                    Condition: BooleanExpression condition
+                } conditionalJumpStatement)
+            {
+                continue;
+            }
 
             var jumpStatementSection = sectionsByName[conditionalJumpStatement.SectionName];
             if (jumpStatementSection.StartIndex < i) { continue; }

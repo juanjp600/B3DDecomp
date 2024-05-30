@@ -372,7 +372,7 @@ internal static class Program
             {
                 if (referencedSections.Contains(section.Name))
                 {
-                    writeLineToFile(".section", section.Name);
+                    writeLineToFile("", "." + HighLevelSection.CleanupSectionName(section.Name, function));
                 }
                 foreach (var statement in section.Statements)
                 {

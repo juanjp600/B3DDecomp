@@ -173,4 +173,18 @@ sealed class HighLevelSection
         Statements = new SubList(this);
         Owner = owner;
     }
+
+    public static string CleanupSectionName(string lowLevelName, Function function)
+    {
+        var retVal = lowLevelName;
+        if (retVal.EndsWith(function.CoreSymbolName)) { retVal = retVal[..^function.CoreSymbolName.Length]; }
+
+        if (!lowLevelName.StartsWith("_l_", StringComparison.Ordinal)) { return "section_" + retVal; }
+
+        for (int i = 3; i < lowLevelName.Length; i++)
+        {
+            if (!char.IsDigit(lowLevelName[i])) { return retVal[i..]; }
+        }
+        return "section" + retVal;
+    }
 }

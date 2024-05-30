@@ -178,7 +178,7 @@ static class BasicLowToHighLevelConversion
                         "jl" => new OneIfLessThanZeroExpression(lastCompareExpression),
                         "jle" => new OneIfLessThanOrEqualToZeroExpression(lastCompareExpression),
                         _ => throw new Exception("unreachable")
-                    }, instruction.DestArg[1..]));
+                    }, instruction.DestArg[1..], function));
                     break;
                 case "jae":
                     if (instruction.DestArg.Contains("_builtIn__bbNullObjEx", StringComparison.Ordinal)
@@ -195,7 +195,7 @@ static class BasicLowToHighLevelConversion
                     }
                     else
                     {
-                        highLevelSection.Statements.Add(new UnconditionalJumpStatement(jmpSectionName));
+                        highLevelSection.Statements.Add(new UnconditionalJumpStatement(jmpSectionName, function));
                     }
                     break;
                 case "setz" or "sete":

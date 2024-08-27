@@ -15,6 +15,7 @@ readonly record struct BlitzSymbol(
     {
         static DeclType ripTypeFromStr(ref string str, DeclType defaultType)
         {
+            str = str.Replace(" ", "");
             if (str[0] == '#')
             {
                 str = str[1..];
@@ -30,6 +31,11 @@ readonly record struct BlitzSymbol(
                 str = str[1..];
                 return DeclType.String;
             }
+            if (str[0] == '*')
+            {
+                str = str[1..];
+                return DeclType.Pointer;
+            }
             return defaultType;
         }
 
@@ -38,7 +44,8 @@ readonly record struct BlitzSymbol(
         str = str
             .Replace("%", " %")
             .Replace("#", " #")
-            .Replace("$", " $");
+            .Replace("$", " $")
+            .Replace("*", " *");
         var split = str.Split(" ");
         var parameters = new List<Parameter>();
         var funcName = split[0].ToLowerInvariant();

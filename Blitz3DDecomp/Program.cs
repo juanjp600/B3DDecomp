@@ -11,21 +11,58 @@ using Blitz3DDecomp.HighLevel;
 
 internal static class Program
 {
+    const string DisasmExecutableName = "Blitz3DDisasm";
+    const string DecompExecutableName = "Blitz3DDecomp";
+
     public static void Main(string[] args)
     {
-        if (args.Length == 0)
+        args = args.Select(arg => arg.CleanupPath()).ToArray();
+        Console.WriteLine($"args: {string.Join(" ", args)}");
+
+        while (args.Any(arg => !arg.IsDisasmPath() && File.GetAttributes(arg).HasFlag(FileAttributes.Directory)))
         {
-            Console.WriteLine("No input given, closing");
+            args = args.SelectMany(
+                arg =>
+                    !arg.IsDisasmPath() && File.GetAttributes(arg).HasFlag(FileAttributes.Directory)
+                        ? Directory.GetFileSystemEntries(arg)
+                        : [arg.CleanupPath()])
+                .ToArray();
+        }
+
+        string[] declsPaths = args.Where(arg => arg.EndsWith(".decls", StringComparison.OrdinalIgnoreCase)).ToArray();
+        string[] exePaths = args.Where(arg => arg.EndsWith(".exe", StringComparison.OrdinalIgnoreCase)).ToArray();
+        string[] disasmDirPaths = args.Where(arg => arg.EndsWith("_disasm/", StringComparison.OrdinalIgnoreCase)).ToArray();
+
+        if (exePaths.Any())
+        {
+            foreach (var exePath in exePaths)
+            {
+                var disasmProcess = Process.Start(DisasmExecutableName, [exePath]);
+                disasmProcess.WaitForExit();
+                var newDisasmPath = Path.GetDirectoryName(exePath)+"/"+Path.GetFileNameWithoutExtension(exePath)+"_disasm/";
+
+                var newDecompProcess = Process.Start(DecompExecutableName, [newDisasmPath, ..declsPaths]);
+                newDecompProcess.WaitForExit();
+            }
             return;
         }
 
-        string disasmPath = args[0].CleanupPath();
-        if (disasmPath.EndsWith(".exe"))
+        string disasmPath;
+        switch (disasmDirPaths.Length)
         {
-            var disasmExecutableName = "Blitz3DDisasm";
-            var disasmProcess = Process.Start(disasmExecutableName, args);
-            disasmProcess.WaitForExit();
-            disasmPath = Directory.GetCurrentDirectory().CleanupPath().AppendToPath(Path.GetFileNameWithoutExtension(args[0])+"_disasm");
+            case 0:
+                Console.WriteLine("No input given, closing");
+                return;
+            case 1:
+                disasmPath = disasmDirPaths[0].CleanupPath();
+                break;
+            default:
+                foreach (var disasmDirPath in disasmDirPaths)
+                {
+                    var newDecompProcess = Process.Start(DecompExecutableName, [disasmDirPath, ..declsPaths]);
+                    newDecompProcess.WaitForExit();
+                }
+                return;
         }
 
         string decompPath = disasmPath.Replace("_disasm", "_decomp");
@@ -35,7 +72,7 @@ internal static class Program
             File.ReadAllText(disasmPath.AppendToPath("Compiler.txt")).Trim(),
             ignoreCase: true);
 
-        Step0(disasmPath, decompPath);
+        Step0(disasmPath, decompPath, declsPaths);
         Step1();
         Step2();
         Step3();
@@ -115,7 +152,7 @@ internal static class Program
     /// <summary>
     /// Disassembly ingest, trivial analysis and codegen
     /// </summary>
-    private static void Step0(string disasmPath, string decompPath)
+    private static void Step0(string disasmPath, string decompPath, string[] declsFiles)
     {
         Function.InitBuiltIn(disasmPath, CurrentCompiler.Value);
 
@@ -123,6 +160,7 @@ internal static class Program
         LoadDimArrays.FromDir(disasmPath);
         IngestCodeFiles.FromDir(disasmPath);
         IngestLibInfo.FromDir(disasmPath);
+        IngestDecls.FromFiles(declsFiles);
 
         IngestStringConstants.FromDir(disasmPath);
         TypeDecompiler.FromDir(disasmPath, decompPath);

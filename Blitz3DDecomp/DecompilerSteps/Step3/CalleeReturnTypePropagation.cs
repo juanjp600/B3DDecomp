@@ -19,6 +19,7 @@ static class CalleeReturnTypePropagation
             var variable = instruction.ReturnOutputVar;
             if (variable is null) { continue; }
 
+            if (variable.DeclType == DeclType.Pointer || callee.ReturnType == DeclType.Pointer) { continue; }
             if (variable.DeclType == DeclType.Unknown && callee.ReturnType != DeclType.Unknown)
             {
                 variable.DeclType = callee.ReturnType;

@@ -202,7 +202,12 @@ static class DetermineLibParameterCount
         {
             foreach (var entry in dll.Entries)
             {
-                if (entry.ParameterCount is { } parameterCount)
+                if (Function.TryGetFunctionByName(entry.DecompName) is { } ingestedFunction)
+                {
+                    context.SolvedFunctions.Add(ingestedFunction);
+                    Logger.WriteLine($"{entry.DecompName} was ingested from decls");
+                }
+                else if (entry.ParameterCount is { } parameterCount)
                 {
                     var newLibFunction = new Function(entry.DecompName, parameterCount);
                     context.SolvedFunctions.Add(newLibFunction);

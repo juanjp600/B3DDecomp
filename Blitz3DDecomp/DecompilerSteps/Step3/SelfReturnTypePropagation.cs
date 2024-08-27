@@ -24,6 +24,7 @@ static class SelfReturnTypePropagation
 
                     var callee = Function.GetFunctionByName(prevInstruction.DestArg);
                     if (callee.ReturnType == DeclType.Unknown) { return; }
+                    if (callee.ReturnType == DeclType.Pointer) { return; }
 
                     section.Owner.ReturnType = callee.ReturnType;
                     section.Owner.Trace = section.Owner.Trace.Append($"{section.Owner}: returns {section.Owner.ReturnType} because {prevInstruction}");
@@ -35,7 +36,7 @@ static class SelfReturnTypePropagation
                 if (!matchingArgOption.TryUnwrap(out var matchingArg)) { continue; }
 
                 var variable = section.Owner.InstructionArgumentToVariable(matchingArg);
-                if (variable is null || variable.DeclType == DeclType.Unknown) { break; }
+                if (variable is null || variable.DeclType == DeclType.Unknown || variable.DeclType == DeclType.Pointer) { break; }
 
                 section.Owner.ReturnType = variable.DeclType;
                 section.Owner.Trace = section.Owner.Trace.Append($"{section.Owner}: returns {section.Owner.ReturnType} because {prevInstruction}");

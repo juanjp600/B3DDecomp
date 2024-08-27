@@ -11,6 +11,10 @@ static class VariableTypePropagation
 
         void exchangeTypes(Variable destVar, Variable srcVar)
         {
+            if (destVar.DeclType == DeclType.Pointer || srcVar.DeclType == DeclType.Pointer)
+            {
+                return;
+            }
             if (destVar.DeclType == DeclType.Unknown && srcVar.DeclType != DeclType.Unknown)
             {
                 somethingChanged = true;

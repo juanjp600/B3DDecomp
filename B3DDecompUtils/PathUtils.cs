@@ -10,4 +10,8 @@ public static class PathUtils
         if (!path.EndsWith("/")) { path += "/"; }
         return path + fsEntry;
     }
+
+    public static bool IsDisasmPath(this string path)
+        => path.EndsWith("_disasm/", StringComparison.OrdinalIgnoreCase)
+           || path.EndsWith("_disasm", StringComparison.OrdinalIgnoreCase);
 }

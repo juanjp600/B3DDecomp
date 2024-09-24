@@ -234,7 +234,7 @@ static class DetermineLibParameterCount
                 {
                     Debugger.Break();
                 }
-                function.Parameters.AddRange(Enumerable.Range(0, parameterCount).Select(i => new Function.Parameter($"param{i}", i)));
+                function.Parameters.AddRange(Enumerable.Range(0, parameterCount).Select(i => new Function.Parameter(function, $"param{i}", i)));
                 for (var i = 0; i < context.Equations.Count; i++)
                 {
                     context.Equations[i] = context.Equations[i].RemoveCallee(function, parameterCount);
@@ -268,7 +268,7 @@ static class DetermineLibParameterCount
                 var bestGuess = groupedGuesses.First();
                 var bestGuessFunction = bestGuess.Key;
                 var bestGuessParameterCount = bestGuess.Values[0].ParameterCount;
-                bestGuessFunction.Parameters.AddRange(Enumerable.Range(0, bestGuessParameterCount).Select(i => new Function.Parameter($"param{i}", i)));
+                bestGuessFunction.Parameters.AddRange(Enumerable.Range(0, bestGuessParameterCount).Select(i => new Function.Parameter(bestGuessFunction, $"param{i}", i)));
                 context.SolvedFunctions.Add(bestGuessFunction);
 
                 Logger.WriteLine($"Guessed for {bestGuessFunction.Name} out of {bestGuess.Values.Length} choices");

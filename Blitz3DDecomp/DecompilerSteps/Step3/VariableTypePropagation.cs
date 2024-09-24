@@ -11,17 +11,13 @@ static class VariableTypePropagation
 
         void exchangeTypes(Variable destVar, Variable srcVar)
         {
-            if (destVar.DeclType == DeclType.Pointer || srcVar.DeclType == DeclType.Pointer)
-            {
-                return;
-            }
-            if (destVar.DeclType == DeclType.Unknown && srcVar.DeclType != DeclType.Unknown)
+            if (destVar.DeclType == DeclType.Unknown && srcVar.CanBeSourceOfPropagation())
             {
                 somethingChanged = true;
                 destVar.DeclType = srcVar.DeclType;
                 destVar.Trace = srcVar.Trace.Append($"{function}: {destVar.Name} is {destVar.DeclType} because {srcVar}");
             }
-            if (srcVar.DeclType == DeclType.Unknown && destVar.DeclType != DeclType.Unknown)
+            if (srcVar.DeclType == DeclType.Unknown && destVar.CanBeSourceOfPropagation())
             {
                 somethingChanged = true;
                 srcVar.DeclType = destVar.DeclType;

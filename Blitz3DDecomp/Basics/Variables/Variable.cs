@@ -30,6 +30,20 @@ abstract class Variable
         }
     }
 
+    public bool CanBeSourceOfPropagation()
+    {
+        if (DeclType == DeclType.Unknown) { return false; }
+
+        if (this is Function.Parameter { Owner: var owner }
+            && DeclType == DeclType.Pointer
+            && owner.Name.EndsWith("__LIBS", StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        return true;
+    }
+
     protected Variable(string name)
     {
         Name = name;

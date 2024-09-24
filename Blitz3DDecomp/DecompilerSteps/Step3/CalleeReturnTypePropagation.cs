@@ -19,14 +19,13 @@ static class CalleeReturnTypePropagation
             var variable = instruction.ReturnOutputVar;
             if (variable is null) { continue; }
 
-            if (variable.DeclType == DeclType.Pointer || callee.ReturnType == DeclType.Pointer) { continue; }
-            if (variable.DeclType == DeclType.Unknown && callee.ReturnType != DeclType.Unknown)
+            if (variable.DeclType == DeclType.Unknown && callee.CanReturnTypeBeSourceOfPropagation())
             {
                 variable.DeclType = callee.ReturnType;
                 somethingChanged = true;
                 variable.Trace = callee.Trace.Append($"{section.Owner}: {variable.Name} is {variable.DeclType} because {callee.Name}'s return type");
             }
-            else if (callee.ReturnType == DeclType.Unknown && variable.DeclType != DeclType.Unknown)
+            else if (callee.ReturnType == DeclType.Unknown && variable.CanBeSourceOfPropagation())
             {
                 callee.ReturnType = variable.DeclType;
                 somethingChanged = true;

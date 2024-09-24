@@ -11,10 +11,12 @@ sealed class Function
 {
     public sealed class Parameter : VariableWithOwnType
     {
+        public readonly Function Owner;
         public readonly int Index;
 
-        public Parameter(string name, int index) : base(name)
+        public Parameter(Function owner, string name, int index) : base(name)
         {
+            Owner = owner;
             Index = index;
         }
 
@@ -217,14 +219,15 @@ sealed class Function
         }
 
         var newFunction = new Function($"_builtIn_f{symbol.FunctionName}", 0) { ReturnType = symbol.ReturnType };
-        newFunction.Parameters.Clear(); newFunction.Parameters.AddRange(symbol.Parameters.Select((p, i) => new Parameter(p.Name, i) { DeclType = p.DeclType }));
+        newFunction.Parameters.Clear();
+        newFunction.Parameters.AddRange(symbol.Parameters.Select((p, i) => new Parameter(newFunction, p.Name, i) { DeclType = p.DeclType }));
         return newFunction;
     }
 
     public Function(string name, int argCount) : this(name, Array.Empty<Instruction>(), Array.Empty<IngestCodeFiles.TempSection>())
     {
         Parameters = Enumerable.Range(0, argCount)
-            .Select(i => new Parameter($"arg{i}", i) { DeclType = DeclType.Unknown })
+            .Select(i => new Parameter(this, $"arg{i}", i) { DeclType = DeclType.Unknown })
             .ToList();
     }
 
@@ -259,5 +262,18 @@ sealed class Function
     {
         return Name + ReturnType.Suffix + "("
                + string.Join(", ", Parameters) + ")";
+    }
+
+    public bool CanReturnTypeBeSourceOfPropagation()
+    {
+        if (ReturnType == DeclType.Unknown) { return false; }
+
+        if (ReturnType == DeclType.Pointer
+            && Name.EndsWith("__LIBS", StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        return true;
     }
 }

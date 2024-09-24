@@ -22,7 +22,7 @@ static class CalleeArgumentTypePropagation
                 {
                     if (variable.DeclType != DeclType.Unknown)
                     {
-                        if (variable.DeclType == DeclType.Pointer) { continue; }
+                        if (!variable.CanBeSourceOfPropagation()) { continue; }
                         if (callee.IsBuiltIn) { continue; }
                         if (callee.Parameters[i].DeclType != DeclType.Unknown) { continue; }
 
@@ -32,8 +32,7 @@ static class CalleeArgumentTypePropagation
                     }
                     else
                     {
-                        if (callee.Parameters[i].DeclType == DeclType.Unknown) { continue; }
-                        if (callee.Parameters[i].DeclType == DeclType.Pointer) { continue; }
+                        if (!callee.Parameters[i].CanBeSourceOfPropagation()) { continue; }
 
                         variable.DeclType = callee.Parameters[i].DeclType;
                         somethingChanged = true;

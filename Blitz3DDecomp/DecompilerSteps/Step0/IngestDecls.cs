@@ -43,7 +43,8 @@ static class IngestDecls
                 Console.WriteLine(nameString + string.Join("", parameters));
 
                 var newFunction = new Function($"{symbol.FunctionName}__LIBS", 0) { ReturnType = symbol.ReturnType };
-                newFunction.Parameters.Clear(); newFunction.Parameters.AddRange(symbol.Parameters.Select((p, i) => new Function.Parameter(p.Name, i) { DeclType = p.DeclType }));
+                newFunction.Parameters.Clear();
+                newFunction.Parameters.AddRange(symbol.Parameters.Select((p, i) => new Function.Parameter(newFunction, p.Name, i) { DeclType = p.DeclType }));
             }
         }
     }

@@ -44,7 +44,7 @@ static class RemoveSingleUseTemps
         for (int i = statementIndex + 1; i < Math.Min(statementIndex + 60, function.HighLevelStatements.Count); i++)
         {
             var statement = function.HighLevelStatements[i];
-            if (jumpIndex < 0 && statement is UnconditionalJumpStatement or JumpIfExpressionStatement) { jumpIndex = i; }
+            if (jumpIndex < 0 && statement is JumpStatement) { jumpIndex = i; }
             if (!statementReferencesVariable(statement)) { continue; }
 
             if (secondUseIndex < 0)

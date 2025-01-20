@@ -9,7 +9,7 @@ abstract class VariableWithOwnType : Variable
         set
         {
             declType = value;
-            fields.Clear();
+            fields = null;
         }
     }
 

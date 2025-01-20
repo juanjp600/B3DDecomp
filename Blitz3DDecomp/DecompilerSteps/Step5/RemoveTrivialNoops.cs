@@ -16,7 +16,15 @@ static class RemoveTrivialNoops
                     lhs = tempLhs;
                     rhs = tempRhs;
                     break;
+                case LogicalAndExpression { Lhs: var tempLhs, Rhs: var tempRhs }:
+                    lhs = tempLhs;
+                    rhs = tempRhs;
+                    break;
                 case OrExpression { Lhs: var tempLhs, Rhs: var tempRhs }:
+                    lhs = tempLhs;
+                    rhs = tempRhs;
+                    break;
+                case LogicalOrExpression { Lhs: var tempLhs, Rhs: var tempRhs }:
                     lhs = tempLhs;
                     rhs = tempRhs;
                     break;

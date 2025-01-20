@@ -69,6 +69,8 @@ readonly record struct BlitzSymbol(
 
     public static void Init(string symbolsPath)
     {
+        if (!File.Exists(symbolsPath)) { return; }
+
         var symbolStrings = File.ReadAllLines(symbolsPath);
         foreach (var s in symbolStrings)
         {

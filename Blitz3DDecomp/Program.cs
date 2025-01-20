@@ -362,6 +362,13 @@ internal static class Program
             ConvertFunctionCallsToFinalRepresentation.Process(function);
             CleanupBooleanExpressions.Process(function);
             ConvertConstantsToFinalRepresentation.Process(function);
+            for (int i = 0; i < 20; i++) /* TODO: MAJOR HACK, SHOULD CHECK FOR A NEED TO REDO THESE STEPS */
+            {
+                CleanupLogicalBooleanExpressions.Process(function);
+                RemoveSingleUseTemps.Process(function);
+                CleanupBooleanExpressions.Process(function);
+                function.RemoveUnreferencedHighLevelSections();
+            }
             CleanupSelect.Process(function);
             CleanupUselessGoto.Process(function);
             CleanupWhile.Process(function);

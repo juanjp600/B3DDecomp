@@ -134,7 +134,7 @@ static class DetermineLibParameterCount
         }
         else if (stackFill != 0)
         {
-            Debugger.Break();
+            //Debugger.Break();
         }
     }
 

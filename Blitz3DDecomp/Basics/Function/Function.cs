@@ -276,4 +276,22 @@ sealed class Function
 
         return true;
     }
+
+    public void RemoveUnreferencedHighLevelSections()
+    {
+        var referencedSectionNames = HighLevelStatements
+            .OfType<JumpStatement>()
+            .Select(js => js.SectionName)
+            .Distinct()
+            .ToHashSet();
+        var unreferencedSections = HighLevelSections.Where(s => !referencedSectionNames.Contains(s.Name)).ToArray();
+        foreach (var section in unreferencedSections)
+        {
+            var sectionIndex = HighLevelSections.IndexOf(section);
+            if (sectionIndex <= 0) { continue; }
+
+            HighLevelSections[sectionIndex - 1].Statements.IncreaseCount(section.Statements.Count);
+            HighLevelSections.RemoveAt(sectionIndex);
+        }
+    }
 }

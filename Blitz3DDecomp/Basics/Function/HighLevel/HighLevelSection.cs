@@ -5,7 +5,7 @@ namespace Blitz3DDecomp.HighLevel;
 
 sealed class HighLevelSection
 {
-    private sealed class SubList : IList<Statement>
+    public sealed class SubList : IList<Statement>
     {
         private readonly HighLevelSection owner;
 
@@ -104,6 +104,11 @@ sealed class HighLevelSection
             count--;
         }
 
+        public void IncreaseCount(int amount)
+        {
+            count += amount;
+        }
+
         public Statement this[int index]
         {
             get
@@ -125,7 +130,7 @@ sealed class HighLevelSection
     }
 
     public readonly string Name;
-    public readonly IList<Statement> Statements;
+    public readonly SubList Statements;
     public readonly Function Owner;
 
     public int StartIndex

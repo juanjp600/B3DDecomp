@@ -18,43 +18,58 @@ internal static class Program
             return;
         }
 
-        string exePath = args[0].CleanupPath();
-        if (!exePath.EndsWith(".exe"))
+        var outputPath = Directory.GetCurrentDirectory().CleanupPath();
+        string inputPath = args[0].CleanupPath();
+
+        byte[] data;
+        string disasmPath;
+        if (inputPath.EndsWith(".exe"))
+        {
+            var exeName = Path.GetFileName(inputPath);
+            var peImage = PEImage.FromFile(inputPath);
+            var resources = peImage.Resources;
+            if (resources?.Entries is not IEnumerable<IResourceEntry> entries)
+            {
+                throw new Exception($"");
+            }
+
+            static IEnumerable<IResourceEntry> flattener(IResourceEntry entry)
+            {
+                if (entry is not IResourceDirectory dir)
+                {
+                    return new[] { entry };
+                }
+
+                return dir.Type is ResourceType.RcData or (ResourceType)1111
+                    ? dir.Entries
+                    : Enumerable.Empty<IResourceEntry>();
+            }
+
+            var flatten = entries
+                .SelectMany(flattener)
+                .SelectMany(flattener)
+                .SelectMany(flattener)
+                .SelectMany(flattener);
+            data = flatten
+                .OfType<IResourceData>()
+                .Select(d => d.Contents)
+                .OfType<DataSegment>()
+                .First()
+                .Data;
+            
+            disasmPath = outputPath.AppendToPath(exeName.Replace(".exe", "_disasm"));
+        }
+        else if (inputPath.EndsWith(".bin"))
+        {
+            data = File.ReadAllBytes(inputPath);
+            var binName = Path.GetFileName(inputPath);
+            disasmPath = outputPath.AppendToPath(binName.Replace(".bin", "_disasm"));
+        }
+        else
         {
             Console.WriteLine("Input isn't an exe, closing");
             return;
         }
-
-        var outputPath = Directory.GetCurrentDirectory().CleanupPath();
-
-        var exeName = Path.GetFileName(exePath);
-        var peImage = PEImage.FromFile(exePath);
-        var resources = peImage.Resources;
-        if (resources?.Entries is not IEnumerable<IResourceEntry> entries)
-        {
-            throw new Exception($"");
-        }
-
-        static IEnumerable<IResourceEntry> flattener(IResourceEntry entry)
-        {
-            if (entry is not IResourceDirectory dir) { return new[] { entry }; }
-
-            return dir.Type is ResourceType.RcData or (ResourceType)1111
-                ? dir.Entries
-                : Enumerable.Empty<IResourceEntry>();
-        }
-
-        var flatten = entries
-            .SelectMany(flattener)
-            .SelectMany(flattener)
-            .SelectMany(flattener)
-            .SelectMany(flattener);
-        var data = flatten
-            .OfType<IResourceData>()
-            .Select(d => d.Contents)
-            .OfType<DataSegment>()
-            .First()
-            .Data;
 
         var symbols = new List<Symbol>();
         var symbolByName = new Dictionary<string, Symbol>();
@@ -352,14 +367,15 @@ internal static class Program
             symbol.NewName = newName;
         }
 
-        var disasmPath = outputPath.AppendToPath(exeName.Replace(".exe", "_disasm"));
-        
         DirectoryUtils.RecreateDirectory(disasmPath);
         
         File.WriteAllText(disasmPath + "/Compiler.txt", compiler.ToString());
 
-        var builtInSymbols = BuiltInSymbolExtractor.FromFile(exePath);
-        File.WriteAllLines(disasmPath + "/BuiltInSymbols.txt", builtInSymbols);
+        if (inputPath.EndsWith(".exe"))
+        {
+            var builtInSymbols = BuiltInSymbolExtractor.FromFile(inputPath);
+            File.WriteAllLines(disasmPath + "/BuiltInSymbols.txt", builtInSymbols);
+        }
 
         for (int i = 0; i < symbols.Count; i++)
         {

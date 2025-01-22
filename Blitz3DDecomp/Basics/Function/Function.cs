@@ -284,13 +284,19 @@ sealed class Function
             .Select(js => js.SectionName)
             .Distinct()
             .ToHashSet();
-        var unreferencedSections = HighLevelSections.Where(s => !referencedSectionNames.Contains(s.Name)).ToArray();
+        var unreferencedSections = HighLevelSections.Skip(1).Where(s => !referencedSectionNames.Contains(s.Name)).ToArray();
+
+        if (unreferencedSections.Length == 0) { return; }
+        
+        //Console.WriteLine($"{Name}: removing {unreferencedSections.Length} sections");
         foreach (var section in unreferencedSections)
         {
             var sectionIndex = HighLevelSections.IndexOf(section);
             if (sectionIndex <= 0) { continue; }
 
-            HighLevelSections[sectionIndex - 1].Statements.IncreaseCount(section.Statements.Count);
+            int previousIndex = sectionIndex - 1;
+
+            HighLevelSections[previousIndex].Statements.IncreaseCount(section.Statements.Count);
             HighLevelSections.RemoveAt(sectionIndex);
         }
     }

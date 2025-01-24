@@ -280,31 +280,6 @@ static class CleanupSelect
             }
         }
 
-        // Push Case statements above every empty section that's next to them
-        // so remaining gotos can still work.
-        // Assembly sections are checked for emptiness because that's representative
-        // of the real semantics of the program, some non-empty sections may decompile
-        // down to no statements at all.
-        for (int i = 0; i < function.HighLevelSections.Count; i++)
-        {
-            var section = function.HighLevelSections[i];
-            if (section.Statements.Count != 1) { continue; }
-            if (section.Statements[0] is not CaseStatement) { continue; }
-
-            var reinsertIndex = i;
-            while (function.HighLevelSections[reinsertIndex - 1].Statements.Count == 0
-                    && (!function.AssemblySectionsByName.TryGetValue(function.HighLevelSections[reinsertIndex - 1].Name, out var assemblySection)
-                        || assemblySection.Instructions.Length == 0))
-            {
-                reinsertIndex--;
-            }
-            if (reinsertIndex < i)
-            {
-                function.HighLevelSections.RemoveAt(i);
-                function.HighLevelSections.Insert(reinsertIndex, section);
-            }
-        }
-
         for (int i = 1; i < function.HighLevelStatements.Count; i++)
         {
             if (function.HighLevelStatements[i] is not SelectStatement selectStatement) { continue; }

@@ -17,7 +17,6 @@ internal static class Program
     public static void Main(string[] args)
     {
         args = args.Select(arg => arg.CleanupPath()).ToArray();
-        args = ["/home/juan/Repos/B3DDecomp/bin/Debug/net8.0/resdump_disasm/", "/home/juan/Repos/B3DDecomp/bin/Debug/net8.0/Decls/"];
         Console.WriteLine($"args: {string.Join(" ", args)}");
 
         while (args.Any(arg => !arg.IsDisasmPath() && File.GetAttributes(arg).HasFlag(FileAttributes.Directory)))
@@ -370,7 +369,7 @@ internal static class Program
             function.RemoveUnreferencedHighLevelSections();
             ConvertConstantsToFinalRepresentation.Process(function);
             function.RemoveUnreferencedHighLevelSections();
-            for (int i = 0; i < 20; i++) /* TODO: MAJOR HACK, SHOULD CHECK FOR A NEED TO REDO THESE STEPS */
+            for (int i = 0; i < 20; i++) // TODO: MAJOR HACK, SHOULD CHECK FOR A NEED TO REDO THESE STEPS
             {
                 CleanupLogicalBooleanExpressions.Process(function);
                 function.RemoveUnreferencedHighLevelSections();
@@ -381,8 +380,8 @@ internal static class Program
             }
             CleanupSelect.Process(function);
             function.RemoveUnreferencedHighLevelSections();
-            //CleanupUselessGoto.Process(function);
-            //function.RemoveUnreferencedHighLevelSections();
+            CleanupUselessGoto.Process(function);
+            function.RemoveUnreferencedHighLevelSections();
             CleanupWhile.Process(function);
             function.RemoveUnreferencedHighLevelSections();
             CleanupForOnInt.Process(function);
@@ -410,7 +409,7 @@ internal static class Program
         var functionsWithHighLevelSections = referencedFunctions.Where(f => f.HighLevelSections.Count > 0).ToArray();
         foreach (var function in functionsWithHighLevelSections)
         {
-            /*var referencedSections = function
+            var referencedSections = function
                 .HighLevelStatements
                 .SelectMany(stmt =>
                     stmt switch
@@ -419,7 +418,7 @@ internal static class Program
                         JumpIfExpressionStatement jumpIfExpressionStatement => new[] { jumpIfExpressionStatement.SectionName },
                         _ => Array.Empty<string>()
                     })
-                .ToHashSet();*/
+                .ToHashSet();
 
             using var file = File.Create(outputDir.AppendToPath($"{function.Name}.bb"));
 
@@ -435,10 +434,10 @@ internal static class Program
             }
             foreach (var section in function.HighLevelSections)
             {
-                /*if (referencedSections.Contains(section.Name))
-                {*/
-                writeLineToFile("", "." + HighLevelSection.CleanupSectionName(section.Name, function));
-                //}
+                if (referencedSections.Contains(section.Name))
+                {
+                    writeLineToFile("", "." + HighLevelSection.CleanupSectionName(section.Name, function));
+                }
                 foreach (var statement in section.Statements)
                 {
                     for (int i=0;i<statement.IndentationToSubtract;i++) { indentation = indentation[..^4]; }

@@ -172,6 +172,9 @@ sealed class HighLevelSection
     public AssemblySection? LinkedAssemblySection
         => Owner.AssemblySectionsByName.GetValueOrDefault(Name);
 
+    public bool IsEmpty
+        => Statements.Count == 0 && LinkedAssemblySection is not { Instructions.Length: > 0 };
+
     public HighLevelSection(Function owner, string name)
     {
         Name = name;

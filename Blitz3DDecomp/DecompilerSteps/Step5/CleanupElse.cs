@@ -29,7 +29,7 @@ static class CleanupElse
             if (indent < -1) { continue; }
 
             var endIfSection = jumpStatementSection;
-            while (endIfSection is { LinkedAssemblySection.Instructions.Length: 0, NextSection: { } nextSection })
+            while (endIfSection is { IsEmpty: true, NextSection: { } nextSection })
             {
                 endIfSection = nextSection;
             }

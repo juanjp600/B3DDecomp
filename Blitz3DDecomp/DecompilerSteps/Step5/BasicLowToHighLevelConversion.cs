@@ -8,10 +8,13 @@ static class BasicLowToHighLevelConversion
 {
     private readonly record struct DimSizeAssignment(DimArray Array, int Dimension);
 
-    private readonly record struct Context(
-        Dictionary<Function.DecompGeneratedTempVariable, Expression> TempToExpression,
-        Dictionary<DimSizeAssignment, Function.DecompGeneratedTempVariable> DimSizeAssignmentToVar,
-        Stack<Expression> FloatStack);
+    private sealed class Context
+    {
+        public readonly Dictionary<Function.DecompGeneratedTempVariable, Expression> TempToExpression = new();
+        public readonly Dictionary<DimSizeAssignment, Function.DecompGeneratedTempVariable> DimSizeAssignmentToVar = new();
+        public readonly Stack<Expression> FloatStack = new();
+        public Expression? LastPotentialReturnExpression = null;
+    };
 
     private static void ProcessSection(
         Function function,
@@ -81,7 +84,6 @@ static class BasicLowToHighLevelConversion
             return expression.Map(reduceExpression);
         }
 
-        Expression? lastPotentialReturnExpression = null;
         Expression? lastCompareExpression = null;
         for (int i = assemblySection.PreambleEndIndex + 1; i < assemblySection.Instructions.Length; i++)
         {
@@ -130,7 +132,7 @@ static class BasicLowToHighLevelConversion
                 {
                     highLevelSection.Statements.Add(new AssignmentStatement(new VariableExpression(destVar), srcExpression));
                 }
-                if (destVar.Name.StartsWith("eax", StringComparison.Ordinal)) { lastPotentialReturnExpression = new VariableExpression(destVar); }
+                if (destVar.Name.StartsWith("eax", StringComparison.Ordinal)) { context.LastPotentialReturnExpression = new VariableExpression(destVar); }
 
                 if (destVar is Function.DecompGeneratedTempVariable tempDestVar2)
                 {
@@ -189,9 +191,9 @@ static class BasicLowToHighLevelConversion
                 case "jmp":
                     var jmpSectionName = instruction.DestArg[1..];
                     if (jmpSectionName.EndsWith($"_leave_f{function.Name}", StringComparison.Ordinal)
-                        && lastPotentialReturnExpression != null)
+                        && context.LastPotentialReturnExpression != null)
                     {
-                        highLevelSection.Statements.Add(new ReturnStatement(lastPotentialReturnExpression));
+                        highLevelSection.Statements.Add(new ReturnStatement(context.LastPotentialReturnExpression));
                     }
                     else
                     {
@@ -635,7 +637,7 @@ static class BasicLowToHighLevelConversion
                     };
                     if (function.ReturnType == DeclType.Float)
                     {
-                        lastPotentialReturnExpression = st0;
+                        context.LastPotentialReturnExpression = st0;
                     }
                     context.FloatStack.Push(st0);
                     break;
@@ -673,7 +675,7 @@ static class BasicLowToHighLevelConversion
                     if (function.ReturnType == DeclType.Float
                         && function.InstructionArgumentToVariable(nextInstruction.DestArg) is { } destVar)
                     {
-                        lastPotentialReturnExpression = new VariableExpression(destVar);
+                        context.LastPotentialReturnExpression = new VariableExpression(destVar);
                     }
                     break;
                 case "fstp" or "fistp":
@@ -712,10 +714,7 @@ static class BasicLowToHighLevelConversion
 
     public static void Process(Function function)
     {
-        var context = new Context(
-            TempToExpression: new Dictionary<Function.DecompGeneratedTempVariable, Expression>(),
-            DimSizeAssignmentToVar: new Dictionary<DimSizeAssignment, Function.DecompGeneratedTempVariable>(),
-            FloatStack: new Stack<Expression>());
+        var context = new Context();
         foreach (var section in function.AssemblySections)
         {
             ProcessSection(function, section.Name, context);

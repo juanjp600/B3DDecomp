@@ -36,7 +36,7 @@ static class CleanupRepeat
 
             function.HighLevelStatements[i] = replacementStatement;
             var repeatSection = jumpStatementSection;
-            while (repeatSection is { LinkedAssemblySection.Instructions.Length: 0, NextSection: { } nextSection })
+            while (repeatSection is { IsEmpty: true, NextSection: { } nextSection })
             {
                 repeatSection = nextSection;
             }

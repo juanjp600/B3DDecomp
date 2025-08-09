@@ -183,6 +183,11 @@ static class CleanupSelect
 
                 // Regenerate default case sections and insert End Select
                 var indexToInsertDefault = function.HighLevelSections.IndexOf(sectionsByName[statementToRemoveEverywhere.SectionName]);
+                while (indexToInsertDefault > 0 && function.HighLevelSections[indexToInsertDefault - 1].IsEmpty)
+                {
+                    indexToInsertDefault--;
+                }
+
                 foreach (var tempSection in tempSections)
                 {
                     var newSection = new HighLevelSection(function, tempSection.Name);
@@ -218,7 +223,7 @@ static class CleanupSelect
                     var caseSection = allCaseSections[j];
                     var caseSectionIndex = function.HighLevelSections.IndexOf(caseSection);
 
-                    var newSection = new HighLevelSection(function, $"_selectCase{currentSectionNumber}");
+                    var newSection = new HighLevelSection(function, $"_selectCase{currentSectionNumber}{caseSection.Name}");
                     currentSectionNumber++;
                     function.HighLevelSections.Insert(caseSectionIndex, newSection);
 

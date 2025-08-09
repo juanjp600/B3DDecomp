@@ -86,7 +86,7 @@ public static class IngestCodeFiles
                 }
             }
 
-            var newFunction = new Function(functionName, instructions, sections);
+            var newFunction = new Function(functionName, instructions, sections.ToArray());
         }
 
         

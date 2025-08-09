@@ -239,14 +239,18 @@ sealed class Function
         }
     }
 
-    public Function(string name, IReadOnlyList<Instruction> instructions, IReadOnlyList<IngestCodeFiles.TempSection> assemblySections)
+    public Function(string name, IReadOnlyList<Instruction> instructions, IngestCodeFiles.TempSection[] assemblySections)
     {
         Name = name;
         Instructions = instructions.ToImmutableArray();
         var constructedSections = new List<AssemblySection>();
         int prevIndex = instructions.Count;
-        foreach (var section in assemblySections.OrderByDescending(s => s.StartIndex))
+        foreach (var section in assemblySections.Reverse())
         {
+            if (prevIndex < section.StartIndex)
+            {
+                throw new Exception($"{name}'s assembly sections are in the wrong order!");
+            }
             constructedSections.Insert(0, new AssemblySection(this, section.Name, section.StartIndex..prevIndex));
             prevIndex = section.StartIndex;
         }

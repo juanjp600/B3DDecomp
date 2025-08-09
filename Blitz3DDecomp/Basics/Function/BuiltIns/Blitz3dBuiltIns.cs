@@ -319,12 +319,12 @@ static class Blitz3dBuiltIns
         Function.FromBlitzSymbol("%VerifySound%sound");
         Function.FromBlitzSymbol("%LoadSound$filename");
         Function.FromBlitzSymbol("FreeSound%sound");
-        Function.FromBlitzSymbol("LoopSound%sound");
+        Function.FromBlitzSymbol("LoopSound%sound%loop=1");
         Function.FromBlitzSymbol("SoundPitch%sound%pitch");
         Function.FromBlitzSymbol("SoundVolume%sound#volume");
         Function.FromBlitzSymbol("SoundPan%sound#pan");
         Function.FromBlitzSymbol("%PlaySound%sound");
-        Function.FromBlitzSymbol("%PlayMusic$midifile%mode=0");
+        Function.FromBlitzSymbol("%PlayMusic$filepath#volume=1");
         Function.FromBlitzSymbol("%PlayCDTrack%track%mode=1");
         Function.FromBlitzSymbol("StopChannel%channel");
         Function.FromBlitzSymbol("PauseChannel%channel");
@@ -332,6 +332,7 @@ static class Blitz3dBuiltIns
         Function.FromBlitzSymbol("ChannelPitch%channel%pitch");
         Function.FromBlitzSymbol("ChannelVolume%channel#volume");
         Function.FromBlitzSymbol("ChannelPan%channel#pan");
+        Function.FromBlitzSymbol("ChannelLoop%channel%loop=1");
         Function.FromBlitzSymbol("%ChannelPlaying%channel");
         Function.FromBlitzSymbol("%Load3DSound$filename");
         Function.FromBlitzSymbol("LoaderMatrix$file_ext#xx#xy#xz#yx#yy#yz#zx#zy#zz");
@@ -906,12 +907,12 @@ static class Blitz3dBuiltIns
             Function.FromBlitzSymbol("%Blitz_VerifySound%sound");
             Function.FromBlitzSymbol("%Blitz_LoadSound$filename");
             Function.FromBlitzSymbol("Blitz_FreeSound%sound");
-            Function.FromBlitzSymbol("Blitz_LoopSound%sound");
+            Function.FromBlitzSymbol("Blitz_LoopSound%sound%loop=1");
             Function.FromBlitzSymbol("Blitz_SoundPitch%sound%pitch");
             Function.FromBlitzSymbol("Blitz_SoundVolume%sound#volume");
             Function.FromBlitzSymbol("Blitz_SoundPan%sound#pan");
             Function.FromBlitzSymbol("%Blitz_PlaySound%sound");
-            Function.FromBlitzSymbol("%Blitz_PlayMusic$midifile%mode=0");
+            Function.FromBlitzSymbol("%Blitz_PlayMusic$filepath#volume=1");
             Function.FromBlitzSymbol("%Blitz_PlayCDTrack%track%mode=1");
             Function.FromBlitzSymbol("Blitz_StopChannel%channel");
             Function.FromBlitzSymbol("Blitz_PauseChannel%channel");
@@ -1207,9 +1208,9 @@ static class Blitz3dBuiltIns
         _ = new Function("_builtIn__bbVecFree", 2);
 
         _ = new Function("_builtIn__bbRestore", 1);
-        _ = new Function("_builtIn__bbReadInt", 0);
-        _ = new Function("_builtIn__bbReadFloat", 0);
-        _ = new Function("_builtIn__bbReadStr", 0);
+        _ = new Function("_builtIn__bbReadInt", 0) { ReturnType = DeclType.Int };
+        _ = new Function("_builtIn__bbReadFloat", 0) { ReturnType = DeclType.Float };
+        _ = new Function("_builtIn__bbReadStr", 0) { ReturnType = DeclType.String };
 
         _ = new Function("_builtIn__bbLoadLibs", 1);
 

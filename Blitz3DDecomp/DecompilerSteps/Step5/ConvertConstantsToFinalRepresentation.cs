@@ -1,4 +1,5 @@
-﻿using System.Diagnostics;
+using System.Diagnostics;
+using System.Globalization;
 using B3DDecompUtils;
 using Blitz3DDecomp.HighLevel;
 using Blitz3DDecomp.HighLevel.ComparisonResults;
@@ -35,14 +36,14 @@ static class ConvertConstantsToFinalRepresentation
             {
                 return new ConstantExpression("NAN");
             }
-            string stringRepresentation = floatValue.ToString("0.0" + new string('#', 99));
+            string stringRepresentation = floatValue.ToString("0.0" + new string('#', 99), CultureInfo.InvariantCulture);
             if (stringRepresentation.IndexOf('.', StringComparison.Ordinal) is >= 0 and var indexOfDecimalPoint)
             {
                 var wholePortion = stringRepresentation[..indexOfDecimalPoint];
                 var fraction = stringRepresentation[(indexOfDecimalPoint+1)..];
                 if (wholePortion.Length <= 3 && fraction.Length >= 4)
                 {
-                    var inverseStringRepresentation = (1f / floatValue).ToString("0.0" + new string('#', 99));
+                    var inverseStringRepresentation = (1f / floatValue).ToString("0.0" + new string('#', 99), CultureInfo.InvariantCulture);
                     if (inverseStringRepresentation.Length < stringRepresentation.Length)
                     {
                         return new DivideExpression(

@@ -553,6 +553,9 @@ static class BasicLowToHighLevelConversion
                         or "_builtIn__bbDebugEnter"
                         or "_builtIn__bbDebugLeave"
                         or "_builtIn__bbDebugStmt"
+                        or "_builtIn__bbReleaseEnter"
+                        or "_builtIn__bbReleaseLeave"
+                        or "_builtIn__bbReleaseStmt"
                         or "_builtIn__bbArrayBoundsEx"
                         or "_builtIn__bbVecBoundsEx"
                         or "_builtIn__bbNullObjEx")

@@ -75,6 +75,12 @@ static class DetermineLibParameterCount
                 case "call":
                     if (instruction.DestArg.EndsWith("_begin__MAIN")) { continue; }
                     var callee = Function.TryGetFunctionByName(instruction.DestArg);
+                    if (callee is null
+                        && instruction.DestArg.StartsWith("@_builtIn_f", StringComparison.Ordinal)
+                        && BlitzSymbol.SymbolsDeclaredByExecutable.TryGetValue(instruction.DestArg["@_builtIn_f".Length..], out var symbol))
+                    {
+                        callee = Function.FromBlitzSymbol(symbol);
+                    }
                     if (callee is null)
                     {
                         if (instruction.DestArg.EndsWith("__LIBS"))

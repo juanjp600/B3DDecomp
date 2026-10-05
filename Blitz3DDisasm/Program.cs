@@ -4,12 +4,80 @@ using AsmResolver.PE.Win32Resources;
 using SharpDisasm.Udis86;
 using System.Diagnostics;
 using System.Text;
+using AsmResolver.PE.File;
 using B3DDecompUtils;
+using B3DDecompUtils.Primitives;
 
 namespace Blitz3DDecomp;
 
 internal static class Program
 {
+    private static void ParseExeFile(string inputPath, string outputPath, out byte[] data, out string disasmPath)
+    {
+        var exeName = Path.GetFileName(inputPath);
+        disasmPath = outputPath.AppendToPath(exeName.Replace(".exe", "_disasm"));
+
+        var peImage = (SerializedPEImage)PEImage.FromFile(inputPath);
+        var peFile = (SerializedPEFile)peImage.PEFile;
+
+        if (peFile.Sections.FirstOrNone(s => s.Name == ".b3dmod").TryUnwrap(out var b3dmodSection))
+        {
+            var virtualSegment = (b3dmodSection.Contents as VirtualSegment);
+            var dataSourceSegment = virtualSegment?.PhysicalContents as DataSourceSegment;
+            var reader = dataSourceSegment?.CreateReader();
+
+            if (reader?.ReadToEnd() is { } readBytes)
+            {
+                // BlitzX3D uses an XOR cipher on the Blitz compiler output.
+                // Since the compiler always generates its first four instructions
+                // to push the same registers onto the stack, we can perform a
+                // known plaintext attack.
+                Span<byte> key = stackalloc byte[4];
+                key[0] = (byte)(readBytes[8 + 4 + 0] ^ 0x53);
+                key[1] = (byte)(readBytes[8 + 4 + 1] ^ 0x56);
+                key[2] = (byte)(readBytes[8 + 4 + 2] ^ 0x57);
+                key[3] = (byte)(readBytes[8 + 4 + 3] ^ 0x55);
+
+                for (int i = 0; i < readBytes.Length; i++)
+                {
+                    readBytes[i] ^= key[i % 4];
+                }
+                data = readBytes[8..];
+                return;
+            }
+        }
+
+        var resources = peImage.Resources;
+        if (resources?.Entries is not IEnumerable<IResourceEntry> entries)
+        {
+            throw new Exception($"");
+        }
+
+        static IEnumerable<IResourceEntry> flattener(IResourceEntry entry)
+        {
+            if (entry is not IResourceDirectory dir)
+            {
+                return new[] { entry };
+            }
+
+            return dir.Type is ResourceType.RcData or (ResourceType)1111
+                ? dir.Entries
+                : Enumerable.Empty<IResourceEntry>();
+        }
+
+        var flatten = entries
+            .SelectMany(flattener)
+            .SelectMany(flattener)
+            .SelectMany(flattener)
+            .SelectMany(flattener);
+        data = flatten
+            .OfType<IResourceData>()
+            .Select(d => d.Contents)
+            .OfType<DataSegment>()
+            .First()
+            .Data;
+    }
+
     private static void Main(string[] args)
     {
         if (args.Length == 0)
@@ -25,39 +93,7 @@ internal static class Program
         string disasmPath;
         if (inputPath.EndsWith(".exe"))
         {
-            var exeName = Path.GetFileName(inputPath);
-            var peImage = PEImage.FromFile(inputPath);
-            var resources = peImage.Resources;
-            if (resources?.Entries is not IEnumerable<IResourceEntry> entries)
-            {
-                throw new Exception($"");
-            }
-
-            static IEnumerable<IResourceEntry> flattener(IResourceEntry entry)
-            {
-                if (entry is not IResourceDirectory dir)
-                {
-                    return new[] { entry };
-                }
-
-                return dir.Type is ResourceType.RcData or (ResourceType)1111
-                    ? dir.Entries
-                    : Enumerable.Empty<IResourceEntry>();
-            }
-
-            var flatten = entries
-                .SelectMany(flattener)
-                .SelectMany(flattener)
-                .SelectMany(flattener)
-                .SelectMany(flattener);
-            data = flatten
-                .OfType<IResourceData>()
-                .Select(d => d.Contents)
-                .OfType<DataSegment>()
-                .First()
-                .Data;
-            
-            disasmPath = outputPath.AppendToPath(exeName.Replace(".exe", "_disasm"));
+            ParseExeFile(inputPath, outputPath, out data, out disasmPath);
         }
         else if (inputPath.EndsWith(".bin"))
         {
@@ -76,9 +112,12 @@ internal static class Program
         var symbolByAddress = new Dictionary<int, Symbol>();
         void addSymbol(string symbolName, int symbolAddress)
         {
-            symbols.Add(new Symbol(name: symbolName) { Address = symbolAddress });
-            symbolByName.Add(symbolName, symbols.Last());
-            symbolByAddress.TryAdd(symbolAddress, symbols.Last());
+            var newSymbol = new Symbol(name: symbolName) { Address = symbolAddress };
+            if (symbolByName.TryAdd(symbolName, newSymbol))
+            {
+                symbols.Add(newSymbol);
+                symbolByAddress.TryAdd(symbolAddress, newSymbol);
+            }
         }
         using var stream = new MemoryStream(data);
         using var reader = new BinaryReader(stream);

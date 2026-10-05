@@ -218,6 +218,11 @@ sealed class Function
             symbol = existingSymbol;
         }
 
+        return FromBlitzSymbol(symbol);
+    }
+
+    public static Function FromBlitzSymbol(BlitzSymbol symbol)
+    {
         var newFunction = new Function($"_builtIn_f{symbol.FunctionName}", 0) { ReturnType = symbol.ReturnType };
         newFunction.Parameters.Clear();
         newFunction.Parameters.AddRange(symbol.Parameters.Select((p, i) => new Parameter(newFunction, p.Name, i) { DeclType = p.DeclType }));

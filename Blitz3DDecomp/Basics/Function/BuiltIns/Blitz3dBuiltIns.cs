@@ -185,6 +185,8 @@ static class Blitz3dBuiltIns
         Function.FromBlitzSymbol("%ScanLine");
         Function.FromBlitzSymbol("VWait%frames=1");
         Function.FromBlitzSymbol("Flip%vwait=1");
+        Function.FromBlitzSymbol("CapFPS%fps");
+        Function.FromBlitzSymbol("UncapFPS");
         Function.FromBlitzSymbol("%GraphicsWidth");
         Function.FromBlitzSymbol("%GraphicsHeight");
         Function.FromBlitzSymbol("%GraphicsDepth");
@@ -460,6 +462,7 @@ static class Blitz3dBuiltIns
         Function.FromBlitzSymbol("%EntityInView%entity%camera");
         Function.FromBlitzSymbol("%EntityVisible%src_entity%dest_entity");
         Function.FromBlitzSymbol("%EntityPick%entity#range");
+        Function.FromBlitzSymbol("%EntityExist%entity");
         Function.FromBlitzSymbol("%LinePick#x#y#z#dx#dy#dz#radius=0");
         Function.FromBlitzSymbol("%CameraPick%camera#viewport_x#viewport_y");
         Function.FromBlitzSymbol("#PickedX");
@@ -1241,6 +1244,9 @@ static class Blitz3dBuiltIns
         _ = new Function("_builtIn__bbDebugEnter", 3);
         _ = new Function("_builtIn__bbDebugLeave", 0);
         _ = new Function("_builtIn__bbDebugStmt", 2);
+        _ = new Function("_builtIn__bbReleaseEnter", 1);
+        _ = new Function("_builtIn__bbReleaseLeave", 0);
+        _ = new Function("_builtIn__bbReleaseStmt", 2);
         _ = new Function("_builtIn__bbNullObjEx", 0);
         _ = new Function("_builtIn__bbArrayBoundsEx", 0);
         _ = new Function("_builtIn__bbVecBoundsEx", 0);

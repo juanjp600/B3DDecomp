@@ -275,9 +275,6 @@ static class BlitzPlusBuiltIns
         Function.FromBlitzSymbol("%QueryObject%object%query_id");
         Function.FromBlitzSymbol("Stop");
         Function.FromBlitzSymbol("DebugLog$message");
-        Function.FromBlitzSymbol("_bbDebugStmt");
-        Function.FromBlitzSymbol("_bbDebugEnter");
-        Function.FromBlitzSymbol("_bbDebugLeave");
         Function.FromBlitzSymbol("#Sin#degrees");
         Function.FromBlitzSymbol("#Cos#degrees");
         Function.FromBlitzSymbol("#Tan#degrees");
